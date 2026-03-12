@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- AB blue background circle -->
+  <circle cx="32" cy="32" r="32" fill="#4A90C4"/>
+  <!-- White "O" ring -->
+  <circle cx="32" cy="32" r="20" fill="none" stroke="white" stroke-width="8"/>
+  <!-- Orange eye fill -->
+  <circle cx="32" cy="32" r="16" fill="#E8962D"/>
+  <!-- Dark pupil -->
+  <circle cx="36" cy="28" r="6" fill="#2D6A9F"/>
+</svg>

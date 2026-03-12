@@ -1,0 +1,14 @@
+# Exclude non-GS files from clasp push
+**/*.md
+**/*.json
+!appsscript.json
+**/*.csv
+**/*.txt
+.git/**
+.github/**
+node_modules/**
+.clasp.json
+.claspignore
+.gitignore
+tmpclaude-*
+web/**

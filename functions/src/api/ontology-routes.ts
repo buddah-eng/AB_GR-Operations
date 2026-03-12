@@ -1,0 +1,233 @@
+/**
+ * Ontology API Routes (Read-Only)
+ *
+ * Serves the domain ontology and configuration to the frontend.
+ * These endpoints allow the Vue SPA to discover concepts, properties,
+ * relationships, form configs, view configs, and page layouts at runtime.
+ */
+
+import { Router } from "express";
+import type { Request, Response } from "express";
+import * as logger from "firebase-functions/logger";
+import {
+  getOntology,
+  reloadOntology,
+  getConceptByKey,
+  getPropertiesForConcept,
+  getRelationshipsForConcept,
+  getFormConfig,
+  getViewConfigs,
+  getPageConfigs,
+} from "../ontology/loader";
+import { requireAuth, requireRole } from "../auth/middleware";
+import type { ApiResponse, OntologyCache } from "../ontology/types";
+
+// --- Router ---
+
+export const ontologyRouter = Router();
+
+// --- GET /api/ontology ---
+// Returns the full ontology (concepts, properties, relationships)
+
+ontologyRouter.get("/", async (_req: Request, res: Response) => {
+  try {
+    const ontology = await getOntology();
+    const serialized = serializeOntology(ontology);
+
+    const response: ApiResponse<typeof serialized> = {
+      success: true,
+      data: serialized,
+    };
+    res.json(response);
+  } catch (err) {
+    handleError(res, err, "loading ontology");
+  }
+});
+
+// --- GET /api/ontology/concepts ---
+// Returns all concepts
+
+ontologyRouter.get("/concepts", async (_req: Request, res: Response) => {
+  try {
+    const ontology = await getOntology();
+    const concepts = Array.from(ontology.concepts.values());
+
+    const response: ApiResponse<typeof concepts> = {
+      success: true,
+      data: concepts,
+    };
+    res.json(response);
+  } catch (err) {
+    handleError(res, err, "loading concepts");
+  }
+});
+
+// --- GET /api/ontology/concepts/:key ---
+// Returns a single concept with its properties and relationships
+
+ontologyRouter.get("/concepts/:key", async (req: Request, res: Response) => {
+  try {
+    const { key } = req.params;
+    const concept = await getConceptByKey(key);
+
+    if (!concept) {
+      res.status(404).json({
+        success: false,
+        error: `Concept "${key}" not found.`,
+      } as ApiResponse<never>);
+      return;
+    }
+
+    const properties = await getPropertiesForConcept(key);
+    const relationships = await getRelationshipsForConcept(key);
+
+    const data = {
+      concept,
+      properties,
+      relationships,
+    };
+
+    const response: ApiResponse<typeof data> = {
+      success: true,
+      data,
+    };
+    res.json(response);
+  } catch (err) {
+    handleError(res, err, "loading concept");
+  }
+});
+
+// --- GET /api/ontology/configs/forms/:concept ---
+// Returns the form config for a concept
+
+ontologyRouter.get(
+  "/configs/forms/:concept",
+  async (req: Request, res: Response) => {
+    try {
+      const { concept } = req.params;
+      const formConfig = await getFormConfig(concept);
+
+      if (!formConfig) {
+        res.status(404).json({
+          success: false,
+          error: `No form config found for concept "${concept}".`,
+        } as ApiResponse<never>);
+        return;
+      }
+
+      const response: ApiResponse<typeof formConfig> = {
+        success: true,
+        data: formConfig,
+      };
+      res.json(response);
+    } catch (err) {
+      handleError(res, err, "loading form config");
+    }
+  }
+);
+
+// --- GET /api/ontology/configs/views/:concept ---
+// Returns all view configs for a concept
+
+ontologyRouter.get(
+  "/configs/views/:concept",
+  async (req: Request, res: Response) => {
+    try {
+      const { concept } = req.params;
+      const viewConfigs = await getViewConfigs(concept);
+
+      const response: ApiResponse<typeof viewConfigs> = {
+        success: true,
+        data: viewConfigs,
+      };
+      res.json(response);
+    } catch (err) {
+      handleError(res, err, "loading view configs");
+    }
+  }
+);
+
+// --- GET /api/ontology/configs/pages ---
+// Returns all page configs
+
+ontologyRouter.get("/configs/pages", async (_req: Request, res: Response) => {
+  try {
+    const pageConfigs = await getPageConfigs();
+
+    const response: ApiResponse<typeof pageConfigs> = {
+      success: true,
+      data: pageConfigs,
+    };
+    res.json(response);
+  } catch (err) {
+    handleError(res, err, "loading page configs");
+  }
+});
+
+// --- POST /api/ontology/reload ---
+// Forces a full ontology cache refresh (admin only)
+
+ontologyRouter.post(
+  "/reload",
+  requireAuth,
+  requireRole(10), // Only high-priority roles (director level)
+  async (_req: Request, res: Response) => {
+    try {
+      logger.info("Ontology reload requested by admin");
+      const ontology = await reloadOntology();
+      const serialized = serializeOntology(ontology);
+
+      const response: ApiResponse<typeof serialized> = {
+        success: true,
+        data: serialized,
+      };
+      res.json(response);
+    } catch (err) {
+      handleError(res, err, "reloading ontology");
+    }
+  }
+);
+
+// --- Serialization ---
+
+/**
+ * Converts the OntologyCache (which uses Maps) into a plain object
+ * suitable for JSON serialization.
+ */
+function serializeOntology(ontology: OntologyCache): Record<string, unknown> {
+  return {
+    concepts: Object.fromEntries(ontology.concepts),
+    properties: Object.fromEntries(
+      Array.from(ontology.properties.entries()).map(
+        ([key, props]) => [key, Array.from(props)]
+      )
+    ),
+    relationships: Object.fromEntries(
+      Array.from(ontology.relationships.entries()).map(
+        ([key, rels]) => [key, Array.from(rels)]
+      )
+    ),
+    events: Object.fromEntries(
+      Array.from(ontology.events.entries()).map(
+        ([key, evts]) => [key, Array.from(evts)]
+      )
+    ),
+    constraints: Object.fromEntries(
+      Array.from(ontology.constraints.entries()).map(
+        ([key, cons]) => [key, Array.from(cons)]
+      )
+    ),
+    loadedAt: ontology.loadedAt,
+  };
+}
+
+// --- Error handling ---
+
+function handleError(res: Response, err: unknown, context: string): void {
+  const message = err instanceof Error ? err.message : String(err);
+  logger.error(`Error ${context}`, { error: message });
+  res.status(500).json({
+    success: false,
+    error: `Internal error while ${context}: ${message}`,
+  } as ApiResponse<never>);
+}

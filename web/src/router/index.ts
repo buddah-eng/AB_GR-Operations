@@ -1,0 +1,144 @@
+import {
+  createRouter,
+  createWebHistory,
+  type RouteRecordRaw,
+} from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+
+/* ------------------------------------------------------------------ */
+/*  Route definitions                                                  */
+/* ------------------------------------------------------------------ */
+
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/',
+    redirect: '/dashboard',
+  },
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('@/views/LoginView.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/dashboard',
+    name: 'dashboard',
+    component: () => import('@/views/DashboardView.vue'),
+  },
+  {
+    path: '/guests',
+    name: 'guests',
+    component: () => import('@/views/GuestListView.vue'),
+  },
+  {
+    path: '/guests/new',
+    name: 'new-guest',
+    component: () => import('@/views/NewGuestWizardView.vue'),
+  },
+  {
+    path: '/guests/:id',
+    name: 'guest-hub',
+    component: () => import('@/views/GuestHubView.vue'),
+    props: true,
+  },
+  {
+    path: '/staff',
+    name: 'staff',
+    component: () => import('@/views/StaffListView.vue'),
+  },
+  {
+    path: '/schedule',
+    name: 'schedule',
+    component: () => import('@/views/ScheduleView.vue'),
+  },
+  {
+    path: '/prep-tracker',
+    name: 'prep-tracker',
+    component: () => import('@/views/PrepTrackerView.vue'),
+  },
+  {
+    path: '/workflows',
+    name: 'workflows',
+    component: () => import('@/views/WorkflowManagerView.vue'),
+  },
+  {
+    path: '/settings',
+    name: 'settings',
+    component: () => import('@/views/SettingsView.vue'),
+  },
+  {
+    path: '/travel',
+    name: 'travel',
+    component: () => import('@/views/DomainListView.vue'),
+    props: { domain: 'travel' },
+  },
+  {
+    path: '/accommodations',
+    name: 'accommodations',
+    component: () => import('@/views/DomainListView.vue'),
+    props: { domain: 'accommodations' },
+  },
+  {
+    path: '/dietary',
+    name: 'dietary',
+    component: () => import('@/views/DomainListView.vue'),
+    props: { domain: 'dietary' },
+  },
+  {
+    path: '/autographs',
+    name: 'autographs',
+    component: () => import('@/views/DomainListView.vue'),
+    props: { domain: 'autographs' },
+  },
+  {
+    path: '/venues',
+    name: 'venues',
+    component: () => import('@/views/DomainListView.vue'),
+    props: { domain: 'venues' },
+  },
+  {
+    path: '/pairings',
+    name: 'pairings',
+    component: () => import('@/views/DomainListView.vue'),
+    props: { domain: 'pairings' },
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/dashboard',
+  },
+]
+
+/* ------------------------------------------------------------------ */
+/*  Router instance                                                    */
+/* ------------------------------------------------------------------ */
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+})
+
+/* ------------------------------------------------------------------ */
+/*  Navigation guard: require auth on all routes except /login         */
+/* ------------------------------------------------------------------ */
+
+router.beforeEach((to) => {
+  const authStore = useAuthStore()
+
+  // Allow login page without auth
+  if (to.meta.requiresAuth === false) {
+    // If already authenticated, redirect to dashboard
+    if (authStore.isAuthenticated) {
+      return { name: 'dashboard' }
+    }
+    return true
+  }
+
+  // All other routes require auth
+  if (!authStore.isAuthenticated && !authStore.loading) {
+    return { name: 'login' }
+  }
+
+  return true
+})
+
+export default router

@@ -1,0 +1,33 @@
+# Auth tokens
+.clasprc.json
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Temp files
+tmpclaude-*
+
+# Firebase
+.firebaserc
+firebase-debug.log
+*-debug.log
+functions/coverage/
+functions/lib/
+functions/node_modules/
+
+# Firebase web app
+web/node_modules/
+web/dist/
+web/.env.local
+web/functions/node_modules/
+web/functions/lib/

@@ -1,0 +1,124 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------ */
+/*  GR-Ops "Koinobori" Design System                                   */
+/*  Anime Boston 2026 — steel blue chrome, clean workspace             */
+/* ------------------------------------------------------------------ */
+
+/* --- Base layer --- */
+@layer base {
+  body {
+    @apply font-sans text-surface-900 antialiased bg-ab-50;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3 {
+    @apply font-display;
+  }
+
+  h1 {
+    @apply text-2xl font-bold tracking-tight;
+  }
+
+  h2 {
+    @apply text-xl font-semibold tracking-tight;
+  }
+
+  h3 {
+    @apply text-lg font-semibold;
+  }
+}
+
+/* --- PrimeVue overrides --- */
+
+/* Cards: orange left-border accent on hover */
+.p-card {
+  @apply shadow-sm border border-surface-200 transition-all duration-200;
+}
+
+.p-card:hover {
+  @apply shadow-md;
+  border-left: 3px solid theme('colors.accent.400');
+}
+
+/* DataTable: clean black/white workspace — headers use display font */
+.p-datatable .p-datatable-thead > tr > th {
+  @apply font-display font-semibold text-xs uppercase tracking-wider
+         bg-surface-100 text-surface-700 border-b border-surface-200;
+}
+
+.p-datatable .p-datatable-tbody > tr:hover {
+  @apply bg-surface-50;
+}
+
+/* Tags / Badges: rounder, bolder */
+.p-tag {
+  @apply rounded-full font-semibold text-xs tracking-wide;
+  padding: 0.25rem 0.75rem;
+}
+
+/* Tabs: orange underline on active tab */
+.p-tablist .p-tab.p-tab-active {
+  border-color: theme('colors.accent.400');
+  color: theme('colors.accent.500');
+}
+
+/* Toolbar: subtle AB blue top border */
+.p-toolbar {
+  border-top: 2px solid theme('colors.ab.200');
+}
+
+/* ProgressBar: AB blue gradient fill */
+.p-progressbar .p-progressbar-value {
+  background: linear-gradient(
+    90deg,
+    theme('colors.ab.600'),
+    theme('colors.ab.400')
+  );
+}
+
+/* Buttons: primary uses AB blue */
+.p-button.p-button-primary,
+.p-button:not(.p-button-secondary):not(.p-button-success):not(.p-button-info):not(.p-button-warn):not(.p-button-danger):not(.p-button-help):not(.p-button-plain):not(.p-button-text):not(.p-button-outlined):not(.p-button-link) {
+  @apply bg-ab-600 border-ab-600 text-white;
+}
+
+.p-button.p-button-primary:hover,
+.p-button:not(.p-button-secondary):not(.p-button-success):not(.p-button-info):not(.p-button-warn):not(.p-button-danger):not(.p-button-help):not(.p-button-plain):not(.p-button-text):not(.p-button-outlined):not(.p-button-link):hover {
+  @apply bg-ab-800 border-ab-800;
+}
+
+.p-button:focus-visible {
+  @apply ring-2 ring-ab-300 ring-offset-2;
+}
+
+/* --- Utility classes --- */
+@layer components {
+  .page-title {
+    @apply font-display text-2xl font-bold tracking-tight text-surface-900;
+  }
+
+  .stat-value {
+    @apply font-display text-3xl font-extrabold leading-tight text-surface-900;
+  }
+
+  /* Action banner: orange accent gradient for urgency */
+  .action-banner {
+    @apply rounded-lg px-4 py-3 text-white font-medium;
+    background: linear-gradient(
+      135deg,
+      theme('colors.accent.400'),
+      theme('colors.red.500')
+    );
+  }
+
+  /* AB branded section header: blue underline */
+  .section-header {
+    @apply font-display text-lg font-semibold text-ab-950 pb-2 border-b-2 border-ab-200;
+  }
+}

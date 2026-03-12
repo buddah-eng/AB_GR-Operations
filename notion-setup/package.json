@@ -1,0 +1,22 @@
+{
+  "name": "gr-ops-notion-setup",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "create-databases": "tsx src/create-databases.ts",
+    "seed-ontology": "tsx src/seed-ontology.ts",
+    "seed-roles": "tsx src/seed-roles.ts",
+    "seed-workflows": "tsx src/seed-workflows.ts",
+    "setup-all": "npm run create-databases && npm run seed-ontology && npm run seed-roles && npm run seed-workflows"
+  },
+  "dependencies": {
+    "@notionhq/client": "^2.2.15",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "tsx": "^4.7.0",
+    "@types/node": "^20.11.0"
+  }
+}
