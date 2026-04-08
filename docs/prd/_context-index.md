@@ -10,16 +10,16 @@ column provides enough context to decide whether you need to open the full docum
 
 | Doc ID | Title | Shorthand | Tags | Status | Last Updated |
 |--------|-------|-----------|------|--------|--------------|
-| PRD-00 | Platform Vision & Positioning | Ontology-driven convention operations platform. Source code = engine, database = application. AGPL-3.0 engine is OSS-safe; convention-specific config, workflows, and data stay private in Postgres. Replaces Notion as SOR due to rate limits, no transactions, no field-level RBAC. | `vision`, `ontology`, `oss`, `postgres`, `notion-migration`, `anime-boston` | draft | 2026-04-08 |
-| PRD-01 | System Architecture | Three-tier architecture: Vue 3 SPA (PrimeVue) + Firebase Cloud Functions (Express/TypeScript) + Notion (migrating to Postgres). Ontology loader, RBAC engine, event bus, domain CRUD router, and in-memory cache with stale-while-revalidate. Deployed on Firebase Hosting + Cloud Functions us-east1. | `architecture`, `firebase`, `express`, `vue`, `notion`, `postgres`, `cache`, `cloud-functions` | draft | 2026-04-08 |
+| PRD-00 | Platform Vision & Positioning | Ontology-driven convention operations platform. Source code = engine, database = application. AGPL-3.0 engine is OSS-safe; convention-specific config, workflows, and data stay private in Postgres. Built instead of Notion after build-vs-buy analysis showed Notion can't provide transactions, field-level RBAC, or scale past 3 req/s API limits. | `vision`, `ontology`, `oss`, `postgres`, `anime-boston` | draft | 2026-04-08 |
+| PRD-01 | System Architecture | Three-tier architecture: Vue 3 SPA (PrimeVue) + Express/TypeScript API + Postgres (SOR). Ontology loader, RBAC engine, event bus, domain CRUD router. Current: Firebase Cloud Functions. Target: Cloud Run + Postgres + Redis. Scaling from Firebase free tier (Y1) → Cloud Run auto-scaling (Y2+). | `architecture`, `firebase`, `express`, `vue`, `postgres`, `cloud-run`, `redis`, `cache` | draft | 2026-04-08 |
 | PRD-02 | Ontology Engine & Web Builder | Five ontology databases (Concepts, Properties, Relationships, Events, Constraints) define the domain model at runtime. ConditionExpression system for conditional logic. FormConfig, ViewConfig, PageConfig enable DB-driven UI. Concept inheritance via `extends`. Ontology loaded via `functions/src/ontology/loader.ts`, typed in `functions/src/ontology/types.ts`. | `ontology`, `concepts`, `properties`, `relationships`, `constraints`, `conditions`, `forms`, `views`, `pages`, `inheritance` | draft | 2026-04-08 |
-| PRD-03 | RBAC, Auth & Security | Firebase Auth (Google OAuth) with role resolution from Notion Users DB. Five roles (director/liaison/department_head/interpreter/volunteer) with priority-based hierarchy. Permission records define CRUD + field-level visibility per role per concept. DataScope records filter query results by relation path, field value, or department. ScreenAccess controls page visibility. Dev-bypass mode for emulator. | `rbac`, `auth`, `firebase-auth`, `permissions`, `data-scopes`, `screen-access`, `roles`, `security` | draft | 2026-04-08 |
+| PRD-03 | RBAC, Auth & Security | Firebase Auth (Google OAuth) with role resolution from Postgres users table. Four-tier hierarchy: volunteer→manager→director→admin. Permission records define CRUD + field-level visibility per role per concept. DataScope records filter query results by relation path, field value, or department. API key auth for internal app integrations. Token-scoped auth for external surfaces. Audit triggers on all ontology tables. | `rbac`, `auth`, `firebase-auth`, `permissions`, `data-scopes`, `roles`, `security`, `api-keys`, `token-auth`, `audit` | draft | 2026-04-08 |
 | PRD-04 | API Layer & Integration Patterns | Express router mounted at `/api/*` on a single Cloud Function. Generic CRUD at `/api/domains/:concept` validates concept in ontology, enforces RBAC, fires domain events. Legacy action router at `/api/action` for backward compat. Ontology API at `/api/ontology` serves concept definitions to frontend. Config API at `/api/config` backed by Firestore. Concurrency-limited frontend client with semaphore (max 8). | `api`, `rest`, `crud`, `express`, `domains`, `actions`, `ontology-api`, `config-api`, `integration` | draft | 2026-04-08 |
-| PRD-05 | Data Layer & Postgres Migration | Current SOR is Notion with 32 databases (5 ontology, 13 domain, 3 registry, 6 config, 5 role). Notion client wraps `@notionhq/client` with 2-concurrent-request semaphore and exponential backoff on 429s. Database ID registry maps logical keys to env vars. Migration target is Postgres for transactions, JOINs, FK constraints, and elimination of rate limits. | `postgres`, `notion`, `migration`, `databases`, `rate-limits`, `cache`, `data-layer` | draft | 2026-04-08 |
-| PRD-06 | Workflow Engine & Automation | Domain event bus with glob-style pattern matching (`guest.*`, `*.created`). Priority-ordered sequential handler execution. Eight seed workflows: New Guest Pipeline, JP Guest Extras, Schedule-to-Calendar sync, Travel Update cascade, Pairing attendee sync, Prep Overdue daily cron, Staffing Auto-Create. WorkflowConfig stored in Notion with trigger, condition, and action arrays. | `workflows`, `events`, `event-bus`, `automation`, `domain-events`, `triggers`, `conditions` | draft | 2026-04-08 |
+| PRD-05 | Data Layer (Postgres) | Postgres as SOR. Ontology tables (concepts, properties, relationships, events, constraints), config tables (forms, views, pages, workflows), RBAC tables (roles, permissions, data_scopes), domain tables with JSONB properties column. Row-level versioning, nightly pg_dump snapshots, audit triggers on all ontology tables. YoY registry for cross-year persistent data. | `postgres`, `databases`, `schema`, `versioning`, `backups`, `audit`, `data-layer`, `jsonb`, `registry` | draft | 2026-04-08 |
+| PRD-06 | Workflow Engine & Automation | Domain event bus with glob-style pattern matching (`guest.*`, `*.created`). Priority-ordered sequential handler execution. WorkflowConfig stored in Postgres with trigger (domain_event/scheduled/manual/field_changed), ConditionExpression evaluation, and action chains (create_record, notify, generate_doc, call_api, etc.). Workflows are DB-defined, not code. | `workflows`, `events`, `event-bus`, `automation`, `domain-events`, `triggers`, `conditions` | draft | 2026-04-08 |
 | PRD-07 | Dynamic Forms & View Builder | FormConfig supports single-column, two-column, and wizard layouts with conditional field visibility (`showIf` ConditionExpression). ViewConfig supports table, kanban, timeline, detail, and dashboard view types with column definitions, filters, sort, groupBy, and presets. PageConfig defines dashboard layouts with responsive breakpoints and widget grid positioning. Frontend ontology store provides runtime concept/property/relationship lookup. | `forms`, `views`, `pages`, `widgets`, `ui`, `dynamic-rendering`, `ontology`, `conditions` | draft | 2026-04-08 |
-| PRD-08 | Contract Generation | Planned: Google Docs template-based itinerary and checklist generation per guest. OutputTemplates database defines template types (calendar, doc, email, itinerary). `handleGenerateItinerary` and `handleGenerateChecklist` stubs exist in `functions/src/api/actions.ts`. Targeted for Phase 3. | `contracts`, `documents`, `templates`, `google-docs`, `itinerary`, `checklist` | draft | 2026-04-08 |
-| PRD-09 | Transportation & Logistics Module | Travel concept tracks flights/trains/cars with carrier, route, departure/arrival dates and times, confirmation numbers. Accommodations concept tracks hotel bookings with room type, check-in/check-out, special requests. Travel Update workflow cascades arrival changes to Transport-type schedule events. Dietary concept tracks restrictions, allergies, and preferences per guest. | `travel`, `accommodations`, `dietary`, `logistics`, `transportation`, `workflows` | draft | 2026-04-08 |
+| PRD-08 | Contracts & Itineraries | Conditional clause assembly: contract_template + contract_clause concepts in Postgres. Each clause has a ConditionExpression (e.g., type='JP' → interpreter clause, dept='Music' → performance rider). Handlebars templates with {{variable}} resolution. Contracts and itineraries are first-class in-app views (not external docs), exportable to PDF. Triggered via generate_doc workflow action on guest confirmation. | `contracts`, `itineraries`, `documents`, `templates`, `clause-assembly`, `handlebars`, `pdf-export`, `workflows`, `in-app-views` | draft | 2026-04-08 |
+| PRD-09 | Transportation & Logistics Module | New concepts: transport_booking (status lifecycle, flight tracking, driver assignment), transport_driver, api_integration. Third-party APIs: Blacklane/Karhoo for rides, FlightAware for flight status. Three views: guest (tokenized ETA/driver info), driver (tokenized pickup details), manager dashboard (all bookings). Pre-event guest forms with YoY pre-population. | `travel`, `transport`, `logistics`, `flights`, `drivers`, `blacklane`, `flightaware`, `api-integration`, `external-surfaces` | draft | 2026-04-08 |
 | PRD-10 | External Surfaces (Guest Forms, Driver Views) | Planned: token-scoped auth for external users (guests filling self-service forms, drivers viewing pickup schedules). Separate from Firebase Auth. External forms submit via API with scoped write permissions. Driver views are read-only filtered schedule views. Security boundary enforced via short-lived tokens, not full platform RBAC. | `external`, `guest-forms`, `driver-views`, `token-auth`, `self-service`, `security` | draft | 2026-04-08 |
 | PRD-11 | Phased Rollout Roadmap | Y1: GR module for AB 2026 (guests, staff, schedule, travel, accommodations, dietary, prep, autographs, pairings, venues). Y1+: Exhibits (dealers, artists), Programming (panels, concerts, lotteries). Y2+: Convention-wide platform, multi-org support. Postgres migration timeline, external surfaces, contract generation phases. | `roadmap`, `phases`, `timeline`, `milestones`, `gr-module`, `exhibits`, `programming` | draft | 2026-04-08 |
 
@@ -31,9 +31,7 @@ column provides enough context to decide whether you need to open the full docum
 |-----|---------|
 | `ontology` | PRD-00, PRD-02, PRD-04, PRD-06, PRD-07 |
 | `rbac` | PRD-00, PRD-03, PRD-04, PRD-10 |
-| `postgres` | PRD-00, PRD-01, PRD-05 |
-| `notion` | PRD-01, PRD-05 |
-| `notion-migration` | PRD-00, PRD-05 |
+| `postgres` | PRD-00, PRD-01, PRD-05, PRD-06, PRD-08 |
 | `firebase` | PRD-01, PRD-03 |
 | `firebase-auth` | PRD-03 |
 | `auth` | PRD-03, PRD-10 |
@@ -44,7 +42,23 @@ column provides enough context to decide whether you need to open the full docum
 | `vue` | PRD-01, PRD-07 |
 | `architecture` | PRD-01 |
 | `cache` | PRD-01, PRD-05 |
-| `cloud-functions` | PRD-01 |
+| `cloud-run` | PRD-01 |
+| `redis` | PRD-01 |
+| `api-keys` | PRD-03, PRD-04 |
+| `token-auth` | PRD-03, PRD-10 |
+| `audit` | PRD-03, PRD-05 |
+| `versioning` | PRD-05 |
+| `backups` | PRD-05 |
+| `jsonb` | PRD-05 |
+| `registry` | PRD-05 |
+| `transport` | PRD-09 |
+| `drivers` | PRD-09 |
+| `flights` | PRD-09 |
+| `api-integration` | PRD-04, PRD-09 |
+| `clause-assembly` | PRD-08 |
+| `itineraries` | PRD-08 |
+| `pdf-export` | PRD-08 |
+| `in-app-views` | PRD-08 |
 | `concepts` | PRD-02 |
 | `properties` | PRD-02 |
 | `relationships` | PRD-02 |
@@ -71,18 +85,11 @@ column provides enough context to decide whether you need to open the full docum
 | `contracts` | PRD-08 |
 | `documents` | PRD-08 |
 | `templates` | PRD-08 |
-| `google-docs` | PRD-08 |
-| `itinerary` | PRD-08 |
-| `checklist` | PRD-08 |
 | `travel` | PRD-09 |
-| `accommodations` | PRD-09 |
-| `dietary` | PRD-09 |
 | `logistics` | PRD-09 |
-| `transportation` | PRD-09 |
 | `external` | PRD-10 |
 | `guest-forms` | PRD-10 |
 | `driver-views` | PRD-10 |
-| `token-auth` | PRD-10 |
 | `self-service` | PRD-10 |
 | `roadmap` | PRD-11 |
 | `phases` | PRD-11 |
