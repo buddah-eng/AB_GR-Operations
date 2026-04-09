@@ -104,7 +104,7 @@ app.use(
   }
 );
 
-// --- Export Cloud Function ---
+// --- Export Cloud Functions ---
 
 export const api = onRequest(
   {
@@ -115,3 +115,7 @@ export const api = onRequest(
   },
   app
 );
+
+// Scheduled jobs
+export { rogueDetectionJob, cleanupExpiredTokensJob } from "./audit/scheduled";
+export { nightlyBackupJob } from "./backups/scheduled";
