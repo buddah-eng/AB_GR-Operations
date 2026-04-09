@@ -1,20 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { RoleEngine } from "./engine";
-import { cache } from "../notion/cache";
+import { cache } from "../cache";
 
-// --- Mock the Notion boundary ---
+// --- Mock the Postgres boundary ---
 
-const mockQueryDatabase = vi.fn();
-const mockPageToFlatObject = vi.fn();
+const mockQuery = vi.fn();
 
-vi.mock("../notion/client", () => ({
-  queryDatabase: (...args: unknown[]) => mockQueryDatabase(...args),
-  pageToFlatObject: (...args: unknown[]) => mockPageToFlatObject(...args),
-  createPage: vi.fn().mockResolvedValue({}),
-}));
-
-vi.mock("../notion/databases", () => ({
-  getOntologyDatabaseId: vi.fn((key: string) => `fake-db-id-${key}`),
+vi.mock("../db/client", () => ({
+  query: (...args: unknown[]) => mockQuery(...args),
 }));
 
 vi.mock("firebase-functions/logger", () => ({
@@ -24,26 +17,26 @@ vi.mock("firebase-functions/logger", () => ({
   error: vi.fn(),
 }));
 
-// --- Test data: permission rows as Notion would return them ---
+// --- Test data helpers ---
 
 function makePermissionRow(
   id: string,
   roleKey: string,
   conceptKey: string,
   overrides: Record<string, unknown> = {}
-) {
-  const flat = {
-    "Role Key": roleKey,
-    "Concept Key": conceptKey,
-    "Can View": true,
-    "Can Edit": false,
-    "Can Create": false,
-    "Can Delete": false,
-    "Visible Properties": "name,status,type",
-    "Editable Properties": "",
+): Record<string, unknown> {
+  return {
+    id,
+    role_key: roleKey,
+    concept_key: conceptKey,
+    can_view: true,
+    can_edit: false,
+    can_create: false,
+    can_delete: false,
+    visible_properties: ["name", "status", "type"],
+    editable_properties: null,
     ...overrides,
   };
-  return { id, flat };
 }
 
 function makeDataScopeRow(
@@ -52,37 +45,51 @@ function makeDataScopeRow(
   conceptKey: string,
   scopeType: string,
   extra: Record<string, unknown> = {}
-) {
-  const flat = {
-    "Role Key": roleKey,
-    "Concept Key": conceptKey,
-    "Scope Type": scopeType,
-    "Relation Path": undefined,
-    "Field": undefined,
-    "Value": undefined,
+): Record<string, unknown> {
+  return {
+    id,
+    role_key: roleKey,
+    concept_key: conceptKey,
+    scope_type: scopeType,
+    relation_path: null,
+    field: null,
+    value: null,
     ...extra,
   };
-  return { id, flat };
 }
 
-// --- Setup: wire mock responses for queryDatabase + pageToFlatObject ---
+function makeScreenAccessRow(
+  id: string,
+  roleKey: string,
+  pageSlug: string,
+  visible: boolean
+): Record<string, unknown> {
+  return {
+    id,
+    role_key: roleKey,
+    page_slug: pageSlug,
+    visible,
+  };
+}
 
-function setupPermissionMocks(
-  permissions: Array<ReturnType<typeof makePermissionRow>>,
-  dataScopes: Array<ReturnType<typeof makeDataScopeRow>>
+// --- Setup: wire mock query responses ---
+
+function setupMocks(
+  permissions: Record<string, unknown>[],
+  dataScopes: Record<string, unknown>[],
+  screenAccess: Record<string, unknown>[] = []
 ) {
-  mockQueryDatabase.mockImplementation((dbId: string) => {
-    if (dbId === "fake-db-id-permissions") {
-      return Promise.resolve(permissions.map((p) => ({ ...p })));
+  mockQuery.mockImplementation((sql: string) => {
+    if (sql.includes("FROM permissions")) {
+      return Promise.resolve({ rows: permissions, rowCount: permissions.length });
     }
-    if (dbId === "fake-db-id-data_scopes") {
-      return Promise.resolve(dataScopes.map((d) => ({ ...d })));
+    if (sql.includes("FROM data_scopes")) {
+      return Promise.resolve({ rows: dataScopes, rowCount: dataScopes.length });
     }
-    return Promise.resolve([]);
-  });
-
-  mockPageToFlatObject.mockImplementation((row: Record<string, unknown>) => {
-    return (row as { flat: Record<string, unknown> }).flat;
+    if (sql.includes("FROM screen_access")) {
+      return Promise.resolve({ rows: screenAccess, rowCount: screenAccess.length });
+    }
+    return Promise.resolve({ rows: [], rowCount: 0 });
   });
 }
 
@@ -91,8 +98,7 @@ describe("RoleEngine", () => {
 
   beforeEach(() => {
     cache.clear();
-    mockQueryDatabase.mockReset();
-    mockPageToFlatObject.mockReset();
+    mockQuery.mockReset();
     engine = new RoleEngine();
   });
 
@@ -100,13 +106,13 @@ describe("RoleEngine", () => {
 
   describe("canPerformAction", () => {
     it("returns true when role has the requested permission", async () => {
-      setupPermissionMocks(
+      setupMocks(
         [
           makePermissionRow("p1", "director", "guest", {
-            "Can View": true,
-            "Can Edit": true,
-            "Can Create": true,
-            "Can Delete": true,
+            can_view: true,
+            can_edit: true,
+            can_create: true,
+            can_delete: true,
           }),
         ],
         []
@@ -119,13 +125,13 @@ describe("RoleEngine", () => {
     });
 
     it("returns false when role lacks the requested permission", async () => {
-      setupPermissionMocks(
+      setupMocks(
         [
           makePermissionRow("p1", "volunteer", "guest", {
-            "Can View": true,
-            "Can Edit": false,
-            "Can Create": false,
-            "Can Delete": false,
+            can_view: true,
+            can_edit: false,
+            can_create: false,
+            can_delete: false,
           }),
         ],
         []
@@ -137,8 +143,8 @@ describe("RoleEngine", () => {
       expect(await engine.canPerformAction("volunteer", "guest", "delete")).toBe(false);
     });
 
-    it("returns false when no permission record exists for the role+concept", async () => {
-      setupPermissionMocks(
+    it("returns false when no permission record exists (deny by default)", async () => {
+      setupMocks(
         [makePermissionRow("p1", "director", "guest")],
         []
       );
@@ -148,19 +154,18 @@ describe("RoleEngine", () => {
     });
 
     it("maps event action synonyms correctly", async () => {
-      setupPermissionMocks(
+      setupMocks(
         [
           makePermissionRow("p1", "liaison", "guest", {
-            "Can View": true,
-            "Can Edit": true,
-            "Can Create": true,
-            "Can Delete": false,
+            can_view: true,
+            can_edit: true,
+            can_create: true,
+            can_delete: false,
           }),
         ],
         []
       );
 
-      // EventAction → CrudAction mapping
       expect(await engine.canPerformAction("liaison", "guest", "created")).toBe(true);
       expect(await engine.canPerformAction("liaison", "guest", "updated")).toBe(true);
       expect(await engine.canPerformAction("liaison", "guest", "update")).toBe(true);
@@ -174,10 +179,10 @@ describe("RoleEngine", () => {
 
   describe("getVisibleProperties", () => {
     it("returns the property list for a valid role+concept", async () => {
-      setupPermissionMocks(
+      setupMocks(
         [
           makePermissionRow("p1", "liaison", "guest", {
-            "Visible Properties": "name,status,type,company",
+            visible_properties: ["name", "status", "type", "company"],
           }),
         ],
         []
@@ -188,24 +193,10 @@ describe("RoleEngine", () => {
     });
 
     it("returns empty array when no permission record exists", async () => {
-      setupPermissionMocks([], []);
+      setupMocks([], []);
 
       const props = await engine.getVisibleProperties("unknown", "guest");
       expect(props).toEqual([]);
-    });
-
-    it("handles comma-separated string values", async () => {
-      setupPermissionMocks(
-        [
-          makePermissionRow("p1", "volunteer", "guest", {
-            "Visible Properties": "name, department, photo",
-          }),
-        ],
-        []
-      );
-
-      const props = await engine.getVisibleProperties("volunteer", "guest");
-      expect(props).toEqual(["name", "department", "photo"]);
     });
   });
 
@@ -213,11 +204,11 @@ describe("RoleEngine", () => {
 
   describe("getEditableProperties", () => {
     it("returns editable properties when defined", async () => {
-      setupPermissionMocks(
+      setupMocks(
         [
           makePermissionRow("p1", "liaison", "guest", {
-            "Visible Properties": "name,status,type,company",
-            "Editable Properties": "status,company",
+            visible_properties: ["name", "status", "type", "company"],
+            editable_properties: ["status", "company"],
           }),
         ],
         []
@@ -228,18 +219,17 @@ describe("RoleEngine", () => {
     });
 
     it("falls back to visible properties when editable is not defined", async () => {
-      setupPermissionMocks(
+      setupMocks(
         [
           makePermissionRow("p1", "director", "guest", {
-            "Visible Properties": "name,status,type",
-            "Editable Properties": "",
+            visible_properties: ["name", "status", "type"],
+            editable_properties: null,
           }),
         ],
         []
       );
 
       const editable = await engine.getEditableProperties("director", "guest");
-      // Empty string parses to empty array → fallback to visibleProperties
       expect(editable).toEqual(["name", "status", "type"]);
     });
   });
@@ -248,10 +238,10 @@ describe("RoleEngine", () => {
 
   describe("filterRecord", () => {
     it("strips properties the role cannot see", async () => {
-      setupPermissionMocks(
+      setupMocks(
         [
           makePermissionRow("p1", "volunteer", "guest", {
-            "Visible Properties": "name,department",
+            visible_properties: ["name", "department"],
           }),
         ],
         []
@@ -273,7 +263,7 @@ describe("RoleEngine", () => {
     });
 
     it("returns empty object when no permission exists (deny by default)", async () => {
-      setupPermissionMocks([], []);
+      setupMocks([], []);
 
       const filtered = await engine.filterRecord("unknown", "guest", {
         name: "Secret Guest",
@@ -282,30 +272,43 @@ describe("RoleEngine", () => {
 
       expect(filtered).toEqual({});
     });
+
+    it("does not mutate the input record", async () => {
+      setupMocks(
+        [makePermissionRow("p1", "volunteer", "guest", { visible_properties: ["name"] })],
+        []
+      );
+
+      const record = { name: "Test", status: "Active", secret: "hidden" };
+      const original = { ...record };
+      await engine.filterRecord("volunteer", "guest", record);
+      expect(record).toEqual(original);
+    });
   });
 
   // --- filterWritePayload ---
 
   describe("filterWritePayload", () => {
     it("strips non-editable properties from write payload", async () => {
-      setupPermissionMocks(
+      setupMocks(
         [
           makePermissionRow("p1", "liaison", "guest", {
-            "Visible Properties": "name,status,type,company",
-            "Editable Properties": "status",
+            visible_properties: ["name", "status", "type", "company"],
+            editable_properties: ["status"],
           }),
         ],
         []
       );
 
-      const payload = {
-        name: "Hijacked Name",
-        status: "Confirmed",
-        type: "JP",
-      };
-
+      const payload = { name: "Hijacked Name", status: "Confirmed", type: "JP" };
       const filtered = await engine.filterWritePayload("liaison", "guest", payload);
       expect(filtered).toEqual({ status: "Confirmed" });
+    });
+
+    it("returns empty object when no permission exists", async () => {
+      setupMocks([], []);
+      const filtered = await engine.filterWritePayload("unknown", "guest", { name: "test" });
+      expect(filtered).toEqual({});
     });
   });
 
@@ -313,70 +316,44 @@ describe("RoleEngine", () => {
 
   describe("buildDataScopeFilter", () => {
     it("returns undefined for scope type 'all' (no restriction)", async () => {
-      setupPermissionMocks(
-        [],
-        [makeDataScopeRow("ds1", "director", "guest", "all")]
-      );
+      setupMocks([], [makeDataScopeRow("ds1", "director", "guest", "all")]);
 
       const filter = await engine.buildDataScopeFilter("director", "guest", "user-123");
       expect(filter).toBeUndefined();
     });
 
     it("builds relation filter for scope type 'relation'", async () => {
-      setupPermissionMocks(
+      setupMocks(
         [],
-        [
-          makeDataScopeRow("ds1", "liaison", "guest", "relation", {
-            "Relation Path": "Assigned Liaison",
-          }),
-        ]
+        [makeDataScopeRow("ds1", "liaison", "guest", "relation", { relation_path: "assigned_liaison" })]
       );
 
       const filter = await engine.buildDataScopeFilter("liaison", "guest", "user-abc");
-      expect(filter).toEqual({
-        property: "Assigned Liaison",
-        relation: { contains: "user-abc" },
-      });
+      expect(filter).toEqual({ column: "assigned_liaison", operator: "=", value: "user-abc" });
     });
 
     it("builds field filter for scope type 'field'", async () => {
-      setupPermissionMocks(
+      setupMocks(
         [],
-        [
-          makeDataScopeRow("ds1", "dept_head", "guest", "field", {
-            "Field": "Department",
-            "Value": "Anime",
-          }),
-        ]
+        [makeDataScopeRow("ds1", "dept_head", "guest", "field", { field: "department", value: "Anime" })]
       );
 
       const filter = await engine.buildDataScopeFilter("dept_head", "guest", "user-xyz");
-      expect(filter).toEqual({
-        property: "Department",
-        rich_text: { equals: "Anime" },
-      });
+      expect(filter).toEqual({ column: "department", operator: "=", value: "Anime" });
     });
 
     it("builds department filter for scope type 'department'", async () => {
-      setupPermissionMocks(
+      setupMocks(
         [],
-        [
-          makeDataScopeRow("ds1", "dept_head", "staff", "department", {
-            "Field": "Department",
-            "Value": "Gaming",
-          }),
-        ]
+        [makeDataScopeRow("ds1", "dept_head", "staff", "department", { field: "department", value: "Gaming" })]
       );
 
       const filter = await engine.buildDataScopeFilter("dept_head", "staff", "user-xyz");
-      expect(filter).toEqual({
-        property: "Department",
-        select: { equals: "Gaming" },
-      });
+      expect(filter).toEqual({ column: "department", operator: "=", value: "Gaming" });
     });
 
     it("returns undefined when no data scope exists for role+concept", async () => {
-      setupPermissionMocks([], []);
+      setupMocks([], []);
 
       const filter = await engine.buildDataScopeFilter("volunteer", "guest", "user-123");
       expect(filter).toBeUndefined();
@@ -387,25 +364,18 @@ describe("RoleEngine", () => {
 
   describe("reload", () => {
     it("forces fresh load on next access after reload", async () => {
-      setupPermissionMocks(
-        [
-          makePermissionRow("p1", "director", "guest", {
-            "Can View": true,
-          }),
-        ],
+      setupMocks(
+        [makePermissionRow("p1", "director", "guest", { can_view: true })],
         []
       );
 
-      // First access loads from "Notion"
       expect(await engine.canPerformAction("director", "guest", "view")).toBe(true);
-      const firstCallCount = mockQueryDatabase.mock.calls.length;
+      const firstCallCount = mockQuery.mock.calls.length;
 
-      // Reload clears cache
       engine.reload();
 
-      // Second access should hit "Notion" again
       expect(await engine.canPerformAction("director", "guest", "view")).toBe(true);
-      expect(mockQueryDatabase.mock.calls.length).toBeGreaterThan(firstCallCount);
+      expect(mockQuery.mock.calls.length).toBeGreaterThan(firstCallCount);
     });
   });
 
@@ -413,47 +383,27 @@ describe("RoleEngine", () => {
 
   describe("chained RBAC scenario: multi-role access control", () => {
     beforeEach(() => {
-      setupPermissionMocks(
+      setupMocks(
         [
-          // Director: full access
           makePermissionRow("p1", "director", "guest", {
-            "Can View": true,
-            "Can Edit": true,
-            "Can Create": true,
-            "Can Delete": true,
-            "Visible Properties": "name,status,type,company,dietary,travel_confirmation,salary",
-            "Editable Properties": "name,status,type,company,dietary,travel_confirmation,salary",
+            can_view: true, can_edit: true, can_create: true, can_delete: true,
+            visible_properties: ["name", "status", "type", "company", "dietary", "travel_confirmation", "salary"],
+            editable_properties: ["name", "status", "type", "company", "dietary", "travel_confirmation", "salary"],
           }),
-          // Liaison: view + edit assigned guests, limited fields
           makePermissionRow("p2", "liaison", "guest", {
-            "Can View": true,
-            "Can Edit": true,
-            "Can Create": false,
-            "Can Delete": false,
-            "Visible Properties": "name,status,type,company,dietary",
-            "Editable Properties": "status",
+            can_view: true, can_edit: true, can_create: false, can_delete: false,
+            visible_properties: ["name", "status", "type", "company", "dietary"],
+            editable_properties: ["status"],
           }),
-          // Volunteer: view-only, minimal fields
           makePermissionRow("p3", "volunteer", "guest", {
-            "Can View": true,
-            "Can Edit": false,
-            "Can Create": false,
-            "Can Delete": false,
-            "Visible Properties": "name,department",
+            can_view: true, can_edit: false, can_create: false, can_delete: false,
+            visible_properties: ["name", "department"],
           }),
         ],
         [
-          // Director: sees all records
           makeDataScopeRow("ds1", "director", "guest", "all"),
-          // Liaison: sees only assigned guests
-          makeDataScopeRow("ds2", "liaison", "guest", "relation", {
-            "Relation Path": "Assigned Liaison",
-          }),
-          // Volunteer: sees only guests in their department
-          makeDataScopeRow("ds3", "volunteer", "guest", "department", {
-            "Field": "Department",
-            "Value": "Anime",
-          }),
+          makeDataScopeRow("ds2", "liaison", "guest", "relation", { relation_path: "assigned_liaison" }),
+          makeDataScopeRow("ds3", "volunteer", "guest", "department", { field: "department", value: "Anime" }),
         ]
       );
     });
@@ -483,18 +433,14 @@ describe("RoleEngine", () => {
       expect(filtered).not.toHaveProperty("travel_confirmation");
 
       const writeFiltered = await engine.filterWritePayload("liaison", "guest", {
-        name: "Hijack",
-        status: "Cancelled",
+        name: "Hijack", status: "Cancelled",
       });
       expect(writeFiltered).toEqual({ status: "Cancelled" });
     });
 
     it("volunteer sees only name and department", async () => {
       const filtered = await engine.filterRecord("volunteer", "guest", guestRecord);
-      expect(filtered).toEqual({
-        name: "Miyazaki Hayao",
-        department: "Anime",
-      });
+      expect(filtered).toEqual({ name: "Miyazaki Hayao", department: "Anime" });
     });
 
     it("director has no data scope filter", async () => {
@@ -504,18 +450,146 @@ describe("RoleEngine", () => {
 
     it("liaison data scope is relation-based", async () => {
       const filter = await engine.buildDataScopeFilter("liaison", "guest", "liaison-001");
-      expect(filter).toEqual({
-        property: "Assigned Liaison",
-        relation: { contains: "liaison-001" },
-      });
+      expect(filter).toEqual({ column: "assigned_liaison", operator: "=", value: "liaison-001" });
     });
 
     it("volunteer data scope is department-based", async () => {
       const filter = await engine.buildDataScopeFilter("volunteer", "guest", "vol-001");
-      expect(filter).toEqual({
-        property: "Department",
-        select: { equals: "Anime" },
-      });
+      expect(filter).toEqual({ column: "department", operator: "=", value: "Anime" });
+    });
+  });
+
+  // --- Screen Access (PRD Section 6) ---
+
+  describe("checkScreenAccess", () => {
+    it("returns false when no screen_access row exists for the role+page (deny by default)", async () => {
+      setupMocks([], [], [
+        makeScreenAccessRow("sa1", "director", "dashboard", true),
+      ]);
+
+      expect(await engine.checkScreenAccess("volunteer", "dashboard")).toBe(false);
+      expect(await engine.checkScreenAccess("director", "settings")).toBe(false);
+    });
+
+    it("returns true when visible is true for the role+page", async () => {
+      setupMocks([], [], [
+        makeScreenAccessRow("sa1", "director", "dashboard", true),
+        makeScreenAccessRow("sa2", "director", "guests", true),
+      ]);
+
+      expect(await engine.checkScreenAccess("director", "dashboard")).toBe(true);
+      expect(await engine.checkScreenAccess("director", "guests")).toBe(true);
+    });
+
+    it("returns false when visible is false for the role+page", async () => {
+      setupMocks([], [], [
+        makeScreenAccessRow("sa1", "volunteer", "admin-panel", false),
+      ]);
+
+      expect(await engine.checkScreenAccess("volunteer", "admin-panel")).toBe(false);
+    });
+  });
+
+  describe("getScreenAccess", () => {
+    it("returns only screen_access records for the given role", async () => {
+      setupMocks([], [], [
+        makeScreenAccessRow("sa1", "director", "dashboard", true),
+        makeScreenAccessRow("sa2", "director", "guests", true),
+        makeScreenAccessRow("sa3", "volunteer", "dashboard", true),
+        makeScreenAccessRow("sa4", "liaison", "guests", false),
+      ]);
+
+      const directorAccess = await engine.getScreenAccess("director");
+      expect(directorAccess).toHaveLength(2);
+      expect(directorAccess.every((s) => s.roleKey === "director")).toBe(true);
+
+      const volunteerAccess = await engine.getScreenAccess("volunteer");
+      expect(volunteerAccess).toHaveLength(1);
+      expect(volunteerAccess[0].pageSlug).toBe("dashboard");
+    });
+  });
+
+  describe("reload clears screen access cache", () => {
+    it("forces fresh screen_access load after reload", async () => {
+      setupMocks([], [], [
+        makeScreenAccessRow("sa1", "director", "dashboard", true),
+      ]);
+
+      expect(await engine.checkScreenAccess("director", "dashboard")).toBe(true);
+      const firstCallCount = mockQuery.mock.calls.length;
+
+      engine.reload();
+
+      expect(await engine.checkScreenAccess("director", "dashboard")).toBe(true);
+      expect(mockQuery.mock.calls.length).toBeGreaterThan(firstCallCount);
+    });
+  });
+
+  // --- Edge Cases (PRD Section 7.3) ---
+
+  describe("edge cases (PRD 7.3)", () => {
+    it("E-02: empty visibleProperties array causes filterRecord to return {}", async () => {
+      setupMocks(
+        [
+          makePermissionRow("p1", "intern", "guest", {
+            can_view: true,
+            visible_properties: [],
+          }),
+        ],
+        []
+      );
+
+      const record = { name: "Test Guest", status: "Confirmed", type: "JP" };
+      const filtered = await engine.filterRecord("intern", "guest", record);
+      expect(filtered).toEqual({});
+    });
+
+    it("E-03: data scope relation type with null relation_path returns undefined", async () => {
+      setupMocks(
+        [],
+        [makeDataScopeRow("ds1", "liaison", "guest", "relation", { relation_path: null })]
+      );
+
+      const filter = await engine.buildDataScopeFilter("liaison", "guest", "user-abc");
+      expect(filter).toBeUndefined();
+    });
+
+    it("E-04: data scope field type with null field returns undefined", async () => {
+      setupMocks(
+        [],
+        [makeDataScopeRow("ds1", "dept_head", "guest", "field", { field: null, value: "Anime" })]
+      );
+
+      const filter = await engine.buildDataScopeFilter("dept_head", "guest", "user-xyz");
+      expect(filter).toBeUndefined();
+    });
+
+    it("E-04b: data scope field type with null value returns undefined", async () => {
+      setupMocks(
+        [],
+        [makeDataScopeRow("ds1", "dept_head", "guest", "field", { field: "department", value: null })]
+      );
+
+      const filter = await engine.buildDataScopeFilter("dept_head", "guest", "user-xyz");
+      expect(filter).toBeUndefined();
+    });
+
+    it("E-07: role with zero permission rows returns false for all actions and [] for properties", async () => {
+      setupMocks(
+        [
+          // Other roles have permissions, but "observer" has none
+          makePermissionRow("p1", "director", "guest", { can_view: true }),
+        ],
+        []
+      );
+
+      expect(await engine.canPerformAction("observer", "guest", "view")).toBe(false);
+      expect(await engine.canPerformAction("observer", "guest", "create")).toBe(false);
+      expect(await engine.canPerformAction("observer", "guest", "edit")).toBe(false);
+      expect(await engine.canPerformAction("observer", "guest", "delete")).toBe(false);
+
+      expect(await engine.getVisibleProperties("observer", "guest")).toEqual([]);
+      expect(await engine.getEditableProperties("observer", "guest")).toEqual([]);
     });
   });
 });
