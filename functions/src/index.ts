@@ -19,6 +19,12 @@ import { configRouter } from "./api/config";
 import { adminAuditRouter } from "./api/admin-audit";
 import { versioningRouter } from "./api/versioning";
 import { registryRouter } from "./api/registry";
+import { externalRouter } from "./api/external";
+import { mcpRouter } from "./api/mcp";
+import { ontologyBuilderRouter } from "./api/ontology-builder";
+import { ciQaRouter } from "./api/ci-qa";
+import { registerWebhookDelivery } from "./api/webhooks";
+import { rateLimiter } from "./api/rate-limiter";
 
 // --- Initialize Firebase Admin ---
 
@@ -43,6 +49,8 @@ app.use(
       "Authorization",
       "X-API-Key",
       "X-MCP-Delegation",
+      "X-Guest-Token",
+      "X-Driver-Token",
       // Dev headers — only effective in emulator (auth middleware rejects bypass tokens in prod)
       ...(process.env.FUNCTIONS_EMULATOR ? ["X-Dev-Email", "X-Dev-Role", "X-Dev-Actor-Type"] : []),
     ],
@@ -59,6 +67,10 @@ app.use(authMiddleware);
 
 // Role resolution — runs on all routes, attaches role if user is authenticated
 app.use(resolveRole);
+
+// Rate limiter — runs after auth resolution, before route handlers
+app.use("/api/domains", rateLimiter());
+app.use("/api/action", rateLimiter());
 
 // --- Health check ---
 
@@ -83,6 +95,14 @@ app.use("/api/ontology", ontologyRouter);
 app.use("/api/admin", adminAuditRouter);
 app.use("/api/ontology", versioningRouter);
 app.use("/api/registry", registryRouter);
+app.use("/api/external", externalRouter);
+app.use("/api/mcp", mcpRouter);
+app.use("/api/builder", ontologyBuilderRouter);
+app.use("/api/config-changes", ciQaRouter);
+
+// --- Webhook delivery ---
+
+registerWebhookDelivery();
 
 // --- 404 handler ---
 
