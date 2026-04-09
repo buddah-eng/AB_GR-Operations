@@ -14,8 +14,9 @@ These are not features. They are mandatory verification procedures that run afte
 | `process/phase-discipline.md` | One phase at a time, read PRD before coding, no combining phases, honest status | Always |
 | `process/session-state.md` | Save corrections, gap analyses, and phase status to memory immediately | Always |
 | `process/phase-completion.md` | Iterative multi-pass verification cycle. Automated scans → write pipeline → acceptance criteria → fresh-eyes → build. Loops until zero findings. | Before declaring ANY phase complete |
+| `process/deferred-backlog.md` | Living tracker for deferred acceptance criteria. Each has a gate condition. Gates checked at phase start. Met gates become current-phase requirements. | At phase start and when deferring |
 
-**These are not optional.** A phase cannot be declared complete unless all 6 process PRDs are satisfied. The phase-completion protocol is the final gate — it runs in cycles until a complete cycle finds zero issues.
+**These are not optional.** A phase cannot be declared complete unless all 7 process PRDs are satisfied. The phase-completion protocol is the final gate — it runs in cycles until a complete cycle finds zero issues. Any deferred items must be in the backlog with gate conditions.
 
 ---
 

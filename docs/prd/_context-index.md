@@ -32,6 +32,7 @@ to decide if you need to load the full document.
 | Phase Discipline | `process/phase-discipline.md` | One phase at a time. Read PRD before code. No combining. Honest status reporting. | `process`, `discipline` | done |
 | Session State | `process/session-state.md` | Save corrections, gap analyses, phase status to memory immediately. No deferred saves. | `process`, `memory`, `state` | done |
 | Phase Completion | `process/phase-completion.md` | Iterative multi-pass verification: automated scans → write pipeline → acceptance criteria → fresh-eyes → build. Cycles until zero findings. | `process`, `verification`, `gate`, `convergence` | done |
+| Deferred Backlog | `process/deferred-backlog.md` | Living tracker for deferred acceptance criteria with gate conditions. Checked at every phase start. Met gates become requirements. | `process`, `deferred`, `gate`, `tracking` | living |
 
 ### Platform
 
