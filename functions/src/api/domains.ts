@@ -142,7 +142,9 @@ domainRouter.get("/:concept", async (req: Request, res: Response) => {
           roleKey, conceptKey, record.properties
         );
         // Decrypt PII only after RBAC filter — if role can't see the field, decryption never runs
-        const decryptedProps = isEncryptionConfigured() ? decryptPiiFields(filteredProps) : filteredProps;
+        const decryptedProps = isEncryptionConfigured()
+          ? decryptPiiFields(filteredProps, { recordId: record.id, actorId: req.user?.uid ?? "anonymous" })
+          : filteredProps;
         return { ...record, properties: decryptedProps };
       })
     );
@@ -190,7 +192,9 @@ domainRouter.get("/:concept/:id", async (req: Request, res: Response) => {
     const filteredProps = await roleEngine.filterRecord(
       roleKey, conceptKey, record.properties
     );
-    const decryptedProps = isEncryptionConfigured() ? decryptPiiFields(filteredProps) : filteredProps;
+    const decryptedProps = isEncryptionConfigured()
+      ? decryptPiiFields(filteredProps, { recordId: record.id, actorId: req.user?.uid ?? "anonymous" })
+      : filteredProps;
 
     res.json({
       success: true,
@@ -269,7 +273,9 @@ domainRouter.post("/:concept", async (req: Request, res: Response) => {
     const filteredProps = await roleEngine.filterRecord(
       roleKey, conceptKey, record.properties
     );
-    const decryptedProps = isEncryptionConfigured() ? decryptPiiFields(filteredProps) : filteredProps;
+    const decryptedProps = isEncryptionConfigured()
+      ? decryptPiiFields(filteredProps, { recordId: record.id, actorId: req.user?.uid ?? "anonymous" })
+      : filteredProps;
 
     res.status(201).json({
       success: true,
@@ -383,7 +389,9 @@ domainRouter.put("/:concept/:id", async (req: Request, res: Response) => {
     const filteredProps = await roleEngine.filterRecord(
       roleKey, conceptKey, record.properties
     );
-    const decryptedProps = isEncryptionConfigured() ? decryptPiiFields(filteredProps) : filteredProps;
+    const decryptedProps = isEncryptionConfigured()
+      ? decryptPiiFields(filteredProps, { recordId: record.id, actorId: req.user?.uid ?? "anonymous" })
+      : filteredProps;
 
     res.json({ success: true, data: { ...record, properties: decryptedProps } } as ApiResponse<DomainRecord>);
   } catch (err) {

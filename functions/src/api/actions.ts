@@ -13,6 +13,8 @@ import type { Request, Response } from "express";
 import * as logger from "firebase-functions/logger";
 import { requireAuth } from "../auth/middleware";
 import { query } from "../db/client";
+import { auditContextFromRequest, withAuditContext, logAuditClaim } from "../audit/context";
+import { emit, createDomainEvent } from "../events/bus";
 
 export const actionRouter = Router();
 
@@ -258,33 +260,67 @@ async function handleGetGuestPairings(params: Readonly<Record<string, unknown>>)
   return result.rows;
 }
 
-async function handleCreateGuest(params: Readonly<Record<string, unknown>>): Promise<unknown> {
+async function handleCreateGuest(params: Readonly<Record<string, unknown>>, req: Request): Promise<unknown> {
   const data = params.data as Record<string, unknown> | undefined;
   if (!data) throw new Error("data object is required");
 
-  const result = await query(
-    `INSERT INTO guests (name, type, department, status, company, properties)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-    [data.name, data.type, data.department, data.status ?? "draft", data.company, JSON.stringify(data)]
+  const auditCtx = auditContextFromRequest(req);
+  const result = await withAuditContext(auditCtx, (client) =>
+    client.query(
+      `INSERT INTO guests (name, type, department, status, company, properties)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+      [data.name, data.type, data.department, data.status ?? "draft", data.company, JSON.stringify(data)]
+    )
   );
 
-  return { status: "APPLIED", pk: result.rows[0].id };
+  const pk = result.rows[0].id as string;
+  logAuditClaim(auditCtx, "POST /api/action (createGuest)");
+
+  const event = createDomainEvent({
+    eventName: "guest.created",
+    domain: "guest",
+    action: "created",
+    recordId: pk,
+    newValues: data,
+    triggeredBy: req.user?.email ?? "system",
+    changeSet: auditCtx.changeSet,
+  });
+  await emit(event);
+
+  return { status: "APPLIED", pk };
 }
 
-async function handleCreateStaff(params: Readonly<Record<string, unknown>>): Promise<unknown> {
+async function handleCreateStaff(params: Readonly<Record<string, unknown>>, req: Request): Promise<unknown> {
   const data = params.data as Record<string, unknown> | undefined;
   if (!data) throw new Error("data object is required");
 
-  const result = await query(
-    `INSERT INTO staff (name, email, role_key, department, phone, properties)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-    [data.name, data.email, data.role_key, data.department, data.phone, JSON.stringify(data)]
+  const auditCtx = auditContextFromRequest(req);
+  const result = await withAuditContext(auditCtx, (client) =>
+    client.query(
+      `INSERT INTO staff (name, email, role_key, department, phone, properties)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+      [data.name, data.email, data.role_key, data.department, data.phone, JSON.stringify(data)]
+    )
   );
 
-  return { status: "APPLIED", pk: result.rows[0].id };
+  const pk = result.rows[0].id as string;
+  logAuditClaim(auditCtx, "POST /api/action (createStaff)");
+
+  const event = createDomainEvent({
+    eventName: "staff.created",
+    domain: "staff",
+    action: "created",
+    recordId: pk,
+    newValues: data,
+    triggeredBy: req.user?.email ?? "system",
+    changeSet: auditCtx.changeSet,
+  });
+  await emit(event);
+
+  return { status: "APPLIED", pk };
 }
 
-async function handleUpdateGuest(params: Readonly<Record<string, unknown>>): Promise<unknown> {
+async function handleUpdateGuest(params: Readonly<Record<string, unknown>>, req: Request): Promise<unknown> {
   const id = String(params.guestId ?? params.id ?? "");
   const patch = params.patch as Record<string, unknown> | undefined;
   if (!id || !patch) throw new Error("guestId and patch are required");
@@ -314,15 +350,33 @@ async function handleUpdateGuest(params: Readonly<Record<string, unknown>>): Pro
   }
 
   values.push(id);
-  await query(
-    `UPDATE guests SET ${setClauses.join(", ")} WHERE id = $${idx}`,
-    values
+
+  const auditCtx = auditContextFromRequest(req);
+  await withAuditContext(auditCtx, (client) =>
+    client.query(
+      `UPDATE guests SET ${setClauses.join(", ")} WHERE id = $${idx}`,
+      values
+    )
   );
+
+  logAuditClaim(auditCtx, `POST /api/action (updateGuest ${id})`);
+
+  const event = createDomainEvent({
+    eventName: "guest.updated",
+    domain: "guest",
+    action: "updated",
+    recordId: id,
+    changedFields: Object.keys(patch),
+    newValues: patch,
+    triggeredBy: req.user?.email ?? "system",
+    changeSet: auditCtx.changeSet,
+  });
+  await emit(event);
 
   return { status: "APPLIED" };
 }
 
-async function handleUpdatePrepItem(params: Readonly<Record<string, unknown>>): Promise<unknown> {
+async function handleUpdatePrepItem(params: Readonly<Record<string, unknown>>, req: Request): Promise<unknown> {
   const id = String(params.prepId ?? params.id ?? "");
   const patch = params.patch as Record<string, unknown> | undefined;
   if (!id || !patch) throw new Error("prepId and patch are required");
@@ -344,56 +398,91 @@ async function handleUpdatePrepItem(params: Readonly<Record<string, unknown>>): 
   }
 
   values.push(id);
-  await query(
-    `UPDATE prep_items SET ${setClauses.join(", ")} WHERE id = $${idx}`,
-    values
+
+  const auditCtx = auditContextFromRequest(req);
+  await withAuditContext(auditCtx, (client) =>
+    client.query(
+      `UPDATE prep_items SET ${setClauses.join(", ")} WHERE id = $${idx}`,
+      values
+    )
   );
+
+  logAuditClaim(auditCtx, `POST /api/action (updatePrepItem ${id})`);
+
+  const event = createDomainEvent({
+    eventName: "prep_item.updated",
+    domain: "prep_item",
+    action: "updated",
+    recordId: id,
+    changedFields: Object.keys(patch),
+    newValues: patch,
+    triggeredBy: req.user?.email ?? "system",
+    changeSet: auditCtx.changeSet,
+  });
+  await emit(event);
 
   return { status: "APPLIED" };
 }
 
-async function handleWizardCreateGuest(params: Readonly<Record<string, unknown>>): Promise<unknown> {
+async function handleWizardCreateGuest(params: Readonly<Record<string, unknown>>, req: Request): Promise<unknown> {
   const guestData = params.guest as Record<string, unknown> | undefined;
   const pairings = (params.pairings ?? []) as ReadonlyArray<Record<string, unknown>>;
   const schedule = (params.schedule ?? []) as ReadonlyArray<Record<string, unknown>>;
 
   if (!guestData) throw new Error("guest data object is required");
 
-  // Create guest
-  const guestResult = await query(
-    `INSERT INTO guests (name, type, department, status, company, properties)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-    [guestData.name, guestData.type, guestData.department, guestData.status ?? "draft", guestData.company, JSON.stringify(guestData)]
-  );
-  const guestId = guestResult.rows[0].id as string;
+  const auditCtx = auditContextFromRequest(req);
 
-  // Create pairings
-  const pairingResults = await Promise.all(
-    pairings.map((p) =>
-      query(
+  // Create guest, pairings, and schedule within audited transaction
+  const result = await withAuditContext(auditCtx, async (client) => {
+    const guestResult = await client.query(
+      `INSERT INTO guests (name, type, department, status, company, properties)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+      [guestData.name, guestData.type, guestData.department, guestData.status ?? "draft", guestData.company, JSON.stringify(guestData)]
+    );
+    const guestId = guestResult.rows[0].id as string;
+
+    const pairingResults: Array<{ status: string; pk: string }> = [];
+    for (const p of pairings) {
+      const r = await client.query(
         `INSERT INTO pairings (guest_id, staff_id, role, properties) VALUES ($1, $2, $3, $4) RETURNING id`,
         [guestId, p.staff_id, p.role, JSON.stringify(p)]
-      ).then((r) => ({ status: "APPLIED", pk: r.rows[0].id }))
-    )
-  );
+      );
+      pairingResults.push({ status: "APPLIED", pk: r.rows[0].id as string });
+    }
 
-  // Create schedule events
-  const scheduleResults = await Promise.all(
-    schedule.map((s) =>
-      query(
+    const scheduleResults: Array<{ status: string; pk: string }> = [];
+    for (const s of schedule) {
+      const r = await client.query(
         `INSERT INTO schedule_events (name, event_type, start_time, end_time, status, properties)
          VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
         [s.name ?? s.activity, s.event_type, s.start_time, s.end_time, "scheduled", JSON.stringify({ ...s, guest_id: guestId })]
-      ).then((r) => ({ status: "APPLIED", pk: r.rows[0].id }))
-    )
-  );
+      );
+      scheduleResults.push({ status: "APPLIED", pk: r.rows[0].id as string });
+    }
 
-  return {
-    guestResult: { status: "APPLIED", pk: guestId },
-    pairingResults,
-    scheduleResults,
-    prepResults: [],
-  };
+    return {
+      guestResult: { status: "APPLIED", pk: guestId },
+      pairingResults,
+      scheduleResults,
+      prepResults: [] as Array<{ status: string; pk: string }>,
+    };
+  });
+
+  logAuditClaim(auditCtx, "POST /api/action (wizardCreateGuest)");
+
+  const event = createDomainEvent({
+    eventName: "guest.created",
+    domain: "guest",
+    action: "created",
+    recordId: result.guestResult.pk,
+    newValues: guestData,
+    triggeredBy: req.user?.email ?? "system",
+    changeSet: auditCtx.changeSet,
+  });
+  await emit(event);
+
+  return result;
 }
 
 async function handleGetConfig(): Promise<unknown> {

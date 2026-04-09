@@ -16,6 +16,9 @@ import { domainRouter } from "./api/domains";
 import { ontologyRouter } from "./api/ontology-routes";
 import { actionRouter } from "./api/actions";
 import { configRouter } from "./api/config";
+import { adminAuditRouter } from "./api/admin-audit";
+import { versioningRouter } from "./api/versioning";
+import { registryRouter } from "./api/registry";
 
 // --- Initialize Firebase Admin ---
 
@@ -77,6 +80,9 @@ app.use("/api/config", configRouter);
 app.use("/api/action", actionRouter);
 app.use("/api/domains", domainRouter);
 app.use("/api/ontology", ontologyRouter);
+app.use("/api/admin", adminAuditRouter);
+app.use("/api/ontology", versioningRouter);
+app.use("/api/registry", registryRouter);
 
 // --- 404 handler ---
 

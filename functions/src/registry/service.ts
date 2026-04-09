@@ -416,6 +416,11 @@ export async function detectDuplicates(
 export async function createAnalyticsSnapshot(
   conventionYear: number
 ): Promise<{ snapshotTable: string; rowCount: number }> {
+  if (!/^\d{4}$/.test(String(conventionYear))) {
+    throw new Error(
+      `Invalid conventionYear "${conventionYear}": must be a 4-digit integer.`
+    );
+  }
   const tableName = `analytics_snapshot_${conventionYear}`;
 
   await query(
