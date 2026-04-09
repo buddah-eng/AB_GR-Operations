@@ -18,6 +18,7 @@ import { actionRouter } from "./api/actions";
 import { configRouter } from "./api/config";
 import { externalRouter } from "./api/external";
 import { adminAuditRouter } from "./api/admin-audit";
+import { mcpRouter } from "./api/mcp";
 import { registerWebhookDelivery } from "./api/webhooks";
 import { registerWorkflowEngine } from "./workflows/engine";
 
@@ -85,6 +86,7 @@ app.use("/api/domains", domainRouter);
 app.use("/api/ontology", ontologyRouter);
 app.use("/api/external", externalRouter);
 app.use("/api/admin", adminAuditRouter);
+app.use("/api/mcp", mcpRouter);
 
 // Register event bus handlers
 registerWorkflowEngine();
