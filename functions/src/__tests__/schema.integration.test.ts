@@ -363,7 +363,43 @@ describe("Append-only audit rules", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 10. NOT NULL enforces on audit change_set
+// 10. updated_at triggers exist
+// ---------------------------------------------------------------------------
+
+describe("updated_at triggers", () => {
+  it("should have set_updated_at triggers on all tables with updated_at columns", async () => {
+    const tablesWithUpdatedAt = [
+      "roles",
+      "users",
+      "guests",
+      "staff",
+      "schedule_events",
+      "prep_items",
+    ];
+
+    const result = await db.query<{
+      event_object_table: string;
+      trigger_name: string;
+    }>(
+      `SELECT event_object_table, trigger_name
+         FROM information_schema.triggers
+        WHERE trigger_schema = 'public'
+          AND trigger_name = 'set_updated_at'
+        ORDER BY event_object_table`
+    );
+
+    const triggeredTables = new Set(
+      result.rows.map((r) => r.event_object_table)
+    );
+
+    for (const table of tablesWithUpdatedAt) {
+      expect(triggeredTables.has(table)).toBe(true);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 11. NOT NULL enforces on audit change_set
 // ---------------------------------------------------------------------------
 
 describe("NOT NULL constraints", () => {
