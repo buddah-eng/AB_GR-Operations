@@ -31,6 +31,7 @@ to decide if you need to load the full document.
 | Acceptance Gate | `process/acceptance-gate.md` | Line-by-line verification of every acceptance criteria with evidence before phase advancement. | `process`, `verification`, `gate` | done |
 | Phase Discipline | `process/phase-discipline.md` | One phase at a time. Read PRD before code. No combining. Honest status reporting. | `process`, `discipline` | done |
 | Session State | `process/session-state.md` | Save corrections, gap analyses, phase status to memory immediately. No deferred saves. | `process`, `memory`, `state` | done |
+| Phase Completion | `process/phase-completion.md` | Iterative multi-pass verification: automated scans → write pipeline → acceptance criteria → fresh-eyes → build. Cycles until zero findings. | `process`, `verification`, `gate`, `convergence` | done |
 
 ### Platform
 

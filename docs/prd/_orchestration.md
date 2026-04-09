@@ -13,8 +13,9 @@ These are not features. They are mandatory verification procedures that run afte
 | `process/acceptance-gate.md` | Line-by-line verification of every acceptance criteria with evidence (file+line+test) | Before declaring any phase complete |
 | `process/phase-discipline.md` | One phase at a time, read PRD before coding, no combining phases, honest status | Always |
 | `process/session-state.md` | Save corrections, gap analyses, and phase status to memory immediately | Always |
+| `process/phase-completion.md` | Iterative multi-pass verification cycle. Automated scans → write pipeline → acceptance criteria → fresh-eyes → build. Loops until zero findings. | Before declaring ANY phase complete |
 
-**These are not optional.** A phase cannot be declared complete unless all 5 process PRDs are satisfied.
+**These are not optional.** A phase cannot be declared complete unless all 6 process PRDs are satisfied. The phase-completion protocol is the final gate — it runs in cycles until a complete cycle finds zero issues.
 
 ---
 
