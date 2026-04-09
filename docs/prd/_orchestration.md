@@ -85,7 +85,7 @@ Depends on Phase 2 core services.
 - Ontology management (scoping → builder → CI/QA) is sequential
 - API surface (integration, external, MCP) can run in parallel — all depend on domain-crud + auth
 
-### Phase 4 — Automation + UI Rendering
+### Phase 4A — Automation + Backend Services
 
 Depends on Phase 2-3 core + API.
 
@@ -93,22 +93,66 @@ Depends on Phase 2-3 core + API.
 |-----|------|------------|
 | `automation/workflow-engine.md` | Executor, trigger evaluation, condition matching, transactions | event-bus, condition-expression, domain-crud |
 | `automation/workflow-actions.md` | Each action type spec'd: create_record, notify, generate_doc, call_api, sync_calendar, lookup_registry | workflow-engine, domain-crud, integration-patterns |
-| `automation/workflow-builder.md` | Visual node editor for building workflows | workflow-engine, workflow-actions, condition-builder-ui |
-| `ui/dynamic-forms.md` | FormKit schema bridge, DynamicForm component, wizard/2-col layouts | ontology-engine, domain-crud, condition-expression |
-| `ui/view-renderer.md` | Table, kanban, timeline, dashboard widget rendering | ontology-engine, domain-crud |
-| `ui/condition-builder-ui.md` | Shared visual builder for ConditionExpressions | condition-expression |
-| `ui/form-view-builder.md` | Drag-drop config UI for forms + views | dynamic-forms, view-renderer, condition-builder-ui, ontology-web-builder |
-| `ui/in-app-documents.md` | Contract/itinerary rendering as first-class views, PDF export | dynamic-forms, view-renderer |
-| `ui/builder-to-operator.md` | Property→input/column mapping, default form/view auto-generation, ontology change impact, builder guardrails | ontology-engine, dynamic-forms, view-renderer |
 | `platform/template-infrastructure.md` | Unified template system (record sets, notifications, documents, presets, workflows). Replaces 6+ separate template tables. | ontology-engine, versioning, workflow-actions |
+| `ui/builder-to-operator.md` | Property→input/column mapping, default form/view auto-generation, ontology change impact, builder guardrails | ontology-engine |
+| `ui/in-app-documents.md` | Contract/itinerary rendering as first-class views, PDF export | condition-expression |
 
-**Parallel tracks in Phase 4:**
-- Automation (engine → actions → builder) is sequential
-- UI rendering (forms + views + condition builder) can run in parallel
-- builder-to-operator defines rendering rules that dynamic-forms and view-renderer implement
-- template-infrastructure provides the storage that workflow-actions and in-app-documents consume
-- form-view-builder depends on both forms and views completing
-- in-app-documents depends on forms + views
+**Parallel tracks in Phase 4A:**
+- Workflow engine → actions is sequential; template-infrastructure parallel
+- builder-to-operator and in-app-documents are backend services, parallel
+
+### Phase 4B — Data Infrastructure
+
+Depends on Phase 4A (workflows, templates provide the action layer that data infrastructure routes through).
+
+| PRD | What | Depends On |
+|-----|------|------------|
+| `data-infrastructure/data-routing.md` | Field-level routing & fan-out with PII filtering | event-bus, rbac-engine, encryption |
+| `data-infrastructure/data-transforms.md` | 9 transform types, composable chains, ConditionExpression integration | data-routing, condition-expression |
+| `data-infrastructure/internal-pipelines.md` | Cross-department data flows with stages, error handling, dead letter queue | data-routing, data-transforms, workflow-engine |
+| `data-infrastructure/external-pipelines.md` | Third-party integrations (FlightAware, Guidebook, Google Calendar), sync state, conflict resolution | data-routing, data-transforms, integration-patterns |
+| `data-infrastructure/data-quality.md` | Completeness, consistency, staleness, dedup rules using ConditionExpression | condition-expression, data-routing |
+| `data-infrastructure/data-lineage.md` | Provenance tracking, forward/backward trace, impact analysis | audit-system, event-bus, data-routing |
+| `data-infrastructure/data-security.md` | PII governance, data classification, breach detection, retention, right-to-deletion | encryption, rbac-engine, audit-system |
+| `data-infrastructure/data-observability.md` | Pipeline health, freshness, throughput, alerting | data-routing, internal-pipelines, external-pipelines |
+| `data-infrastructure/notifications.md` | Email + in-app delivery, templates, preferences, digest mode | template-infrastructure, event-bus |
+| `data-infrastructure/real-time.md` | SSE-based live updates with RBAC filtering | event-bus, rbac-engine |
+| `data-infrastructure/platform-search.md` | Typesense integration, RBAC-filtered search, autocomplete | event-bus, rbac-engine, ontology-engine |
+
+**Parallel tracks in Phase 4B:**
+- data-routing → data-transforms → internal-pipelines → external-pipelines is sequential
+- data-quality, data-lineage, data-security can run in parallel (all depend on data-routing)
+- data-observability depends on pipelines
+- notifications, real-time, platform-search are independent infrastructure
+
+### Phase 4.5 — Frontend + Canvas
+
+Depends on Phase 4A (backend services) and Phase 4B (data infrastructure provides the data that canvas visualizes).
+
+Builder and canvas are parallel interfaces: builders serve technical/power users, canvas serves visual/no-code users. They read and write the same underlying data.
+
+| PRD | What | Depends On |
+|-----|------|------------|
+| `canvas/canvas-engine.md` | Vue Flow rendering infrastructure, node/edge types, modes, layout, accessibility | — (domain-agnostic) |
+| `canvas/system-visualization-architecture.md` | Architectural keystone: collector pattern, unified VisualizationGraph, builder↔canvas coherence, data infrastructure bridge | ALL Phase 4A + 4B PRDs |
+| `canvas/system-graph.md` | Auto-generated ontology visualization, 3 zoom levels, editable | canvas-engine, system-visualization-architecture |
+| `canvas/workflow-canvas.md` | Workflow flow diagrams, cascade visualization, dry-run | canvas-engine, system-visualization-architecture, workflow-engine |
+| `canvas/data-flow-canvas.md` | Field-level routing visualization, PII indicators, transform nodes | canvas-engine, system-visualization-architecture, data-routing |
+| `canvas/canvas-config-bridge.md` | Bidirectional binding, CI/QA integration, conflict resolution, undo/redo | canvas-engine, ontology-ci-qa |
+| `canvas/canvas-rbac.md` | 5-role visibility matrix, edit permissions, offline behavior | canvas-engine, rbac-engine |
+| `ui/dynamic-forms.md` | FormKit schema bridge, DynamicForm component, wizard/2-col layouts | ontology-engine, builder-to-operator |
+| `ui/view-renderer.md` | Table, kanban, timeline, dashboard widget rendering | ontology-engine, builder-to-operator |
+| `ui/condition-builder-ui.md` | Shared visual builder for ConditionExpressions | condition-expression |
+| `ui/form-view-builder.md` | Drag-drop config UI for forms + views | dynamic-forms, view-renderer, condition-builder-ui |
+| `automation/workflow-builder.md` | Visual node editor for building workflows (traditional builder — coexists with workflow canvas) | workflow-engine, workflow-actions, condition-builder-ui |
+
+**Parallel tracks in Phase 4.5:**
+- Canvas engine → system-visualization-architecture is sequential (engine first, then architecture)
+- system-graph, workflow-canvas, data-flow-canvas can run in parallel (all depend on architecture)
+- canvas-config-bridge and canvas-rbac are parallel infrastructure
+- UI rendering (forms + views + condition builder) can run in parallel with canvas work
+- form-view-builder depends on forms + views completing
+- workflow-builder is independent of canvas (parallel interface for different users)
 
 ### Phase 5 — Shared Services
 

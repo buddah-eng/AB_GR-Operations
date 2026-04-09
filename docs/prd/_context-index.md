@@ -100,6 +100,34 @@ to decide if you need to load the full document.
 | In-App Documents | `ui/in-app-documents.md` | Contracts (conditional clause assembly, Handlebars, 14 clause inventory) and itineraries (per-guest schedule aggregation) as in-app views. PDF export via HTML→PDF. Template management via ontology. | `contracts`, `itineraries`, `in-app-views`, `pdf-export` | done |
 | Builder-to-Operator | `ui/builder-to-operator.md` | Property→input mapping (17 types), property→column mapping, default form/view/page auto-generation, ontology change impact on operators, builder guardrails. | `ux`, `translation`, `defaults`, `guardrails` | done |
 
+### Data Infrastructure
+
+| Doc | Path | Shorthand | Tags | Status |
+|-----|------|-----------|------|--------|
+| Data Routing | `data-infrastructure/data-routing.md` | Field-level routing & fan-out. Source→destination field mappings with PII filtering. Route triggers via event bus. Projection maintenance. | `data-flow`, `routing`, `pii`, `fan-out` | done |
+| Data Transforms | `data-infrastructure/data-transforms.md` | 9 transform types (rename, strip, pii_strip, format, compute, aggregate, static, conditional, lookup). Composable chains. ConditionExpression integration. | `transforms`, `data-flow`, `conditions` | done |
+| Internal Pipelines | `data-infrastructure/internal-pipelines.md` | Cross-department data flows. Pipeline stages (route, transform, quality_check, workflow, gate). Error handling with dead letter queue. | `pipelines`, `cross-dept`, `data-flow` | done |
+| External Pipelines | `data-infrastructure/external-pipelines.md` | Third-party integrations (FlightAware, Guidebook, Google Calendar). Inbound/outbound/bidirectional. Sync state. Conflict resolution. Circuit breaker. | `pipelines`, `external`, `sync`, `integrations` | done |
+| Data Quality | `data-infrastructure/data-quality.md` | Completeness, consistency, referential, staleness, uniqueness rules. Quality scores per record/concept/department. Violation tracking. | `quality`, `validation`, `rules` | done |
+| Data Lineage | `data-infrastructure/data-lineage.md` | Provenance tracking. Forward/backward trace. Impact analysis. Built on audit + event log correlation via change_set UUID. | `lineage`, `provenance`, `audit`, `impact` | done |
+| Data Security | `data-infrastructure/data-security.md` | PII governance. Data classification (PII/sensitive/internal/public). Breach detection. Retention policies. Right-to-deletion workflow. | `security`, `pii`, `governance`, `gdpr` | done |
+| Data Observability | `data-infrastructure/data-observability.md` | Pipeline health monitoring. Data freshness. Flow throughput. Error tracking. Configurable alerting. Health check API. | `observability`, `monitoring`, `alerting` | done |
+| Notifications | `data-infrastructure/notifications.md` | Email + in-app delivery. Template rendering. Recipient resolution (role/user/department). Preferences. Digest mode. Delivery tracking. | `notifications`, `email`, `in-app`, `templates` | done |
+| Real-Time Updates | `data-infrastructure/real-time.md` | SSE-based live updates. RBAC-filtered event streams. Connection management. Reconnection with last-event-ID. Vue composable. | `real-time`, `sse`, `live-updates` | done |
+| Platform Search | `data-infrastructure/platform-search.md` | Typesense integration. Per-concept indexes. RBAC-filtered search. Faceted search. Autocomplete. Blind index for encrypted fields. | `search`, `typesense`, `full-text`, `autocomplete` | done |
+
+### Canvas System
+
+| Doc | Path | Shorthand | Tags | Status |
+|-----|------|-----------|------|--------|
+| Canvas Engine | `canvas/canvas-engine.md` | Vue Flow rendering infrastructure. 8 node types, 4 edge types, 3 modes. Layout algorithms. Interaction primitives. Component architecture. Domain-agnostic. | `canvas`, `vue-flow`, `rendering`, `infrastructure` | done |
+| System Visualization Architecture | `canvas/system-visualization-architecture.md` | Architectural keystone. Collector pattern. Unified VisualizationGraph model. Builder↔canvas coherence. Data infrastructure bridge. Caching with diff-based SSE. | `canvas`, `architecture`, `integration`, `visualization` | done |
+| System Graph | `canvas/system-graph.md` | Auto-generated ontology graph. 3 zoom levels (system→department→concept). Editable. Department regions. Data flow + workflow overlays. | `canvas`, `ontology`, `graph`, `auto-generated` | done |
+| Workflow Canvas | `canvas/workflow-canvas.md` | Auto-generated workflow flow diagrams. Cascade visualization. Dry-run mode. Cross-workflow dependency graph. | `canvas`, `workflows`, `flow-diagram` | done |
+| Data Flow Canvas | `canvas/data-flow-canvas.md` | Field-level routing visualization. PII indicators. Transform nodes. Fan-out visualization. Live data animation. | `canvas`, `data-flow`, `routing`, `pii` | done |
+| Canvas-Config Bridge | `canvas/canvas-config-bridge.md` | Bidirectional binding between canvas and config. CI/QA integration. Conflict resolution. Undo/redo via versioning service. | `canvas`, `bridge`, `bidirectional`, `ci-qa` | done |
+| Canvas RBAC | `canvas/canvas-rbac.md` | 5-role visibility matrix. Edit permissions per canvas action. Canvas-specific permissions. Offline/disconnected behavior. | `canvas`, `rbac`, `permissions` | done |
+
 ### Shared Services
 
 | Doc | Path | Shorthand | Tags | Status |
