@@ -41,6 +41,33 @@ CYCLE N:
 
 ---
 
+## Step 0: Test File Coverage Check
+
+Before running the cycle, verify that every implementation file created or modified in this phase has a corresponding test file. This is a hard gate — no exceptions.
+
+```bash
+# Find implementation files without test files
+find src/ -name "*.ts" -not -name "*.test.ts" -not -name "*.integration.test.ts" \
+  -not -path "*__tests__*" -not -path "*node_modules*" -not -name "types.ts" \
+  | while read f; do
+      base="${f%.ts}"
+      if [ ! -f "${base}.test.ts" ] && [ ! -f "${base}.integration.test.ts" ]; then
+        echo "NO TEST: $f"
+      fi
+    done
+```
+
+**Exceptions (must be justified):**
+- `index.ts` — entry point with no testable logic
+- `types.ts` — type definitions only
+- `__tests__/helpers/*` — test infrastructure
+
+**Every other file must have a test file.** API route handlers need tests verifying: auth enforcement, parameter validation, error responses, correct service calls, audit context/claim, domain event emission. "The service is tested" is not sufficient — the route handler that calls it must also be tested.
+
+**Pass criteria:** Zero `NO TEST` lines for files in the current phase. Missing test files must be created before proceeding to Step 1.
+
+---
+
 ## Step 1: Automated Scans
 
 These are grep/bash commands. Run them. Show the output. No summarizing — the raw output is the evidence.
