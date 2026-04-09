@@ -16,11 +16,12 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import * as logger from "firebase-functions/logger";
 import { query } from "../db/client";
+import type { PoolClient } from "pg";
 import { getConceptByKey, getPropertiesForConcept } from "../ontology/loader";
 import { roleEngine } from "../roles/engine";
 import { emit, createDomainEvent } from "../events/bus";
 import { requireAuth } from "../auth/middleware";
-import { auditContextFromRequest, logAuditClaim } from "../audit/context";
+import { auditContextFromRequest, withAuditContext, logAuditClaim } from "../audit/context";
 import { encryptPiiFields, decryptPiiFields, isEncryptionConfigured } from "../encryption/crypto";
 import type { ApiResponse, DomainRecord, Property } from "../ontology/types";
 
@@ -215,7 +216,9 @@ domainRouter.post("/:concept", async (req: Request, res: Response) => {
     const encryptedProps = isEncryptionConfigured() ? encryptPiiFields(jsonbProperties) : jsonbProperties;
 
     const auditCtx = auditContextFromRequest(req);
-    const row = await insertRecord(table, coreColumns, encryptedProps);
+    const row = await withAuditContext(auditCtx, (client) =>
+      insertRecord(table, coreColumns, encryptedProps, client)
+    );
     const record = rowToDomainRecord(row, conceptKey);
 
     // Log audit claim for rogue-actor detection
@@ -292,7 +295,9 @@ domainRouter.put("/:concept/:id", async (req: Request, res: Response) => {
     const encryptedProps = isEncryptionConfigured() ? encryptPiiFields(jsonbProperties) : jsonbProperties;
 
     const auditCtx = auditContextFromRequest(req);
-    const row = await updateRecord(table, id, coreColumns, encryptedProps);
+    const row = await withAuditContext(auditCtx, (client) =>
+      updateRecord(table, id, coreColumns, encryptedProps, client)
+    );
     const record = rowToDomainRecord(row, conceptKey);
 
     logAuditClaim(auditCtx, `PUT /api/domains/${conceptKey}/${id}`);
@@ -340,9 +345,11 @@ domainRouter.delete("/:concept/:id", async (req: Request, res: Response) => {
     const table = conceptToTable(conceptKey);
     const auditCtx = auditContextFromRequest(req);
 
-    await query(
-      `UPDATE ${table} SET archived = true, updated_at = now() WHERE id = $1`,
-      [id]
+    await withAuditContext(auditCtx, (client) =>
+      client.query(
+        `UPDATE ${table} SET archived = true, updated_at = now() WHERE id = $1`,
+        [id]
+      )
     );
 
     logAuditClaim(auditCtx, `DELETE /api/domains/${conceptKey}/${id}`);
@@ -413,7 +420,8 @@ function separateProperties(
 async function insertRecord(
   table: string,
   coreColumns: Record<string, unknown>,
-  jsonbProperties: Record<string, unknown>
+  jsonbProperties: Record<string, unknown>,
+  client?: PoolClient
 ): Promise<Record<string, unknown>> {
   const cols = Object.keys(coreColumns).filter(isSafeIdentifier);
   const vals = cols.map((c) => coreColumns[c]);
@@ -424,10 +432,10 @@ async function insertRecord(
 
   const placeholders = vals.map((_, i) => `$${i + 1}`);
 
-  const result = await query(
-    `INSERT INTO ${table} (${cols.join(", ")}) VALUES (${placeholders.join(", ")}) RETURNING *`,
-    vals
-  );
+  const sql = `INSERT INTO ${table} (${cols.join(", ")}) VALUES (${placeholders.join(", ")}) RETURNING *`;
+  const result = client
+    ? await client.query(sql, vals)
+    : await query(sql, vals);
 
   return result.rows[0];
 }
@@ -436,7 +444,8 @@ async function updateRecord(
   table: string,
   id: string,
   coreColumns: Record<string, unknown>,
-  jsonbProperties: Record<string, unknown>
+  jsonbProperties: Record<string, unknown>,
+  client?: PoolClient
 ): Promise<Record<string, unknown>> {
   const setClauses: string[] = [];
   const params: unknown[] = [];
@@ -460,10 +469,10 @@ async function updateRecord(
 
   params.push(id);
 
-  const result = await query(
-    `UPDATE ${table} SET ${setClauses.join(", ")} WHERE id = $${paramIdx} AND NOT archived RETURNING *`,
-    params
-  );
+  const sql = `UPDATE ${table} SET ${setClauses.join(", ")} WHERE id = $${paramIdx} AND NOT archived RETURNING *`;
+  const result = client
+    ? await client.query(sql, params)
+    : await query(sql, params);
 
   if (result.rows.length === 0) {
     throw Object.assign(new Error("Record not found"), { status: 404 });

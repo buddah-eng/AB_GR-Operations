@@ -7,7 +7,7 @@
  * decryption never runs.
  */
 
-import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
+import { createCipheriv, createDecipheriv, createHmac, randomBytes } from "crypto";
 import * as logger from "firebase-functions/logger";
 
 // --- Types ---
@@ -125,9 +125,13 @@ export function encryptPiiFields(
 /**
  * Decrypts PII fields in a record after reading from Postgres.
  * Handles both encrypted (EncryptedField object) and plaintext values gracefully.
+ *
+ * When `auditContext` is provided, each successful decryption emits an
+ * audit log entry (PRD §7).
  */
 export function decryptPiiFields(
-  record: Readonly<Record<string, unknown>>
+  record: Readonly<Record<string, unknown>>,
+  auditContext?: Readonly<{ recordId: string; actorId: string }>
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {};
 
@@ -135,6 +139,9 @@ export function decryptPiiFields(
     if (isPiiField(key) && isEncryptedField(value)) {
       try {
         result[key] = decrypt(value);
+        if (auditContext) {
+          logDecryption(key, auditContext.recordId, auditContext.actorId);
+        }
       } catch (err) {
         logger.error(`Failed to decrypt field "${key}"`, { error: err });
         result[key] = "[ENCRYPTED]";
@@ -156,4 +163,74 @@ function isEncryptedField(value: unknown): value is EncryptedField {
     typeof obj.tag === "string" &&
     typeof obj.keyVersion === "number"
   );
+}
+
+// --- Section 5: Blind Index (HMAC) ---
+
+let cachedHmacKey: Buffer | null = null;
+
+function getHmacKey(): Buffer {
+  if (cachedHmacKey) return cachedHmacKey;
+
+  const keyHex = process.env.HMAC_KEY;
+  if (!keyHex || keyHex.length !== 64) {
+    throw new Error(
+      "HMAC_KEY must be a 64-character hex string (32 bytes). " +
+      "Set it via environment variable."
+    );
+  }
+
+  cachedHmacKey = Buffer.from(keyHex, "hex");
+  return cachedHmacKey;
+}
+
+/**
+ * Returns true if the HMAC key is configured.
+ * When false, computeHmac operations should be skipped.
+ */
+export function isHmacConfigured(): boolean {
+  const keyHex = process.env.HMAC_KEY;
+  return typeof keyHex === "string" && keyHex.length === 64;
+}
+
+/**
+ * Computes an HMAC-SHA256 blind index for encrypted search.
+ * The same plaintext always produces the same hash (deterministic),
+ * enabling lookups without decrypting every row.
+ */
+export function computeHmac(value: string): string {
+  const key = getHmacKey();
+  return createHmac("sha256", key).update(value, "utf8").digest("hex");
+}
+
+// --- Section 6: Key Rotation ---
+
+/**
+ * Re-encrypts an EncryptedField: decrypts with the current key, then
+ * re-encrypts (producing a fresh IV and the current key version).
+ * Used by the background migration job during key rotation.
+ */
+export function reEncryptField(field: EncryptedField): EncryptedField {
+  const plaintext = decrypt(field);
+  return encrypt(plaintext);
+}
+
+// --- Section 7: Decryption Audit Logging ---
+
+/**
+ * Emits a structured audit log entry whenever a PII field is decrypted.
+ * In production this feeds the `decryption_log` table; for now it
+ * uses Firebase structured logging.
+ */
+export function logDecryption(
+  fieldKey: string,
+  recordId: string,
+  actorId: string
+): void {
+  logger.info("PII field decrypted", {
+    event: "pii_decrypted",
+    fieldKey,
+    recordId,
+    actorId,
+  });
 }

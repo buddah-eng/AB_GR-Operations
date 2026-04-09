@@ -55,6 +55,11 @@ const mockLogAuditClaim = vi.fn();
 vi.mock("../audit/context", () => ({
   auditContextFromRequest: (...args: unknown[]) => mockAuditContextFromRequest(...args),
   logAuditClaim: (...args: unknown[]) => mockLogAuditClaim(...args),
+  withAuditContext: async (_ctx: unknown, fn: (client: unknown) => Promise<unknown>) => {
+    // In tests, withAuditContext just calls fn with a mock client that delegates to mockQuery
+    const mockClient = { query: (...args: unknown[]) => mockQuery(...args) };
+    return fn(mockClient);
+  },
 }));
 
 vi.mock("../auth/middleware", () => ({

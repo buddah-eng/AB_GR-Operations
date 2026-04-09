@@ -10,6 +10,10 @@ import {
   getFrequentGuests,
   getReturnRateByDepartment,
   getYoyGrowth,
+  getNewVsReturningVendors,
+  getCohortAnalysis,
+  detectDuplicates,
+  createAnalyticsSnapshot,
 } from "./service";
 
 // ---------------------------------------------------------------------------
@@ -322,6 +326,163 @@ describe("Registry Service", () => {
         expect.stringContaining("UPDATE guests SET registry_id = $1"),
         ["reg-1", "guest-1"]
       );
+    });
+  });
+
+  // =========================================================================
+  // 6.5 — New vs Returning Vendors
+  // =========================================================================
+
+  describe("getNewVsReturningVendors", () => {
+    it("returns correct split", async () => {
+      mockQuery.mockResolvedValue({
+        rows: [{ new_count: 5, returning_count: 3, total: 8 }],
+        rowCount: 1,
+      });
+
+      const result = await getNewVsReturningVendors(2026);
+
+      expect(result).toEqual({
+        newCount: 5,
+        returningCount: 3,
+        total: 8,
+      });
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining("vendor_registry"),
+        [2026]
+      );
+    });
+
+    it("handles zero vendors", async () => {
+      mockQuery.mockResolvedValue({
+        rows: [{ new_count: 0, returning_count: 0, total: 0 }],
+        rowCount: 1,
+      });
+
+      const result = await getNewVsReturningVendors(2026);
+
+      expect(result).toEqual({
+        newCount: 0,
+        returningCount: 0,
+        total: 0,
+      });
+    });
+  });
+
+  // =========================================================================
+  // 6.6 — Cohort Analysis
+  // =========================================================================
+
+  describe("getCohortAnalysis", () => {
+    it("returns cohort-year/attended-year pairs", async () => {
+      const rows = [
+        { cohort_year: 2023, attended_year: 2023, guests_in_cohort: 10 },
+        { cohort_year: 2023, attended_year: 2024, guests_in_cohort: 7 },
+        { cohort_year: 2024, attended_year: 2024, guests_in_cohort: 15 },
+      ];
+      mockQuery.mockResolvedValue({ rows, rowCount: 3 });
+
+      const result = await getCohortAnalysis();
+
+      expect(result).toHaveLength(3);
+      expect(result[0].cohort_year).toBe(2023);
+      expect(result[1].attended_year).toBe(2024);
+      expect(result[2].guests_in_cohort).toBe(15);
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining("first_year AS cohort_year")
+      );
+    });
+
+    it("handles single-year data", async () => {
+      const rows = [
+        { cohort_year: 2026, attended_year: 2026, guests_in_cohort: 20 },
+      ];
+      mockQuery.mockResolvedValue({ rows, rowCount: 1 });
+
+      const result = await getCohortAnalysis();
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({
+        cohort_year: 2026,
+        attended_year: 2026,
+        guests_in_cohort: 20,
+      });
+    });
+  });
+
+  // =========================================================================
+  // 6.7 — Duplicate Detection
+  // =========================================================================
+
+  describe("detectDuplicates", () => {
+    it("finds email match", async () => {
+      const row = registryRow({ email: "tanaka@example.com" });
+      mockQuery.mockResolvedValue({ rows: [row], rowCount: 1 });
+
+      const result = await detectDuplicates("Tanaka", "tanaka@example.com");
+
+      expect(result).toHaveLength(1);
+      expect(result[0].email).toBe("tanaka@example.com");
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining("WHERE email = $1"),
+        ["tanaka@example.com"]
+      );
+      // Should NOT fall through to name search when email matches
+      expect(mockQuery).toHaveBeenCalledTimes(1);
+    });
+
+    it("finds fuzzy name match", async () => {
+      const row = registryRow({ canonical_name: "Tanaka Ichiro" });
+      // First call (email) returns empty, second call (name) returns match
+      mockQuery
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 })
+        .mockResolvedValueOnce({ rows: [row], rowCount: 1 });
+
+      const result = await detectDuplicates("Tanaka", "unknown@example.com");
+
+      expect(result).toHaveLength(1);
+      expect(result[0].canonical_name).toBe("Tanaka Ichiro");
+      expect(mockQuery).toHaveBeenCalledTimes(2);
+      expect(mockQuery).toHaveBeenLastCalledWith(
+        expect.stringContaining("ILIKE"),
+        ["%Tanaka%"]
+      );
+    });
+
+    it("returns empty for no matches", async () => {
+      mockQuery.mockResolvedValue({ rows: [], rowCount: 0 });
+
+      const result = await detectDuplicates("NonExistent");
+
+      expect(result).toHaveLength(0);
+      // Without email, only one query (name search)
+      expect(mockQuery).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // =========================================================================
+  // 6.8 — Analytics Snapshot
+  // =========================================================================
+
+  describe("createAnalyticsSnapshot", () => {
+    it("creates table and returns count", async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 })  // CREATE TABLE
+        .mockResolvedValueOnce({ rows: [{ count: 5 }], rowCount: 1 }); // SELECT COUNT
+
+      const result = await createAnalyticsSnapshot(2026);
+
+      expect(result).toEqual({
+        snapshotTable: "analytics_snapshot_2026",
+        rowCount: 5,
+      });
+
+      const createCall = mockQuery.mock.calls[0];
+      expect(createCall[0]).toContain("CREATE TABLE IF NOT EXISTS analytics_snapshot_2026");
+      expect(createCall[1]).toEqual([2026]);
+
+      const countCall = mockQuery.mock.calls[1];
+      expect(countCall[0]).toContain("analytics_snapshot_2026");
     });
   });
 });

@@ -384,44 +384,43 @@ CREATE INDEX idx_pairings_staff ON pairings (staff_id) WHERE NOT archived;
 
 CREATE TABLE ontology_audit_log (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  timestamp   TIMESTAMPTZ NOT NULL DEFAULT now(),
-  actor_id    UUID,
-  actor_role  TEXT,
-  actor_type  TEXT CHECK (actor_type IN ('human', 'api_client', 'external_token', 'ai_agent', 'system')),
+  change_set  UUID NOT NULL,
+  actor_id    TEXT NOT NULL DEFAULT 'pg_trigger_fallback',
+  actor_type  TEXT NOT NULL DEFAULT 'system'
+              CHECK (actor_type IN ('human', 'api_client', 'external_token', 'ai_agent', 'system')),
   action      TEXT NOT NULL CHECK (action IN ('INSERT', 'UPDATE', 'DELETE')),
   table_name  TEXT NOT NULL,
   record_id   UUID NOT NULL,
-  old_value   JSONB,
-  new_value   JSONB,
-  change_set  UUID,
-  ip_address  TEXT,
-  session_id  TEXT
+  old_data    JSONB,
+  new_data    JSONB,
+  ip_address  INET,
+  session_id  UUID,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_ontology_audit_time ON ontology_audit_log (timestamp);
-CREATE INDEX idx_ontology_audit_table ON ontology_audit_log (table_name, record_id);
-CREATE INDEX idx_ontology_audit_actor ON ontology_audit_log (actor_id);
+CREATE INDEX idx_ontology_audit_actor ON ontology_audit_log (actor_id, created_at);
+CREATE INDEX idx_ontology_audit_table ON ontology_audit_log (table_name, created_at);
 CREATE INDEX idx_ontology_audit_changeset ON ontology_audit_log (change_set);
 
 CREATE TABLE domain_audit_log (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  timestamp   TIMESTAMPTZ NOT NULL DEFAULT now(),
-  actor_id    UUID,
-  actor_role  TEXT,
-  actor_type  TEXT CHECK (actor_type IN ('human', 'api_client', 'external_token', 'ai_agent', 'system')),
+  change_set  UUID NOT NULL,
+  actor_id    TEXT NOT NULL DEFAULT 'pg_trigger_fallback',
+  actor_type  TEXT NOT NULL DEFAULT 'system'
+              CHECK (actor_type IN ('human', 'api_client', 'external_token', 'ai_agent', 'system')),
   action      TEXT NOT NULL CHECK (action IN ('INSERT', 'UPDATE', 'DELETE')),
   table_name  TEXT NOT NULL,
   record_id   UUID NOT NULL,
-  old_value   JSONB,
-  new_value   JSONB,
-  change_set  UUID,
-  ip_address  TEXT,
-  session_id  TEXT
+  old_data    JSONB,
+  new_data    JSONB,
+  ip_address  INET,
+  session_id  UUID,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_domain_audit_time ON domain_audit_log (timestamp);
-CREATE INDEX idx_domain_audit_table ON domain_audit_log (table_name, record_id);
-CREATE INDEX idx_domain_audit_actor ON domain_audit_log (actor_id);
+CREATE INDEX idx_domain_audit_actor ON domain_audit_log (actor_id, created_at);
+CREATE INDEX idx_domain_audit_table ON domain_audit_log (table_name, created_at);
+CREATE INDEX idx_domain_audit_changeset ON domain_audit_log (change_set);
 
 CREATE TABLE event_log (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -429,6 +428,7 @@ CREATE TABLE event_log (
   event_name          TEXT NOT NULL,
   record_id           TEXT NOT NULL,
   triggered_by        TEXT NOT NULL,
+  change_set          UUID,
   timestamp           TIMESTAMPTZ NOT NULL,
   workflows_triggered TEXT[],
   actions_executed    JSONB,
@@ -438,65 +438,128 @@ CREATE TABLE event_log (
 CREATE INDEX idx_event_log_name ON event_log (event_name);
 CREATE INDEX idx_event_log_time ON event_log (timestamp);
 CREATE INDEX idx_event_log_record ON event_log (record_id);
+CREATE INDEX idx_event_log_changeset ON event_log (change_set);
+
+CREATE TABLE admin_alerts (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  severity    TEXT NOT NULL CHECK (severity IN ('info', 'warning', 'critical')),
+  category    TEXT NOT NULL,
+  title       TEXT NOT NULL,
+  details     JSONB NOT NULL DEFAULT '{}',
+  resolved    BOOLEAN NOT NULL DEFAULT false,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_admin_alerts_unresolved ON admin_alerts (category) WHERE NOT resolved;
 
 -- ============================================================================
 -- 6. Audit Triggers
 -- ============================================================================
 
-CREATE OR REPLACE FUNCTION audit_ontology_change() RETURNS TRIGGER AS $$
+-- Session-variable-aware ontology audit trigger
+-- Reads actor context from SET LOCAL variables; falls back to system/pg_trigger_fallback
+CREATE OR REPLACE FUNCTION audit_ontology_trigger() RETURNS TRIGGER AS $$
+DECLARE
+  v_actor_id    TEXT;
+  v_actor_type  TEXT;
+  v_change_set  UUID;
+  v_session_id  UUID;
+  v_ip          INET;
 BEGIN
+  v_actor_id   := coalesce(current_setting('app.actor_id',   true), 'pg_trigger_fallback');
+  v_actor_type := coalesce(current_setting('app.actor_type', true), 'system');
+  v_change_set := coalesce(current_setting('app.change_set', true)::UUID, gen_random_uuid());
+  v_session_id := current_setting('app.session_id', true)::UUID;
+  v_ip         := current_setting('app.ip_address', true)::INET;
+
   INSERT INTO ontology_audit_log (
-    action, table_name, record_id, old_value, new_value
+    change_set, actor_id, actor_type, action,
+    table_name, record_id, old_data, new_data,
+    ip_address, session_id
   ) VALUES (
-    TG_OP,
-    TG_TABLE_NAME,
-    COALESCE(NEW.id, OLD.id),
-    CASE WHEN TG_OP = 'DELETE' THEN to_jsonb(OLD) ELSE NULL END,
-    CASE WHEN TG_OP = 'INSERT' THEN to_jsonb(NEW)
-         WHEN TG_OP = 'UPDATE' THEN to_jsonb(NEW)
-         ELSE NULL END
-  );
-  RETURN COALESCE(NEW, OLD);
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER audit_trigger AFTER INSERT OR UPDATE OR DELETE
-  ON ontology_concepts FOR EACH ROW EXECUTE FUNCTION audit_ontology_change();
-CREATE TRIGGER audit_trigger AFTER INSERT OR UPDATE OR DELETE
-  ON ontology_properties FOR EACH ROW EXECUTE FUNCTION audit_ontology_change();
-CREATE TRIGGER audit_trigger AFTER INSERT OR UPDATE OR DELETE
-  ON ontology_relationships FOR EACH ROW EXECUTE FUNCTION audit_ontology_change();
-CREATE TRIGGER audit_trigger AFTER INSERT OR UPDATE OR DELETE
-  ON ontology_events FOR EACH ROW EXECUTE FUNCTION audit_ontology_change();
-CREATE TRIGGER audit_trigger AFTER INSERT OR UPDATE OR DELETE
-  ON ontology_constraints FOR EACH ROW EXECUTE FUNCTION audit_ontology_change();
-
--- Domain audit trigger
-CREATE OR REPLACE FUNCTION audit_domain_change() RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO domain_audit_log (
-    action, table_name, record_id, old_value, new_value
-  ) VALUES (
-    TG_OP,
-    TG_TABLE_NAME,
-    COALESCE(NEW.id, OLD.id),
+    v_change_set, v_actor_id, v_actor_type, TG_OP,
+    TG_TABLE_NAME, coalesce(NEW.id, OLD.id),
     CASE WHEN TG_OP IN ('UPDATE', 'DELETE') THEN to_jsonb(OLD) ELSE NULL END,
-    CASE WHEN TG_OP IN ('INSERT', 'UPDATE') THEN to_jsonb(NEW) ELSE NULL END
+    CASE WHEN TG_OP IN ('INSERT', 'UPDATE') THEN to_jsonb(NEW) ELSE NULL END,
+    v_ip, v_session_id
   );
-  RETURN COALESCE(NEW, OLD);
+  RETURN coalesce(NEW, OLD);
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER audit_trigger AFTER INSERT OR UPDATE OR DELETE
-  ON guests FOR EACH ROW EXECUTE FUNCTION audit_domain_change();
-CREATE TRIGGER audit_trigger AFTER INSERT OR UPDATE OR DELETE
-  ON staff FOR EACH ROW EXECUTE FUNCTION audit_domain_change();
-CREATE TRIGGER audit_trigger AFTER INSERT OR UPDATE OR DELETE
-  ON schedule_events FOR EACH ROW EXECUTE FUNCTION audit_domain_change();
-CREATE TRIGGER audit_trigger AFTER INSERT OR UPDATE OR DELETE
-  ON prep_items FOR EACH ROW EXECUTE FUNCTION audit_domain_change();
-CREATE TRIGGER audit_trigger AFTER INSERT OR UPDATE OR DELETE
-  ON pairings FOR EACH ROW EXECUTE FUNCTION audit_domain_change();
+-- Ontology table triggers
+CREATE TRIGGER trg_audit AFTER INSERT OR UPDATE OR DELETE
+  ON ontology_concepts FOR EACH ROW EXECUTE FUNCTION audit_ontology_trigger();
+CREATE TRIGGER trg_audit AFTER INSERT OR UPDATE OR DELETE
+  ON ontology_properties FOR EACH ROW EXECUTE FUNCTION audit_ontology_trigger();
+CREATE TRIGGER trg_audit AFTER INSERT OR UPDATE OR DELETE
+  ON ontology_relationships FOR EACH ROW EXECUTE FUNCTION audit_ontology_trigger();
+CREATE TRIGGER trg_audit AFTER INSERT OR UPDATE OR DELETE
+  ON ontology_events FOR EACH ROW EXECUTE FUNCTION audit_ontology_trigger();
+CREATE TRIGGER trg_audit AFTER INSERT OR UPDATE OR DELETE
+  ON ontology_constraints FOR EACH ROW EXECUTE FUNCTION audit_ontology_trigger();
+-- Config table triggers
+CREATE TRIGGER trg_audit AFTER INSERT OR UPDATE OR DELETE
+  ON form_configs FOR EACH ROW EXECUTE FUNCTION audit_ontology_trigger();
+CREATE TRIGGER trg_audit AFTER INSERT OR UPDATE OR DELETE
+  ON view_configs FOR EACH ROW EXECUTE FUNCTION audit_ontology_trigger();
+CREATE TRIGGER trg_audit AFTER INSERT OR UPDATE OR DELETE
+  ON page_configs FOR EACH ROW EXECUTE FUNCTION audit_ontology_trigger();
+CREATE TRIGGER trg_audit AFTER INSERT OR UPDATE OR DELETE
+  ON workflow_configs FOR EACH ROW EXECUTE FUNCTION audit_ontology_trigger();
+-- RBAC table triggers
+CREATE TRIGGER trg_audit AFTER INSERT OR UPDATE OR DELETE
+  ON roles FOR EACH ROW EXECUTE FUNCTION audit_ontology_trigger();
+CREATE TRIGGER trg_audit AFTER INSERT OR UPDATE OR DELETE
+  ON permissions FOR EACH ROW EXECUTE FUNCTION audit_ontology_trigger();
+
+-- Session-variable-aware domain audit trigger
+CREATE OR REPLACE FUNCTION audit_domain_trigger() RETURNS TRIGGER AS $$
+DECLARE
+  v_actor_id    TEXT;
+  v_actor_type  TEXT;
+  v_change_set  UUID;
+  v_session_id  UUID;
+  v_ip          INET;
+BEGIN
+  v_actor_id   := coalesce(current_setting('app.actor_id',   true), 'pg_trigger_fallback');
+  v_actor_type := coalesce(current_setting('app.actor_type', true), 'system');
+  v_change_set := coalesce(current_setting('app.change_set', true)::UUID, gen_random_uuid());
+  v_session_id := current_setting('app.session_id', true)::UUID;
+  v_ip         := current_setting('app.ip_address', true)::INET;
+
+  INSERT INTO domain_audit_log (
+    change_set, actor_id, actor_type, action,
+    table_name, record_id, old_data, new_data,
+    ip_address, session_id
+  ) VALUES (
+    v_change_set, v_actor_id, v_actor_type, TG_OP,
+    TG_TABLE_NAME, coalesce(NEW.id, OLD.id),
+    CASE WHEN TG_OP IN ('UPDATE', 'DELETE') THEN to_jsonb(OLD) ELSE NULL END,
+    CASE WHEN TG_OP IN ('INSERT', 'UPDATE') THEN to_jsonb(NEW) ELSE NULL END,
+    v_ip, v_session_id
+  );
+  RETURN coalesce(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Domain table triggers
+CREATE TRIGGER trg_audit AFTER INSERT OR UPDATE OR DELETE
+  ON guests FOR EACH ROW EXECUTE FUNCTION audit_domain_trigger();
+CREATE TRIGGER trg_audit AFTER INSERT OR UPDATE OR DELETE
+  ON staff FOR EACH ROW EXECUTE FUNCTION audit_domain_trigger();
+CREATE TRIGGER trg_audit AFTER INSERT OR UPDATE OR DELETE
+  ON schedule_events FOR EACH ROW EXECUTE FUNCTION audit_domain_trigger();
+CREATE TRIGGER trg_audit AFTER INSERT OR UPDATE OR DELETE
+  ON prep_items FOR EACH ROW EXECUTE FUNCTION audit_domain_trigger();
+CREATE TRIGGER trg_audit AFTER INSERT OR UPDATE OR DELETE
+  ON pairings FOR EACH ROW EXECUTE FUNCTION audit_domain_trigger();
+
+-- Append-only protection for audit tables
+CREATE RULE no_update_ontology_audit AS ON UPDATE TO ontology_audit_log DO INSTEAD NOTHING;
+CREATE RULE no_delete_ontology_audit AS ON DELETE TO ontology_audit_log DO INSTEAD NOTHING;
+CREATE RULE no_update_domain_audit AS ON UPDATE TO domain_audit_log DO INSTEAD NOTHING;
+CREATE RULE no_delete_domain_audit AS ON DELETE TO domain_audit_log DO INSTEAD NOTHING;
 
 -- ============================================================================
 -- 7. updated_at trigger

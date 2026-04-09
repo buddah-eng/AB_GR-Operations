@@ -1,5 +1,16 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
-import { encrypt, decrypt, isPiiField, isEncryptionConfigured, encryptPiiFields, decryptPiiFields } from "./crypto";
+import {
+  encrypt,
+  decrypt,
+  isPiiField,
+  isEncryptionConfigured,
+  encryptPiiFields,
+  decryptPiiFields,
+  computeHmac,
+  isHmacConfigured,
+  reEncryptField,
+  logDecryption,
+} from "./crypto";
 
 vi.mock("firebase-functions/logger", () => ({
   info: vi.fn(),
@@ -10,16 +21,19 @@ vi.mock("firebase-functions/logger", () => ({
 
 // Set a test encryption key (32 bytes = 64 hex chars)
 const TEST_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+const TEST_HMAC_KEY = "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
 
 describe("Encryption Module", () => {
   beforeAll(() => {
     process.env.ENCRYPTION_KEY = TEST_KEY;
     process.env.ENCRYPTION_KEY_VERSION = "1";
+    process.env.HMAC_KEY = TEST_HMAC_KEY;
   });
 
   afterAll(() => {
     delete process.env.ENCRYPTION_KEY;
     delete process.env.ENCRYPTION_KEY_VERSION;
+    delete process.env.HMAC_KEY;
   });
 
   describe("isEncryptionConfigured", () => {
@@ -172,6 +186,81 @@ describe("Encryption Module", () => {
       const decrypted = decryptPiiFields(record);
       expect(decrypted.email).toBe("[ENCRYPTED]");
       expect(decrypted.name).toBe("Test");
+    });
+  });
+
+  // --- Section 5: Blind Index (HMAC) ---
+
+  describe("computeHmac", () => {
+    it("produces consistent hash for same input", () => {
+      const hash1 = computeHmac("user@example.com");
+      const hash2 = computeHmac("user@example.com");
+      expect(hash1).toBe(hash2);
+    });
+
+    it("produces different hash for different inputs", () => {
+      const hash1 = computeHmac("alice@example.com");
+      const hash2 = computeHmac("bob@example.com");
+      expect(hash1).not.toBe(hash2);
+    });
+
+    it("is deterministic with the same key", () => {
+      const value = "deterministic-test@example.com";
+      const results = Array.from({ length: 5 }, () => computeHmac(value));
+      const allSame = results.every((r) => r === results[0]);
+      expect(allSame).toBe(true);
+      expect(results[0]).toHaveLength(64); // SHA-256 hex = 64 chars
+    });
+  });
+
+  describe("isHmacConfigured", () => {
+    it("returns true when HMAC_KEY is a 64-char hex string", () => {
+      expect(isHmacConfigured()).toBe(true);
+    });
+
+    it("returns false when HMAC_KEY is not set", () => {
+      const saved = process.env.HMAC_KEY;
+      delete process.env.HMAC_KEY;
+      expect(isHmacConfigured()).toBe(false);
+      process.env.HMAC_KEY = saved;
+    });
+  });
+
+  // --- Section 6: Key Rotation ---
+
+  describe("reEncryptField", () => {
+    it("roundtrip: decrypt old -> re-encrypt -> decrypt new = same plaintext", () => {
+      const plaintext = "rotation-test@example.com";
+      const original = encrypt(plaintext);
+
+      const rotated = reEncryptField(original);
+
+      // Must produce a new ciphertext (different IV)
+      expect(rotated.iv).not.toBe(original.iv);
+      expect(rotated.data).not.toBe(original.data);
+
+      // Decrypting the rotated field must yield original plaintext
+      expect(decrypt(rotated)).toBe(plaintext);
+    });
+  });
+
+  // --- Section 7: Decryption Audit Logging ---
+
+  describe("logDecryption", () => {
+    it("calls logger.info with structured audit data", async () => {
+      const loggerModule = await import("firebase-functions/logger");
+
+      logDecryption("email", "record-42", "actor-7");
+
+      expect(loggerModule.info).toHaveBeenCalledWith(
+        "PII field decrypted",
+        {
+          event: "pii_decrypted",
+          fieldKey: "email",
+          recordId: "record-42",
+          actorId: "actor-7",
+        }
+      );
     });
   });
 });

@@ -65,6 +65,19 @@ export interface YoyGrowthRow {
   growth_pct: number | null;
 }
 
+export interface NewVsReturningResult {
+  newCount: number;
+  returningCount: number;
+  total: number;
+}
+
+export interface CohortRow {
+  readonly [key: string]: unknown;
+  cohort_year: number;
+  attended_year: number;
+  guests_in_cohort: number;
+}
+
 // ---------------------------------------------------------------------------
 // Guest Registry — Lookups
 // ---------------------------------------------------------------------------
@@ -288,4 +301,130 @@ export async function getYoyGrowth(): Promise<YoyGrowthRow[]> {
      ORDER BY convention_year`
   );
   return result.rows;
+}
+
+// ---------------------------------------------------------------------------
+// New vs Returning Vendors
+// ---------------------------------------------------------------------------
+
+/**
+ * Count new vs returning vendors for a given convention year.
+ * A vendor is "new" if attendance_count === 1, "returning" if > 1.
+ */
+export async function getNewVsReturningVendors(
+  conventionYear: number
+): Promise<NewVsReturningResult> {
+  const result = await query<{
+    readonly [key: string]: unknown;
+    new_count: number;
+    returning_count: number;
+    total: number;
+  }>(
+    `SELECT
+       COUNT(CASE WHEN attendance_count = 1 THEN 1 END)::INTEGER AS new_count,
+       COUNT(CASE WHEN attendance_count > 1 THEN 1 END)::INTEGER AS returning_count,
+       COUNT(*)::INTEGER AS total
+     FROM vendor_registry
+     WHERE convention_year = $1`,
+    [conventionYear]
+  );
+
+  const row = result.rows[0];
+  return {
+    newCount: row?.new_count ?? 0,
+    returningCount: row?.returning_count ?? 0,
+    total: row?.total ?? 0,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Cohort Analysis
+// ---------------------------------------------------------------------------
+
+/**
+ * Cohort retention analysis: for each first-attended year (cohort),
+ * count how many guests attended each subsequent year.
+ */
+export async function getCohortAnalysis(): Promise<ReadonlyArray<CohortRow>> {
+  const result = await query<CohortRow>(
+    `SELECT
+       gr.first_year AS cohort_year,
+       g.convention_year AS attended_year,
+       COUNT(DISTINCT gr.id)::INTEGER AS guests_in_cohort
+     FROM guest_registry gr
+     JOIN guests g ON g.registry_id = gr.id
+     WHERE g.archived = false
+     GROUP BY gr.first_year, g.convention_year
+     ORDER BY cohort_year, attended_year`
+  );
+  return result.rows;
+}
+
+// ---------------------------------------------------------------------------
+// Duplicate Detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Detect potential duplicate registry entries for operator review.
+ * If email provided, exact match on email first; then fuzzy match on name.
+ */
+export async function detectDuplicates(
+  name: string,
+  email?: string
+): Promise<ReadonlyArray<GuestRegistryRecord>> {
+  if (email) {
+    const emailResult = await query<GuestRegistryRecord>(
+      `SELECT * FROM guest_registry WHERE email = $1`,
+      [email]
+    );
+    if (emailResult.rows.length > 0) {
+      return emailResult.rows;
+    }
+  }
+
+  const nameResult = await query<GuestRegistryRecord>(
+    `SELECT * FROM guest_registry WHERE canonical_name ILIKE $1`,
+    [`%${name}%`]
+  );
+  return nameResult.rows;
+}
+
+// ---------------------------------------------------------------------------
+// Analytics Snapshot
+// ---------------------------------------------------------------------------
+
+/**
+ * Create an analytics snapshot table for a completed convention year.
+ * Aggregates key metrics into analytics_snapshot_{year}.
+ * Part of the archive process (PRD section 5).
+ */
+export async function createAnalyticsSnapshot(
+  conventionYear: number
+): Promise<{ snapshotTable: string; rowCount: number }> {
+  const tableName = `analytics_snapshot_${conventionYear}`;
+
+  await query(
+    `CREATE TABLE IF NOT EXISTS ${tableName} AS
+     SELECT
+       g.convention_year,
+       g.department,
+       g.type,
+       COUNT(*)::INTEGER AS guest_count,
+       COUNT(DISTINCT g.registry_id)::INTEGER AS unique_registry_entries,
+       COUNT(CASE WHEN gr.total_visits > 1 THEN 1 END)::INTEGER AS returning_count
+     FROM guests g
+     LEFT JOIN guest_registry gr ON gr.id = g.registry_id
+     WHERE g.convention_year = $1
+     GROUP BY g.convention_year, g.department, g.type`,
+    [conventionYear]
+  );
+
+  const countResult = await query<{ readonly [key: string]: unknown; count: number }>(
+    `SELECT COUNT(*)::INTEGER AS count FROM ${tableName}`
+  );
+
+  return {
+    snapshotTable: tableName,
+    rowCount: countResult.rows[0]?.count ?? 0,
+  };
 }
