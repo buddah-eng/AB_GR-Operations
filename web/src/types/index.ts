@@ -49,9 +49,12 @@ export interface AuthUser {
 export interface OntologyProperty {
   key: string
   label: string
-  type: 'string' | 'number' | 'boolean' | 'date' | 'enum' | 'text'
+  type: string
   required: boolean
-  enumValues?: string[]
+  options?: Array<{ value: string; label: string; color?: string }>
+  placeholder?: string
+  hidden?: boolean
+  readOnly?: boolean
   description?: string
 }
 
@@ -59,7 +62,7 @@ export interface OntologyRelationship {
   key: string
   label: string
   targetConcept: string
-  cardinality: 'one-to-one' | 'one-to-many' | 'many-to-many'
+  cardinality: 'has-one' | 'has-many' | 'many-to-many'
 }
 
 export interface OntologyConcept {
@@ -74,6 +77,99 @@ export interface OntologyConcept {
 export interface OntologyData {
   concepts: OntologyConcept[]
   version: string
+}
+
+// ---- Condition Expressions ----
+
+export type ConditionExpression =
+  | FieldCondition
+  | AndCondition
+  | OrCondition
+  | NotCondition
+
+export interface FieldCondition {
+  type: 'field'
+  field: string
+  operator: string
+  value?: unknown
+}
+
+export interface AndCondition {
+  type: 'and'
+  conditions: ConditionExpression[]
+}
+
+export interface OrCondition {
+  type: 'or'
+  conditions: ConditionExpression[]
+}
+
+export interface NotCondition {
+  type: 'not'
+  condition: ConditionExpression
+}
+
+// ---- Form Config ----
+
+export interface FormConfig {
+  id: string
+  conceptKey: string
+  name: string
+  fields: FormFieldConfig[]
+  layout?: 'single' | 'two-column' | 'wizard'
+  steps?: FormStep[]
+}
+
+export interface FormFieldConfig {
+  propertyKey: string
+  groupName?: string
+  colSpan?: 1 | 2
+  showIf?: ConditionExpression
+  autocompleteSource?: string
+  overrideLabel?: string
+  overridePlaceholder?: string
+}
+
+export interface FormStep {
+  name: string
+  label: string
+  fields: string[]
+}
+
+// ---- View Config ----
+
+export interface ViewConfig {
+  id: string
+  conceptKey: string
+  name: string
+  viewType: 'table' | 'kanban' | 'timeline' | 'detail' | 'dashboard'
+  columns?: ViewColumn[]
+  filters?: ViewFilter[]
+  sort?: { field: string; direction: 'asc' | 'desc' }
+  groupBy?: string
+  timelineStart?: string
+  timelineEnd?: string
+  rowAction?: 'navigate_to_detail' | 'inline_edit' | 'none'
+  presets?: ViewPreset[]
+}
+
+export interface ViewColumn {
+  propertyKey: string
+  width?: number
+  sortable?: boolean
+  filterable?: boolean
+  editable?: boolean
+}
+
+export interface ViewFilter {
+  field: string
+  operator: string
+  options?: string[]
+}
+
+export interface ViewPreset {
+  name: string
+  filter: Record<string, unknown>
 }
 
 // ---- Guest ----

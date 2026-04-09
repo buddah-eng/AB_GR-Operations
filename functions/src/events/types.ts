@@ -10,7 +10,7 @@ export interface DomainEvent {
   readonly eventName: string       // e.g. "guest.created", "schedule.updated"
   readonly domain: string          // concept key, e.g. "guest"
   readonly action: EventAction
-  readonly recordId: string        // Notion page ID of the affected record
+  readonly recordId: string        // Postgres row ID of the affected record
   readonly changedFields?: ReadonlyArray<string>
   readonly previousValues?: Readonly<Record<string, unknown>>
   readonly newValues?: Readonly<Record<string, unknown>>

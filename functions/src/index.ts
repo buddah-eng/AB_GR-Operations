@@ -16,6 +16,9 @@ import { domainRouter } from "./api/domains";
 import { ontologyRouter } from "./api/ontology-routes";
 import { actionRouter } from "./api/actions";
 import { configRouter } from "./api/config";
+import { externalRouter } from "./api/external";
+import { registerWebhookDelivery } from "./api/webhooks";
+import { registerWorkflowEngine } from "./workflows/engine";
 
 // --- Initialize Firebase Admin ---
 
@@ -38,8 +41,12 @@ app.use(
     allowedHeaders: [
       "Content-Type",
       "Authorization",
+      "X-API-Key",
+      "X-MCP-Delegation",
+      "X-Guest-Token",
+      "X-Driver-Token",
       // Dev headers — only effective in emulator (auth middleware rejects bypass tokens in prod)
-      ...(process.env.FUNCTIONS_EMULATOR ? ["X-Dev-Email", "X-Dev-Role"] : []),
+      ...(process.env.FUNCTIONS_EMULATOR ? ["X-Dev-Email", "X-Dev-Role", "X-Dev-Actor-Type"] : []),
     ],
     credentials: true,
     maxAge: 3600, // Pre-flight cache: 1 hour
@@ -75,6 +82,11 @@ app.use("/api/config", configRouter);
 app.use("/api/action", actionRouter);
 app.use("/api/domains", domainRouter);
 app.use("/api/ontology", ontologyRouter);
+app.use("/api/external", externalRouter);
+
+// Register event bus handlers
+registerWorkflowEngine();
+registerWebhookDelivery();
 
 // --- 404 handler ---
 

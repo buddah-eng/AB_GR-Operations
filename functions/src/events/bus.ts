@@ -4,13 +4,12 @@
  * In-memory pub/sub with glob-style pattern matching.
  * Handlers execute sequentially by priority (lower = first).
  * One handler failing does not block subsequent handlers.
- * Every emitted event is logged to the Notion Events Log database.
+ * Every emitted event is logged to the Postgres event_log table.
  */
 
 import * as crypto from "crypto";
 import * as logger from "firebase-functions/logger";
-import { createPage } from "../notion/client";
-import { getOntologyDatabaseId } from "../notion/databases";
+import { query } from "../db/client";
 import type { DomainEvent, EventHandler, EventSubscription, EventLogEntry } from "./types";
 
 // --- Subscription registry ---
@@ -23,10 +22,10 @@ const subscriptions: EventSubscription[] = [];
  * Subscribes a handler to domain events matching a pattern.
  *
  * Pattern syntax:
- *   "guest.created"    — exact match
- *   "guest.*"          — matches any event on the guest concept
- *   "*.created"        — matches any concept's created event
- *   "*"                — matches everything
+ *   "guest.created"    -- exact match
+ *   "guest.*"          -- matches any event on the guest concept
+ *   "*.created"        -- matches any concept's created event
+ *   "*"                -- matches everything
  *
  * @returns An unsubscribe function.
  */
@@ -109,9 +108,9 @@ export async function emit(event: DomainEvent): Promise<EventLogEntry> {
     actionsExecuted,
   };
 
-  // Fire-and-forget: log to Notion (don't block the response)
-  logEventToNotion(logEntry).catch((err) => {
-    logger.error("Failed to log event to Notion", { error: err });
+  // Fire-and-forget: log to Postgres (don't block the response)
+  logEventToPostgres(logEntry).catch((err) => {
+    logger.error("Failed to log event to Postgres", { error: err });
   });
 
   return logEntry;
@@ -155,23 +154,14 @@ export function clearSubscriptions(): void {
 
 /**
  * Tests whether an event name matches a subscription pattern.
- *
- * Patterns are dot-separated segments where "*" matches any single segment.
- * Examples:
- *   "guest.created" matches "guest.created"          → true
- *   "guest.*"       matches "guest.created"          → true
- *   "*.created"     matches "guest.created"          → true
- *   "*"             matches "guest.created"           → true (wildcard-only = match all)
- *   "guest.updated" matches "guest.created"          → false
+ * Exported for testing.
  */
-function matchesPattern(pattern: string, eventName: string): boolean {
-  // Single wildcard matches everything
+export function matchesPattern(pattern: string, eventName: string): boolean {
   if (pattern === "*") return true;
 
   const patternParts = pattern.split(".");
   const eventParts = eventName.split(".");
 
-  // Different number of segments = no match (unless pattern is just "*")
   if (patternParts.length !== eventParts.length) return false;
 
   return patternParts.every(
@@ -179,40 +169,24 @@ function matchesPattern(pattern: string, eventName: string): boolean {
   );
 }
 
-// --- Event logging to Notion ---
+// --- Event logging to Postgres ---
 
-async function logEventToNotion(entry: EventLogEntry): Promise<void> {
+async function logEventToPostgres(entry: EventLogEntry): Promise<void> {
   try {
-    const dbId = getOntologyDatabaseId("events_log");
-    await createPage(dbId, {
-      "Event ID": {
-        title: [{ text: { content: entry.eventId } }],
-      },
-      "Event Name": {
-        rich_text: [{ text: { content: entry.eventName } }],
-      },
-      "Record ID": {
-        rich_text: [{ text: { content: entry.recordId } }],
-      },
-      "Triggered By": {
-        rich_text: [{ text: { content: entry.triggeredBy } }],
-      },
-      "Timestamp": {
-        date: { start: entry.timestamp },
-      },
-      "Workflows Triggered": {
-        rich_text: [
-          { text: { content: entry.workflowsTriggered.join(", ") } },
-        ],
-      },
-      "Actions": {
-        rich_text: [
-          { text: { content: JSON.stringify(entry.actionsExecuted).slice(0, 2000) } },
-        ],
-      },
-    });
+    await query(
+      `INSERT INTO event_log (event_id, event_name, record_id, triggered_by, timestamp, workflows_triggered, actions_executed)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        entry.eventId,
+        entry.eventName,
+        entry.recordId,
+        entry.triggeredBy,
+        entry.timestamp,
+        entry.workflowsTriggered,
+        JSON.stringify(entry.actionsExecuted),
+      ]
+    );
   } catch (err) {
-    // Logging failures are non-critical — warn but don't throw
-    logger.warn("Could not write event log to Notion", { error: err });
+    logger.warn("Could not write event log to Postgres", { error: err });
   }
 }

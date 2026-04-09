@@ -1,15 +1,15 @@
 /**
  * Ontology Loader
  *
- * Reads the five ontology databases from Notion (concepts, properties,
+ * Reads the five ontology tables from Postgres (concepts, properties,
  * relationships, events, constraints) and assembles a typed OntologyCache.
- * Results are cached in memory with a 5-minute TTL via MemoryCache.
+ * Results are cached in memory with a 5-minute TTL.
+ * Resolves concept inheritance at load time.
  */
 
 import * as logger from "firebase-functions/logger";
-import { cache, TTL_ONTOLOGY_MS } from "../notion/cache";
-import { queryDatabase, pageToFlatObject, pageMetadata } from "../notion/client";
-import { getOntologyDatabaseId } from "../notion/databases";
+import { cache, TTL_ONTOLOGY_MS } from "../cache";
+import { query } from "../db/client";
 import type {
   Concept,
   Property,
@@ -19,6 +19,7 @@ import type {
   OntologyCache,
   SelectOption,
   ConditionExpression,
+  ValidationRules,
   FormConfig,
   FormFieldConfig,
   FormStep,
@@ -31,7 +32,7 @@ import type {
   WidgetConfig,
 } from "./types";
 
-// --- Cache key ---
+// --- Cache keys ---
 
 const ONTOLOGY_CACHE_KEY = "ontology";
 const FORMS_CACHE_PREFIX = "form:";
@@ -40,11 +41,8 @@ const PAGES_CACHE_KEY = "pages";
 
 // --- Ontology loading ---
 
-/**
- * Loads the full ontology from Notion and builds a typed OntologyCache.
- */
 export async function loadOntology(): Promise<OntologyCache> {
-  logger.info("Loading ontology from Notion...");
+  logger.info("Loading ontology from Postgres...");
   const startMs = Date.now();
 
   const [
@@ -54,84 +52,82 @@ export async function loadOntology(): Promise<OntologyCache> {
     eventRows,
     constraintRows,
   ] = await Promise.all([
-    queryDatabase(getOntologyDatabaseId("concepts")),
-    queryDatabase(getOntologyDatabaseId("properties")),
-    queryDatabase(getOntologyDatabaseId("relationships")),
-    queryDatabase(getOntologyDatabaseId("events")),
-    queryDatabase(getOntologyDatabaseId("constraints")),
+    query("SELECT * FROM ontology_concepts WHERE status = 'active'"),
+    query("SELECT * FROM ontology_properties WHERE status = 'active' ORDER BY sort_order"),
+    query("SELECT * FROM ontology_relationships WHERE status = 'active'"),
+    query("SELECT * FROM ontology_events WHERE status = 'active'"),
+    query("SELECT * FROM ontology_constraints WHERE status = 'active'"),
   ]);
 
   // --- Build concept map ---
   const concepts = new Map<string, Concept>();
-  for (const row of conceptRows) {
-    const flat = pageToFlatObject(row as Record<string, unknown>);
-    const meta = pageMetadata(row as Record<string, unknown>);
-    const concept = parseConcept(meta.id, flat);
+  for (const row of conceptRows.rows) {
+    const concept = parseConcept(row);
     if (concept) {
       concepts.set(concept.key, concept);
     }
   }
 
-  // --- Build properties map (conceptKey → Property[]) ---
-  const properties = new Map<string, ReadonlyArray<Property>>();
+  // --- Build properties map (conceptKey -> Property[]) ---
   const propsByConceptKey = new Map<string, Property[]>();
-  for (const row of propertyRows) {
-    const flat = pageToFlatObject(row as Record<string, unknown>);
-    const meta = pageMetadata(row as Record<string, unknown>);
-    const prop = parseProperty(meta.id, flat);
+  for (const row of propertyRows.rows) {
+    const prop = parseProperty(row);
     if (prop) {
       const existing = propsByConceptKey.get(prop.conceptKey) ?? [];
       propsByConceptKey.set(prop.conceptKey, [...existing, prop]);
     }
   }
-  for (const [key, props] of propsByConceptKey.entries()) {
-    properties.set(key, props.sort((a, b) => a.sortOrder - b.sortOrder));
-  }
 
   // --- Build relationships map ---
-  const relationships = new Map<string, ReadonlyArray<Relationship>>();
   const relsByConceptKey = new Map<string, Relationship[]>();
-  for (const row of relationshipRows) {
-    const flat = pageToFlatObject(row as Record<string, unknown>);
-    const meta = pageMetadata(row as Record<string, unknown>);
-    const rel = parseRelationship(meta.id, flat);
+  for (const row of relationshipRows.rows) {
+    const rel = parseRelationship(row);
     if (rel) {
       const existing = relsByConceptKey.get(rel.sourceConceptKey) ?? [];
       relsByConceptKey.set(rel.sourceConceptKey, [...existing, rel]);
     }
   }
-  for (const [key, rels] of relsByConceptKey.entries()) {
-    relationships.set(key, rels);
-  }
 
   // --- Build events map ---
-  const events = new Map<string, ReadonlyArray<DomainEventDef>>();
   const eventsByConceptKey = new Map<string, DomainEventDef[]>();
-  for (const row of eventRows) {
-    const flat = pageToFlatObject(row as Record<string, unknown>);
-    const meta = pageMetadata(row as Record<string, unknown>);
-    const evt = parseDomainEventDef(meta.id, flat);
+  for (const row of eventRows.rows) {
+    const evt = parseDomainEventDef(row);
     if (evt) {
       const existing = eventsByConceptKey.get(evt.conceptKey) ?? [];
       eventsByConceptKey.set(evt.conceptKey, [...existing, evt]);
     }
   }
-  for (const [key, evts] of eventsByConceptKey.entries()) {
-    events.set(key, evts);
-  }
 
   // --- Build constraints map ---
-  const constraints = new Map<string, ReadonlyArray<Constraint>>();
   const constraintsByConceptKey = new Map<string, Constraint[]>();
-  for (const row of constraintRows) {
-    const flat = pageToFlatObject(row as Record<string, unknown>);
-    const meta = pageMetadata(row as Record<string, unknown>);
-    const constraint = parseConstraint(meta.id, flat);
+  for (const row of constraintRows.rows) {
+    const constraint = parseConstraint(row);
     if (constraint) {
       const existing = constraintsByConceptKey.get(constraint.conceptKey) ?? [];
       constraintsByConceptKey.set(constraint.conceptKey, [...existing, constraint]);
     }
   }
+
+  // --- Resolve inheritance ---
+  resolveInheritance(concepts, propsByConceptKey, constraintsByConceptKey);
+
+  // --- Freeze maps ---
+  const properties = new Map<string, ReadonlyArray<Property>>();
+  for (const [key, props] of propsByConceptKey.entries()) {
+    properties.set(key, props);
+  }
+
+  const relationships = new Map<string, ReadonlyArray<Relationship>>();
+  for (const [key, rels] of relsByConceptKey.entries()) {
+    relationships.set(key, rels);
+  }
+
+  const events = new Map<string, ReadonlyArray<DomainEventDef>>();
+  for (const [key, evts] of eventsByConceptKey.entries()) {
+    events.set(key, evts);
+  }
+
+  const constraints = new Map<string, ReadonlyArray<Constraint>>();
   for (const [key, cons] of constraintsByConceptKey.entries()) {
     constraints.set(key, cons);
   }
@@ -148,27 +144,77 @@ export async function loadOntology(): Promise<OntologyCache> {
   const elapsedMs = Date.now() - startMs;
   logger.info(
     `Ontology loaded: ${concepts.size} concepts, ` +
-    `${propertyRows.length} properties, ` +
-    `${relationshipRows.length} relationships, ` +
-    `${eventRows.length} events, ` +
-    `${constraintRows.length} constraints in ${elapsedMs}ms`
+    `${propertyRows.rowCount} properties, ` +
+    `${relationshipRows.rowCount} relationships, ` +
+    `${eventRows.rowCount} events, ` +
+    `${constraintRows.rowCount} constraints in ${elapsedMs}ms`
   );
 
   return ontologyCache;
 }
 
+// --- Inheritance resolution ---
+
+function resolveInheritance(
+  concepts: ReadonlyMap<string, Concept>,
+  propsByConceptKey: Map<string, Property[]>,
+  constraintsByConceptKey: Map<string, Constraint[]>
+): void {
+  const visited = new Set<string>();
+  const resolving = new Set<string>();
+
+  function resolve(conceptKey: string): void {
+    if (visited.has(conceptKey)) return;
+
+    if (resolving.has(conceptKey)) {
+      logger.error(`Circular inheritance detected for concept: ${conceptKey}`);
+      visited.add(conceptKey);
+      return;
+    }
+
+    const concept = concepts.get(conceptKey);
+    if (!concept?.extends) {
+      visited.add(conceptKey);
+      return;
+    }
+
+    resolving.add(conceptKey);
+
+    // Resolve parent first
+    resolve(concept.extends);
+
+    const parentProps = propsByConceptKey.get(concept.extends) ?? [];
+    const childProps = propsByConceptKey.get(conceptKey) ?? [];
+
+    // Merge: parent properties first, child overrides by key
+    const childPropKeys = new Set(childProps.map((p) => p.key));
+    const mergedProps = [
+      ...parentProps.filter((p) => !childPropKeys.has(p.key)),
+      ...childProps,
+    ].sort((a, b) => a.sortOrder - b.sortOrder);
+
+    propsByConceptKey.set(conceptKey, mergedProps);
+
+    // Concatenate constraints (parent + child)
+    const parentConstraints = constraintsByConceptKey.get(concept.extends) ?? [];
+    const childConstraints = constraintsByConceptKey.get(conceptKey) ?? [];
+    constraintsByConceptKey.set(conceptKey, [...parentConstraints, ...childConstraints]);
+
+    resolving.delete(conceptKey);
+    visited.add(conceptKey);
+  }
+
+  for (const key of concepts.keys()) {
+    resolve(key);
+  }
+}
+
 // --- Public API ---
 
-/**
- * Returns the cached ontology, loading from Notion if necessary.
- */
 export async function getOntology(): Promise<OntologyCache> {
   return cache.getOrLoad(ONTOLOGY_CACHE_KEY, loadOntology, TTL_ONTOLOGY_MS);
 }
 
-/**
- * Forces a full reload of the ontology from Notion.
- */
 export async function reloadOntology(): Promise<OntologyCache> {
   cache.invalidate(ONTOLOGY_CACHE_KEY);
   const freshOntology = await loadOntology();
@@ -176,17 +222,11 @@ export async function reloadOntology(): Promise<OntologyCache> {
   return freshOntology;
 }
 
-/**
- * Returns a single concept by key, or undefined if not found.
- */
 export async function getConceptByKey(key: string): Promise<Concept | undefined> {
   const ontology = await getOntology();
   return ontology.concepts.get(key);
 }
 
-/**
- * Returns all properties defined for a concept.
- */
 export async function getPropertiesForConcept(
   conceptKey: string
 ): Promise<ReadonlyArray<Property>> {
@@ -194,9 +234,6 @@ export async function getPropertiesForConcept(
   return ontology.properties.get(conceptKey) ?? [];
 }
 
-/**
- * Returns all relationships where the given concept is the source.
- */
 export async function getRelationshipsForConcept(
   conceptKey: string
 ): Promise<ReadonlyArray<Relationship>> {
@@ -204,9 +241,6 @@ export async function getRelationshipsForConcept(
   return ontology.relationships.get(conceptKey) ?? [];
 }
 
-/**
- * Returns all event definitions for a concept.
- */
 export async function getEventsForConcept(
   conceptKey: string
 ): Promise<ReadonlyArray<DomainEventDef>> {
@@ -214,9 +248,6 @@ export async function getEventsForConcept(
   return ontology.events.get(conceptKey) ?? [];
 }
 
-/**
- * Returns all constraints for a concept.
- */
 export async function getConstraintsForConcept(
   conceptKey: string
 ): Promise<ReadonlyArray<Constraint>> {
@@ -226,9 +257,6 @@ export async function getConstraintsForConcept(
 
 // --- Form config loader ---
 
-/**
- * Loads the form config for a concept from the Notion Forms database.
- */
 export async function getFormConfig(conceptKey: string): Promise<FormConfig | undefined> {
   const cacheKey = `${FORMS_CACHE_PREFIX}${conceptKey}`;
 
@@ -236,17 +264,12 @@ export async function getFormConfig(conceptKey: string): Promise<FormConfig | un
     cacheKey,
     async () => {
       try {
-        const dbId = getOntologyDatabaseId("forms");
-        const rows = await queryDatabase(dbId, {
-          filter: {
-            property: "Concept Key",
-            rich_text: { equals: conceptKey },
-          },
-        });
-        if (rows.length === 0) return undefined;
-        const flat = pageToFlatObject(rows[0] as Record<string, unknown>);
-        const meta = pageMetadata(rows[0] as Record<string, unknown>);
-        return parseFormConfig(meta.id, flat, conceptKey);
+        const result = await query(
+          "SELECT * FROM form_configs WHERE concept_key = $1 AND status = 'active' LIMIT 1",
+          [conceptKey]
+        );
+        if (result.rows.length === 0) return undefined;
+        return parseFormConfig(result.rows[0]);
       } catch {
         logger.warn(`No form config found for concept: ${conceptKey}`);
         return undefined;
@@ -258,9 +281,6 @@ export async function getFormConfig(conceptKey: string): Promise<FormConfig | un
 
 // --- View config loader ---
 
-/**
- * Loads all view configs for a concept from the Notion Views database.
- */
 export async function getViewConfigs(
   conceptKey: string
 ): Promise<ReadonlyArray<ViewConfig>> {
@@ -270,18 +290,11 @@ export async function getViewConfigs(
     cacheKey,
     async () => {
       try {
-        const dbId = getOntologyDatabaseId("views");
-        const rows = await queryDatabase(dbId, {
-          filter: {
-            property: "Concept Key",
-            rich_text: { equals: conceptKey },
-          },
-        });
-        return rows.map((row) => {
-          const flat = pageToFlatObject(row as Record<string, unknown>);
-          const meta = pageMetadata(row as Record<string, unknown>);
-          return parseViewConfig(meta.id, flat, conceptKey);
-        });
+        const result = await query(
+          "SELECT * FROM view_configs WHERE concept_key = $1 AND status = 'active'",
+          [conceptKey]
+        );
+        return result.rows.map(parseViewConfig);
       } catch {
         logger.warn(`No view configs found for concept: ${conceptKey}`);
         return [];
@@ -293,21 +306,15 @@ export async function getViewConfigs(
 
 // --- Page config loader ---
 
-/**
- * Loads all page configs from the Notion Pages database.
- */
 export async function getPageConfigs(): Promise<ReadonlyArray<PageConfig>> {
   return cache.getOrLoad(
     PAGES_CACHE_KEY,
     async () => {
       try {
-        const dbId = getOntologyDatabaseId("pages");
-        const rows = await queryDatabase(dbId);
-        return rows.map((row) => {
-          const flat = pageToFlatObject(row as Record<string, unknown>);
-          const meta = pageMetadata(row as Record<string, unknown>);
-          return parsePageConfig(meta.id, flat);
-        });
+        const result = await query(
+          "SELECT * FROM page_configs WHERE status = 'active'"
+        );
+        return result.rows.map(parsePageConfig);
       } catch {
         logger.warn("No page configs found");
         return [];
@@ -317,229 +324,161 @@ export async function getPageConfigs(): Promise<ReadonlyArray<PageConfig>> {
   );
 }
 
-// --- Parsers: Notion flat object → typed ontology object ---
+// --- Parsers: Postgres row -> typed ontology object ---
 
-function parseConcept(id: string, flat: Readonly<Record<string, unknown>>): Concept | null {
-  const key = asString(flat["Key"]);
-  const name = asString(flat["Name"]);
+function parseConcept(row: Record<string, unknown>): Concept | null {
+  const key = row.key as string | undefined;
+  const name = row.name as string | undefined;
   if (!key || !name) {
-    logger.warn("Skipping concept row with missing Key or Name", { id });
+    logger.warn("Skipping concept row with missing key or name", { id: row.id });
     return null;
   }
 
   return {
-    id,
+    id: row.id as string,
     key,
     name,
-    pluralName: asString(flat["Plural Name"]) ?? `${name}s`,
-    extends: asString(flat["Extends"]) ?? undefined,
-    notionDatabaseId: asString(flat["Database ID"]) ?? "",
-    icon: asString(flat["Icon"]) ?? undefined,
-    description: asString(flat["Description"]) ?? undefined,
-    isRegistry: asBool(flat["Is Registry"]),
-    isConfig: asBool(flat["Is Config"]),
+    pluralName: (row.plural_name as string) ?? `${name}s`,
+    extends: (row.extends as string) ?? undefined,
+    icon: (row.icon as string) ?? undefined,
+    description: (row.description as string) ?? undefined,
+    isRegistry: row.is_registry === true,
+    isConfig: row.is_config === true,
   };
 }
 
-function parseProperty(id: string, flat: Readonly<Record<string, unknown>>): Property | null {
-  const conceptKey = asString(flat["Concept Key"]);
-  const key = asString(flat["Key"]);
+function parseProperty(row: Record<string, unknown>): Property | null {
+  const conceptKey = row.concept_key as string | undefined;
+  const key = row.key as string | undefined;
   if (!conceptKey || !key) {
-    logger.warn("Skipping property row with missing Concept Key or Key", { id });
+    logger.warn("Skipping property row with missing concept_key or key", { id: row.id });
     return null;
   }
 
+  const validationRules = row.validation_rules as ValidationRules | null;
+
   return {
-    id,
+    id: row.id as string,
     conceptKey,
     key,
-    label: asString(flat["Label"]) ?? key,
-    type: (asString(flat["Type"]) ?? "text") as Property["type"],
-    required: asBool(flat["Required"]),
-    defaultValue: flat["Default Value"] ?? undefined,
-    placeholder: asString(flat["Placeholder"]) ?? undefined,
-    description: asString(flat["Description"]) ?? undefined,
-    notionPropertyName: asString(flat["Notion Property Name"]) ?? key,
-    options: parseSelectOptions(flat["Options"]),
-    minLength: asNumber(flat["Min Length"]) ?? undefined,
-    maxLength: asNumber(flat["Max Length"]) ?? undefined,
-    min: asNumber(flat["Min"]) ?? undefined,
-    max: asNumber(flat["Max"]) ?? undefined,
-    pattern: asString(flat["Pattern"]) ?? undefined,
-    sortOrder: asNumber(flat["Sort Order"]) ?? 0,
-    hidden: asBool(flat["Hidden"]),
-    readOnly: asBool(flat["Read Only"]),
+    label: (row.label as string) ?? key,
+    type: (row.type as Property["type"]) ?? "text",
+    required: row.required === true,
+    defaultValue: row.default_value ?? undefined,
+    placeholder: (row.placeholder as string) ?? undefined,
+    description: (row.description as string) ?? undefined,
+    postgresColumn: (row.postgres_column as string) ?? undefined,
+    options: parseSelectOptions(row.options),
+    validationRules: validationRules ?? undefined,
+    sortOrder: (row.sort_order as number) ?? 0,
+    hidden: row.hidden === true,
+    readOnly: row.read_only === true,
   };
 }
 
-function parseRelationship(
-  id: string,
-  flat: Readonly<Record<string, unknown>>
-): Relationship | null {
-  const sourceConceptKey = asString(flat["Source Concept Key"]);
-  const targetConceptKey = asString(flat["Target Concept Key"]);
-  const key = asString(flat["Key"]);
+function parseRelationship(row: Record<string, unknown>): Relationship | null {
+  const sourceConceptKey = row.source_concept_key as string | undefined;
+  const targetConceptKey = row.target_concept_key as string | undefined;
+  const key = row.key as string | undefined;
   if (!sourceConceptKey || !targetConceptKey || !key) {
-    logger.warn("Skipping relationship row with missing fields", { id });
+    logger.warn("Skipping relationship row with missing fields", { id: row.id });
     return null;
   }
 
   return {
-    id,
+    id: row.id as string,
     sourceConceptKey,
     targetConceptKey,
     key,
-    label: asString(flat["Label"]) ?? key,
-    cardinality: (asString(flat["Cardinality"]) ?? "has-many") as Relationship["cardinality"],
-    notionRelationName: asString(flat["Notion Relation Name"]) ?? key,
-    inverseKey: asString(flat["Inverse Key"]) ?? undefined,
-    description: asString(flat["Description"]) ?? undefined,
+    label: (row.label as string) ?? key,
+    cardinality: (row.cardinality as Relationship["cardinality"]) ?? "has-many",
+    inverseKey: (row.inverse_key as string) ?? undefined,
+    description: (row.description as string) ?? undefined,
   };
 }
 
-function parseDomainEventDef(
-  id: string,
-  flat: Readonly<Record<string, unknown>>
-): DomainEventDef | null {
-  const conceptKey = asString(flat["Concept Key"]);
-  const eventKey = asString(flat["Event Key"]);
+function parseDomainEventDef(row: Record<string, unknown>): DomainEventDef | null {
+  const conceptKey = row.concept_key as string | undefined;
+  const eventKey = row.event_key as string | undefined;
   if (!conceptKey || !eventKey) {
-    logger.warn("Skipping event def row with missing fields", { id });
+    logger.warn("Skipping event def row with missing fields", { id: row.id });
     return null;
   }
 
   return {
-    id,
+    id: row.id as string,
     conceptKey,
     eventKey,
-    fullEventName: asString(flat["Full Event Name"]) ?? `${conceptKey}.${eventKey}`,
-    triggerType: (asString(flat["Trigger Type"]) ?? "on_create") as DomainEventDef["triggerType"],
-    description: asString(flat["Description"]) ?? undefined,
-    changedFields: asStringArray(flat["Changed Fields"]) ?? undefined,
-    schedule: asString(flat["Schedule"]) ?? undefined,
+    fullEventName: (row.full_event_name as string) ?? `${conceptKey}.${eventKey}`,
+    triggerType: (row.trigger_type as DomainEventDef["triggerType"]) ?? "on_create",
+    description: (row.description as string) ?? undefined,
+    changedFields: (row.changed_fields as string[]) ?? undefined,
+    schedule: (row.schedule as string) ?? undefined,
   };
 }
 
-function parseConstraint(
-  id: string,
-  flat: Readonly<Record<string, unknown>>
-): Constraint | null {
-  const conceptKey = asString(flat["Concept Key"]);
-  const name = asString(flat["Name"]);
+function parseConstraint(row: Record<string, unknown>): Constraint | null {
+  const conceptKey = row.concept_key as string | undefined;
+  const name = row.name as string | undefined;
   if (!conceptKey || !name) {
-    logger.warn("Skipping constraint row with missing fields", { id });
+    logger.warn("Skipping constraint row with missing fields", { id: row.id });
     return null;
   }
 
   return {
-    id,
+    id: row.id as string,
     conceptKey,
     name,
-    extends: asString(flat["Extends"]) ?? undefined,
-    condition: parseConditionExpression(flat["Condition"]),
-    defaults: parseJsonField(flat["Defaults"]) as Record<string, unknown> | undefined,
-    requiredFields: asStringArray(flat["Required Fields"]) ?? undefined,
-    description: asString(flat["Description"]) ?? undefined,
+    extends: (row.extends as string) ?? undefined,
+    condition: parseConditionExpression(row.condition),
+    defaults: (row.defaults as Record<string, unknown>) ?? undefined,
+    requiredFields: (row.required_fields as string[]) ?? undefined,
+    description: (row.description as string) ?? undefined,
   };
 }
 
-function parseFormConfig(
-  id: string,
-  flat: Readonly<Record<string, unknown>>,
-  conceptKey: string
-): FormConfig {
-  const fieldsJson = parseJsonField(flat["Fields"]) as FormFieldConfig[] | undefined;
-  const stepsJson = parseJsonField(flat["Steps"]) as FormStep[] | undefined;
-
+function parseFormConfig(row: Record<string, unknown>): FormConfig {
   return {
-    id,
-    conceptKey,
-    name: asString(flat["Name"]) ?? `${conceptKey} form`,
-    fields: fieldsJson ?? [],
-    layout: (asString(flat["Layout"]) as FormConfig["layout"]) ?? "single",
-    steps: stepsJson ?? undefined,
+    id: row.id as string,
+    conceptKey: row.concept_key as string,
+    name: (row.name as string) ?? "default",
+    fields: (row.fields as FormFieldConfig[]) ?? [],
+    layout: (row.layout as FormConfig["layout"]) ?? "single",
+    steps: (row.steps as FormStep[]) ?? undefined,
   };
 }
 
-function parseViewConfig(
-  id: string,
-  flat: Readonly<Record<string, unknown>>,
-  conceptKey: string
-): ViewConfig {
-  const columnsJson = parseJsonField(flat["Columns"]) as ViewColumn[] | undefined;
-  const filtersJson = parseJsonField(flat["Filters"]) as ViewFilter[] | undefined;
-  const sortJson = parseJsonField(flat["Sort"]) as ViewSort | undefined;
-  const presetsJson = parseJsonField(flat["Presets"]) as ViewPreset[] | undefined;
-
+function parseViewConfig(row: Record<string, unknown>): ViewConfig {
   return {
-    id,
-    conceptKey,
-    name: asString(flat["Name"]) ?? `${conceptKey} view`,
-    viewType: (asString(flat["View Type"]) as ViewConfig["viewType"]) ?? "table",
-    columns: columnsJson ?? undefined,
-    filters: filtersJson ?? undefined,
-    sort: sortJson ?? undefined,
-    groupBy: asString(flat["Group By"]) ?? undefined,
-    timelineStart: asString(flat["Timeline Start"]) ?? undefined,
-    timelineEnd: asString(flat["Timeline End"]) ?? undefined,
-    rowAction: (asString(flat["Row Action"]) as ViewConfig["rowAction"]) ?? undefined,
-    presets: presetsJson ?? undefined,
+    id: row.id as string,
+    conceptKey: row.concept_key as string,
+    name: (row.name as string) ?? "default",
+    viewType: (row.view_type as ViewConfig["viewType"]) ?? "table",
+    columns: (row.columns as ViewColumn[]) ?? undefined,
+    filters: (row.filters as ViewFilter[]) ?? undefined,
+    sort: (row.sort as ViewSort) ?? undefined,
+    groupBy: (row.group_by as string) ?? undefined,
+    timelineStart: (row.timeline_start as string) ?? undefined,
+    timelineEnd: (row.timeline_end as string) ?? undefined,
+    rowAction: (row.row_action as ViewConfig["rowAction"]) ?? undefined,
+    presets: (row.presets as ViewPreset[]) ?? undefined,
   };
 }
 
-function parsePageConfig(
-  id: string,
-  flat: Readonly<Record<string, unknown>>
-): PageConfig {
-  const widgetsJson = parseJsonField(flat["Widgets"]) as WidgetConfig[] | undefined;
-  const breakpointsJson = parseJsonField(flat["Breakpoints"]) as PageConfig["breakpoints"] | undefined;
-
+function parsePageConfig(row: Record<string, unknown>): PageConfig {
   return {
-    id,
-    name: asString(flat["Name"]) ?? "Unnamed Page",
-    slug: asString(flat["Slug"]) ?? "/unknown",
-    widgets: widgetsJson ?? [],
-    breakpoints: breakpointsJson ?? undefined,
+    id: row.id as string,
+    name: (row.name as string) ?? "Unnamed Page",
+    slug: (row.slug as string) ?? "/unknown",
+    widgets: (row.widgets as WidgetConfig[]) ?? [],
+    breakpoints: (row.breakpoints as PageConfig["breakpoints"]) ?? undefined,
   };
 }
 
 // --- Parsing utility helpers ---
 
-function asString(val: unknown): string | null {
-  if (typeof val === "string" && val.length > 0) return val;
-  return null;
-}
-
-function asNumber(val: unknown): number | null {
-  if (typeof val === "number" && !isNaN(val)) return val;
-  return null;
-}
-
-function asBool(val: unknown): boolean {
-  return val === true;
-}
-
-function asStringArray(val: unknown): ReadonlyArray<string> | null {
-  if (Array.isArray(val)) {
-    return val.filter((v): v is string => typeof v === "string");
-  }
-  // Support comma-separated string
-  if (typeof val === "string" && val.length > 0) {
-    return val.split(",").map((s) => s.trim());
-  }
-  return null;
-}
-
 function parseSelectOptions(val: unknown): ReadonlyArray<SelectOption> | undefined {
   if (!val) return undefined;
-  // Options might be stored as JSON string or as a multi_select array
-  if (typeof val === "string") {
-    try {
-      return JSON.parse(val) as SelectOption[];
-    } catch {
-      return val.split(",").map((v) => ({ value: v.trim(), label: v.trim() }));
-    }
-  }
   if (Array.isArray(val)) {
     return val.map((v) =>
       typeof v === "string" ? { value: v, label: v } : (v as SelectOption)
@@ -549,31 +488,15 @@ function parseSelectOptions(val: unknown): ReadonlyArray<SelectOption> | undefin
 }
 
 function parseConditionExpression(val: unknown): ConditionExpression {
+  if (typeof val === "object" && val !== null) {
+    return val as ConditionExpression;
+  }
   if (typeof val === "string" && val.length > 0) {
     try {
       return JSON.parse(val) as ConditionExpression;
     } catch {
-      // Fallback: treat as a simple "is not empty" condition
       return { type: "field", field: val, operator: "is_not_empty" };
     }
   }
-  if (typeof val === "object" && val !== null) {
-    return val as ConditionExpression;
-  }
-  // Default condition that always matches
   return { type: "field", field: "_id", operator: "is_not_empty" };
-}
-
-function parseJsonField(val: unknown): unknown | undefined {
-  if (typeof val === "string" && val.length > 0) {
-    try {
-      return JSON.parse(val);
-    } catch {
-      return undefined;
-    }
-  }
-  if (typeof val === "object" && val !== null) {
-    return val;
-  }
-  return undefined;
 }

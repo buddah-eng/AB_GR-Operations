@@ -13,11 +13,6 @@ export default defineConfig({
         "src/index.ts",
         "src/ontology/types.ts",
         "src/events/types.ts",
-        // Integration-heavy modules (tested via Firebase emulator integration tests)
-        "src/api/domains.ts",
-        "src/api/ontology-routes.ts",
-        "src/auth/middleware.ts",
-        "src/ontology/loader.ts",
       ],
       thresholds: {
         lines: 80,

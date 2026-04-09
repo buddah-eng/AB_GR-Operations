@@ -2,42 +2,71 @@
  * Generic CRUD Router for Domain Concepts
  *
  * Provides RESTful endpoints for any ontology concept:
- *   POST   /api/domains/:concept       — create
- *   GET    /api/domains/:concept       — list (paginated, filtered, sorted)
- *   GET    /api/domains/:concept/:id   — get single record
- *   PUT    /api/domains/:concept/:id   — update
- *   DELETE /api/domains/:concept/:id   — archive (soft delete)
+ *   POST   /api/domains/:concept       -- create
+ *   GET    /api/domains/:concept       -- list (paginated, filtered, sorted)
+ *   GET    /api/domains/:concept/:id   -- get single record
+ *   PUT    /api/domains/:concept/:id   -- update
+ *   DELETE /api/domains/:concept/:id   -- archive (soft delete)
  *
  * Every route validates the concept exists in the ontology, enforces RBAC,
- * and fires domain events on writes.
+ * and fires domain events on writes. Postgres is the system of record.
  */
 
 import { Router } from "express";
 import type { Request, Response } from "express";
-import type { QueryDatabaseParameters } from "@notionhq/client/build/src/api-endpoints";
 import * as logger from "firebase-functions/logger";
-import {
-  queryDatabasePage,
-  getPage,
-  createPage,
-  updatePage,
-  archivePage,
-  pageToFlatObject,
-  pageMetadata,
-  buildNotionProperties,
-} from "../notion/client";
+import { query } from "../db/client";
 import { getConceptByKey, getPropertiesForConcept } from "../ontology/loader";
 import { roleEngine } from "../roles/engine";
 import { emit, createDomainEvent } from "../events/bus";
 import { requireAuth } from "../auth/middleware";
+import { auditContextFromRequest, logAuditClaim } from "../audit/context";
 import type { ApiResponse, DomainRecord, Property } from "../ontology/types";
 
 // --- Router ---
 
 export const domainRouter = Router();
 
-// All domain routes require authentication
 domainRouter.use(requireAuth);
+
+// --- Concept-to-table mapping ---
+
+/**
+ * Maps a concept key to its Postgres table name.
+ * Convention: concept key is singular, table name matches.
+ */
+function conceptToTable(conceptKey: string): string {
+  const tableMap: Record<string, string> = {
+    guest: "guests",
+    staff: "staff",
+    volunteer: "staff",
+    schedule: "schedule_events",
+    schedule_event: "schedule_events",
+    prep_item: "prep_items",
+    pairing: "pairings",
+    venue: "venues",
+    shift: "shifts",
+    shift_assignment: "shift_assignments",
+    equipment: "equipment",
+    transport_booking: "transport_bookings",
+    contract_template: "contract_templates",
+    contract_clause: "contract_clauses",
+    guest_contract: "guest_contracts",
+  };
+  const table = tableMap[conceptKey];
+  if (!table) {
+    throw Object.assign(
+      new Error(`No table mapping for concept "${conceptKey}"`),
+      { status: 400 }
+    );
+  }
+  return table;
+}
+
+/** Validates that an identifier is safe for SQL interpolation (letters, digits, underscores only). */
+function isSafeIdentifier(name: string): boolean {
+  return /^[a-z][a-z0-9_]*$/i.test(name);
+}
 
 // --- List records ---
 
@@ -50,50 +79,50 @@ domainRouter.get("/:concept", async (req: Request, res: Response) => {
     const { concept } = conceptResult;
     const roleKey = req.role?.roleKey ?? "viewer";
 
-    // Check view permission
     const canView = await roleEngine.canPerformAction(roleKey, conceptKey, "view");
     if (!canView) {
       sendError(res, 403, `You do not have permission to view ${concept.pluralName}.`);
       return;
     }
 
-    // Parse pagination
     const page = clampInt(req.query.page, 1, 10000, 1);
     const limit = clampInt(req.query.limit, 1, 200, 50);
+    const offset = (page - 1) * limit;
 
-    // Build Notion filter from query params
+    const table = conceptToTable(conceptKey);
     const properties = await getPropertiesForConcept(conceptKey);
-    const notionFilter = buildFilterFromQuery(req.query, properties);
 
-    // Apply data scope filter
-    const scopeFilter = await roleEngine.buildDataScopeFilter(
+    // Build WHERE clause from filters and data scope
+    const { whereClause, params: filterParams } = buildWhereClause(
+      req.query,
+      properties,
       roleKey,
       conceptKey,
       req.user?.uid ?? ""
     );
 
-    const combinedFilter = combineFilters(notionFilter, scopeFilter);
+    // Build ORDER BY
+    const orderBy = buildOrderBy(req.query, properties);
 
-    // Build sort
-    const notionSorts = buildSortFromQuery(req.query, properties);
+    // Count total
+    const countResult = await query(
+      `SELECT COUNT(*) FROM ${table} WHERE NOT archived ${whereClause}`,
+      filterParams
+    );
+    const total = parseInt(countResult.rows[0].count as string, 10);
 
-    // Query Notion with pagination
-    // Notion doesn't support offset-based pagination, so we use cursor-based.
-    // For simplicity, we fetch page*limit results and skip to the right offset.
-    const result = await queryDatabasePage(concept.notionDatabaseId, {
-      filter: combinedFilter as QueryDatabaseParameters["filter"],
-      sorts: notionSorts as QueryDatabaseParameters["sorts"],
-      pageSize: Math.min(limit, 100),
-    });
+    // Fetch page
+    const dataResult = await query(
+      `SELECT * FROM ${table} WHERE NOT archived ${whereClause} ${orderBy} LIMIT $${filterParams.length + 1} OFFSET $${filterParams.length + 2}`,
+      [...filterParams, limit, offset]
+    );
 
-    // Convert to domain records and filter visible properties
+    // Filter visible properties per record
     const records = await Promise.all(
-      result.results.map(async (row) => {
-        const record = toDomainRecord(row as Record<string, unknown>, conceptKey);
+      dataResult.rows.map(async (row) => {
+        const record = rowToDomainRecord(row, conceptKey);
         const filteredProps = await roleEngine.filterRecord(
-          roleKey,
-          conceptKey,
-          record.properties
+          roleKey, conceptKey, record.properties
         );
         return { ...record, properties: filteredProps };
       })
@@ -102,12 +131,7 @@ domainRouter.get("/:concept", async (req: Request, res: Response) => {
     const response: ApiResponse<ReadonlyArray<DomainRecord>> = {
       success: true,
       data: records,
-      meta: {
-        total: records.length,
-        page,
-        limit,
-        hasMore: result.hasMore,
-      },
+      meta: { total, page, limit, hasMore: offset + limit < total },
     };
 
     res.json(response);
@@ -128,24 +152,30 @@ domainRouter.get("/:concept/:id", async (req: Request, res: Response) => {
 
     const canView = await roleEngine.canPerformAction(roleKey, conceptKey, "view");
     if (!canView) {
-      sendError(res, 403, `You do not have permission to view this record.`);
+      sendError(res, 403, "You do not have permission to view this record.");
       return;
     }
 
-    const page = await getPage(id);
-    const record = toDomainRecord(page as Record<string, unknown>, conceptKey);
-    const filteredProps = await roleEngine.filterRecord(
-      roleKey,
-      conceptKey,
-      record.properties
+    const table = conceptToTable(conceptKey);
+    const result = await query(
+      `SELECT * FROM ${table} WHERE id = $1 AND NOT archived`,
+      [id]
     );
 
-    const response: ApiResponse<DomainRecord> = {
+    if (result.rows.length === 0) {
+      sendError(res, 404, "Record not found.");
+      return;
+    }
+
+    const record = rowToDomainRecord(result.rows[0], conceptKey);
+    const filteredProps = await roleEngine.filterRecord(
+      roleKey, conceptKey, record.properties
+    );
+
+    res.json({
       success: true,
       data: { ...record, properties: filteredProps },
-    };
-
-    res.json(response);
+    } as ApiResponse<DomainRecord>);
   } catch (err) {
     handleError(res, err, "fetching record");
   }
@@ -168,24 +198,22 @@ domainRouter.post("/:concept", async (req: Request, res: Response) => {
       return;
     }
 
-    // Filter the write payload to editable properties only
     const rawPayload = req.body as Record<string, unknown>;
-    const filteredPayload = await roleEngine.filterWritePayload(
-      roleKey,
-      conceptKey,
-      rawPayload
-    );
+    const filteredPayload = await roleEngine.filterWritePayload(roleKey, conceptKey, rawPayload);
 
-    // Build Notion property types map from ontology
     const properties = await getPropertiesForConcept(conceptKey);
-    const propertyTypes = buildPropertyTypeMap(properties);
+    const table = conceptToTable(conceptKey);
 
-    const notionProperties = buildNotionProperties(filteredPayload, propertyTypes);
-    const created = await createPage(concept.notionDatabaseId, notionProperties);
+    const { coreColumns, jsonbProperties } = separateProperties(filteredPayload, properties);
+    coreColumns.created_by = req.user?.uid ?? null;
 
-    const record = toDomainRecord(created as Record<string, unknown>, conceptKey);
+    const auditCtx = auditContextFromRequest(req);
+    const row = await insertRecord(table, coreColumns, jsonbProperties);
+    const record = rowToDomainRecord(row, conceptKey);
 
-    // Fire domain event
+    // Log audit claim for rogue-actor detection
+    logAuditClaim(auditCtx, `POST /api/domains/${conceptKey}`);
+
     const event = createDomainEvent({
       eventName: `${conceptKey}.created`,
       domain: conceptKey,
@@ -196,12 +224,10 @@ domainRouter.post("/:concept", async (req: Request, res: Response) => {
     });
     await emit(event);
 
-    const response: ApiResponse<DomainRecord> = {
+    res.status(201).json({
       success: true,
       data: record,
-    };
-
-    res.status(201).json(response);
+    } as ApiResponse<DomainRecord>);
   } catch (err) {
     handleError(res, err, "creating record");
   }
@@ -219,52 +245,52 @@ domainRouter.put("/:concept/:id", async (req: Request, res: Response) => {
 
     const canEdit = await roleEngine.canPerformAction(roleKey, conceptKey, "edit");
     if (!canEdit) {
-      sendError(res, 403, `You do not have permission to edit this record.`);
+      sendError(res, 403, "You do not have permission to edit this record.");
       return;
     }
 
-    // Get the current record for change tracking
-    const existingPage = await getPage(id);
-    const existingFlat = pageToFlatObject(existingPage as Record<string, unknown>);
+    const table = conceptToTable(conceptKey);
 
-    // Filter the write payload
-    const rawPayload = req.body as Record<string, unknown>;
-    const filteredPayload = await roleEngine.filterWritePayload(
-      roleKey,
-      conceptKey,
-      rawPayload
+    // Get existing record for change tracking
+    const existing = await query(
+      `SELECT * FROM ${table} WHERE id = $1 AND NOT archived`,
+      [id]
     );
+    if (existing.rows.length === 0) {
+      sendError(res, 404, "Record not found.");
+      return;
+    }
 
-    // Determine which fields actually changed
+    const existingRow = existing.rows[0];
+    const rawPayload = req.body as Record<string, unknown>;
+    const filteredPayload = await roleEngine.filterWritePayload(roleKey, conceptKey, rawPayload);
+
+    const properties = await getPropertiesForConcept(conceptKey);
+    const { coreColumns, jsonbProperties } = separateProperties(filteredPayload, properties);
+
+    // Determine changed fields
+    const existingProps = (existingRow.properties ?? {}) as Record<string, unknown>;
+    const allExisting = { ...existingRow, ...existingProps };
     const changedFields = Object.keys(filteredPayload).filter(
-      (key) => JSON.stringify(filteredPayload[key]) !== JSON.stringify(existingFlat[key])
+      (key) => JSON.stringify(filteredPayload[key]) !== JSON.stringify(allExisting[key])
     );
 
     if (changedFields.length === 0) {
-      // Nothing to update
-      const record = toDomainRecord(existingPage as Record<string, unknown>, conceptKey);
+      const record = rowToDomainRecord(existingRow, conceptKey);
       res.json({ success: true, data: record } as ApiResponse<DomainRecord>);
       return;
     }
 
-    // Build Notion properties for the changed fields only
-    const properties = await getPropertiesForConcept(conceptKey);
-    const propertyTypes = buildPropertyTypeMap(properties);
+    const auditCtx = auditContextFromRequest(req);
+    const row = await updateRecord(table, id, coreColumns, jsonbProperties);
+    const record = rowToDomainRecord(row, conceptKey);
 
-    const changedPayload = Object.fromEntries(
-      changedFields.map((key) => [key, filteredPayload[key]])
-    );
-    const notionProperties = buildNotionProperties(changedPayload, propertyTypes);
+    logAuditClaim(auditCtx, `PUT /api/domains/${conceptKey}/${id}`);
 
-    const updated = await updatePage(id, notionProperties);
-    const record = toDomainRecord(updated as Record<string, unknown>, conceptKey);
-
-    // Build previous values for the changed fields
     const previousValues = Object.fromEntries(
-      changedFields.map((key) => [key, existingFlat[key]])
+      changedFields.map((key) => [key, allExisting[key]])
     );
 
-    // Fire domain event
     const event = createDomainEvent({
       eventName: `${conceptKey}.updated`,
       domain: conceptKey,
@@ -272,17 +298,14 @@ domainRouter.put("/:concept/:id", async (req: Request, res: Response) => {
       recordId: id,
       changedFields,
       previousValues,
-      newValues: changedPayload,
+      newValues: Object.fromEntries(
+        changedFields.map((key) => [key, filteredPayload[key]])
+      ),
       triggeredBy: req.user?.email ?? "system",
     });
     await emit(event);
 
-    const response: ApiResponse<DomainRecord> = {
-      success: true,
-      data: record,
-    };
-
-    res.json(response);
+    res.json({ success: true, data: record } as ApiResponse<DomainRecord>);
   } catch (err) {
     handleError(res, err, "updating record");
   }
@@ -300,13 +323,20 @@ domainRouter.delete("/:concept/:id", async (req: Request, res: Response) => {
 
     const canDelete = await roleEngine.canPerformAction(roleKey, conceptKey, "delete");
     if (!canDelete) {
-      sendError(res, 403, `You do not have permission to delete this record.`);
+      sendError(res, 403, "You do not have permission to delete this record.");
       return;
     }
 
-    await archivePage(id);
+    const table = conceptToTable(conceptKey);
+    const auditCtx = auditContextFromRequest(req);
 
-    // Fire domain event
+    await query(
+      `UPDATE ${table} SET archived = true, updated_at = now() WHERE id = $1`,
+      [id]
+    );
+
+    logAuditClaim(auditCtx, `DELETE /api/domains/${conceptKey}/${id}`);
+
     const event = createDomainEvent({
       eventName: `${conceptKey}.deleted`,
       domain: conceptKey,
@@ -316,12 +346,7 @@ domainRouter.delete("/:concept/:id", async (req: Request, res: Response) => {
     });
     await emit(event);
 
-    const response: ApiResponse<null> = {
-      success: true,
-      data: null,
-    };
-
-    res.json(response);
+    res.json({ success: true, data: null } as ApiResponse<null>);
   } catch (err) {
     handleError(res, err, "deleting record");
   }
@@ -329,73 +354,151 @@ domainRouter.delete("/:concept/:id", async (req: Request, res: Response) => {
 
 // --- Helpers ---
 
-/**
- * Validates that a concept exists in the ontology.
- * Sends a 404 response and returns null if not found.
- */
 async function validateConcept(
   conceptKey: string,
   res: Response
-): Promise<{ concept: Awaited<ReturnType<typeof getConceptByKey>> & {} } | null> {
+): Promise<{ concept: NonNullable<Awaited<ReturnType<typeof getConceptByKey>>> } | null> {
   const concept = await getConceptByKey(conceptKey);
   if (!concept) {
-    sendError(res, 404, `Unknown concept: "${conceptKey}". Check /api/ontology/concepts for available concepts.`);
+    sendError(res, 404, `Unknown concept: "${conceptKey}". Check /api/ontology/concepts.`);
     return null;
   }
   return { concept };
 }
 
 /**
- * Converts a Notion page to a DomainRecord.
+ * Separates a payload into typed core columns and JSONB properties
+ * based on the ontology property definitions.
  */
-function toDomainRecord(
-  page: Record<string, unknown>,
+function separateProperties(
+  payload: Readonly<Record<string, unknown>>,
+  properties: ReadonlyArray<Property>
+): { coreColumns: Record<string, unknown>; jsonbProperties: Record<string, unknown> } {
+  const coreColumns: Record<string, unknown> = {};
+  const jsonbProperties: Record<string, unknown> = {};
+
+  const corePropertyKeys = new Set(
+    properties.filter((p) => p.postgresColumn).map((p) => p.key)
+  );
+  const corePropToColumn = new Map(
+    properties.filter((p) => p.postgresColumn).map((p) => [p.key, p.postgresColumn!])
+  );
+
+  // Well-known core columns that always go to typed columns
+  const wellKnownCore = new Set(["name", "status", "type", "department", "email", "phone", "company", "role_key"]);
+
+  for (const [key, value] of Object.entries(payload)) {
+    if (corePropertyKeys.has(key)) {
+      coreColumns[corePropToColumn.get(key)!] = value;
+    } else if (wellKnownCore.has(key)) {
+      coreColumns[key] = value;
+    } else {
+      jsonbProperties[key] = value;
+    }
+  }
+
+  return { coreColumns, jsonbProperties };
+}
+
+async function insertRecord(
+  table: string,
+  coreColumns: Record<string, unknown>,
+  jsonbProperties: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  const cols = Object.keys(coreColumns).filter(isSafeIdentifier);
+  const vals = cols.map((c) => coreColumns[c]);
+
+  // Add properties JSONB
+  cols.push("properties");
+  vals.push(JSON.stringify(jsonbProperties));
+
+  const placeholders = vals.map((_, i) => `$${i + 1}`);
+
+  const result = await query(
+    `INSERT INTO ${table} (${cols.join(", ")}) VALUES (${placeholders.join(", ")}) RETURNING *`,
+    vals
+  );
+
+  return result.rows[0];
+}
+
+async function updateRecord(
+  table: string,
+  id: string,
+  coreColumns: Record<string, unknown>,
+  jsonbProperties: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  const setClauses: string[] = [];
+  const params: unknown[] = [];
+  let paramIdx = 1;
+
+  for (const [col, val] of Object.entries(coreColumns)) {
+    if (!isSafeIdentifier(col)) continue;
+    setClauses.push(`${col} = $${paramIdx}`);
+    params.push(val);
+    paramIdx++;
+  }
+
+  // Merge JSONB properties (preserve existing, update changed)
+  if (Object.keys(jsonbProperties).length > 0) {
+    setClauses.push(`properties = properties || $${paramIdx}`);
+    params.push(JSON.stringify(jsonbProperties));
+    paramIdx++;
+  }
+
+  setClauses.push(`updated_at = now()`);
+
+  params.push(id);
+
+  const result = await query(
+    `UPDATE ${table} SET ${setClauses.join(", ")} WHERE id = $${paramIdx} AND NOT archived RETURNING *`,
+    params
+  );
+
+  if (result.rows.length === 0) {
+    throw Object.assign(new Error("Record not found"), { status: 404 });
+  }
+
+  return result.rows[0];
+}
+
+function rowToDomainRecord(
+  row: Record<string, unknown>,
   conceptKey: string
 ): DomainRecord {
-  const flat = pageToFlatObject(page);
-  const meta = pageMetadata(page);
+  const props = (row.properties ?? {}) as Record<string, unknown>;
 
-  // Separate relations from regular properties
-  const properties: Record<string, unknown> = {};
-  const relations: Record<string, ReadonlyArray<string>> = {};
-
-  for (const [key, value] of Object.entries(flat)) {
-    if (Array.isArray(value) && value.length > 0 && typeof value[0] === "string" && isNotionId(value[0])) {
-      relations[key] = value as string[];
-    } else {
-      properties[key] = value;
+  // Merge typed columns into properties for a unified view
+  const allProperties: Record<string, unknown> = { ...props };
+  const metaKeys = new Set(["id", "properties", "created_at", "updated_at", "created_by", "archived"]);
+  for (const [key, value] of Object.entries(row)) {
+    if (!metaKeys.has(key) && value !== null) {
+      allProperties[key] = value;
     }
   }
 
   return {
-    id: meta.id,
+    id: row.id as string,
     conceptKey,
-    properties,
-    relations,
-    createdAt: meta.createdAt,
-    updatedAt: meta.updatedAt,
+    properties: allProperties,
+    relations: {},
+    createdAt: (row.created_at as Date)?.toISOString() ?? new Date().toISOString(),
+    updatedAt: (row.updated_at as Date)?.toISOString() ?? new Date().toISOString(),
   };
 }
 
-/**
- * Heuristic to detect Notion page IDs (UUID-like strings).
- */
-function isNotionId(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
-}
+function buildWhereClause(
+  queryParams: Record<string, unknown>,
+  properties: ReadonlyArray<Property>,
+  roleKey: string,
+  conceptKey: string,
+  userId: string
+): { whereClause: string; params: unknown[] } {
+  const clauses: string[] = [];
+  const params: unknown[] = [];
+  let paramIdx = 1;
 
-/**
- * Builds a Notion filter object from Express query parameters.
- * Supports `filter[field]=value` syntax.
- */
-function buildFilterFromQuery(
-  query: Record<string, unknown>,
-  properties: ReadonlyArray<Property>
-): Record<string, unknown> | undefined {
-  const filters: Array<Record<string, unknown>> = [];
-
-  for (const [key, value] of Object.entries(query)) {
-    // Match filter[fieldName]=value pattern
+  for (const [key, value] of Object.entries(queryParams)) {
     const match = /^filter\[(.+)]$/.exec(key);
     if (!match || !value) continue;
 
@@ -403,170 +506,64 @@ function buildFilterFromQuery(
     const prop = properties.find((p) => p.key === fieldKey);
     if (!prop) continue;
 
-    const filterEntry = buildSingleFilter(prop, String(value));
-    if (filterEntry) {
-      filters.push(filterEntry);
+    if (prop.postgresColumn && isSafeIdentifier(prop.postgresColumn)) {
+      clauses.push(`AND ${prop.postgresColumn} = $${paramIdx}`);
+    } else if (isSafeIdentifier(fieldKey)) {
+      clauses.push(`AND properties->>'${fieldKey}' = $${paramIdx}`);
+    } else {
+      continue; // Skip unsafe field names
     }
+    params.push(String(value));
+    paramIdx++;
   }
 
-  if (filters.length === 0) return undefined;
-  if (filters.length === 1) return filters[0];
-  return { and: filters };
+  return { whereClause: clauses.join(" "), params };
 }
 
-/**
- * Builds a Notion filter for a single property + value.
- */
-function buildSingleFilter(
-  prop: Property,
-  value: string
-): Record<string, unknown> | undefined {
-  const notionProp = prop.notionPropertyName;
-
-  switch (prop.type) {
-    case "text":
-    case "rich_text":
-    case "email":
-    case "phone":
-    case "url":
-      return { property: notionProp, rich_text: { contains: value } };
-    case "number":
-      return { property: notionProp, number: { equals: Number(value) } };
-    case "select":
-    case "status":
-      return { property: notionProp, select: { equals: value } };
-    case "multi_select":
-      return { property: notionProp, multi_select: { contains: value } };
-    case "checkbox":
-      return { property: notionProp, checkbox: { equals: value === "true" } };
-    case "date":
-    case "datetime":
-      return { property: notionProp, date: { equals: value } };
-    default:
-      return undefined;
-  }
-}
-
-/**
- * Builds a Notion sort array from query parameters.
- * Supports `sort=fieldKey` and `direction=asc|desc`.
- */
-function buildSortFromQuery(
-  query: Record<string, unknown>,
+function buildOrderBy(
+  queryParams: Record<string, unknown>,
   properties: ReadonlyArray<Property>
-): Array<Record<string, unknown>> | undefined {
-  const sortKey = query.sort as string | undefined;
-  if (!sortKey) return undefined;
+): string {
+  const sortKey = queryParams.sort as string | undefined;
+  if (!sortKey) return "ORDER BY created_at DESC";
 
   const prop = properties.find((p) => p.key === sortKey);
-  if (!prop) return undefined;
+  if (!prop) return "ORDER BY created_at DESC";
 
-  const direction = (query.direction as string) === "desc" ? "descending" : "ascending";
+  const direction = (queryParams.direction as string) === "desc" ? "DESC" : "ASC";
 
-  return [
-    {
-      property: prop.notionPropertyName,
-      direction,
-    },
-  ];
-}
-
-/**
- * Combines two optional Notion filters with AND logic.
- */
-function combineFilters(
-  a: Record<string, unknown> | undefined,
-  b: Record<string, unknown> | undefined
-): Record<string, unknown> | undefined {
-  if (!a && !b) return undefined;
-  if (!a) return b;
-  if (!b) return a;
-  return { and: [a, b] };
-}
-
-/**
- * Builds a map of property key → Notion property type string.
- * Uses the ontology Property's key as the map key, and
- * notionPropertyName as the output key (since that's what Notion expects).
- */
-function buildPropertyTypeMap(
-  properties: ReadonlyArray<Property>
-): Record<string, string> {
-  const entries = properties.map((p) => {
-    // Map ontology type → Notion API type
-    const notionType = ontologyTypeToNotionType(p.type);
-    return [p.key, notionType] as const;
-  });
-  return Object.fromEntries(entries);
-}
-
-/**
- * Maps our ontology PropertyType to the Notion API property type string.
- */
-function ontologyTypeToNotionType(type: Property["type"]): string {
-  switch (type) {
-    case "text":
-      return "title";
-    case "rich_text":
-      return "rich_text";
-    case "number":
-      return "number";
-    case "select":
-      return "select";
-    case "multi_select":
-      return "multi_select";
-    case "date":
-    case "datetime":
-      return "date";
-    case "checkbox":
-      return "checkbox";
-    case "url":
-      return "url";
-    case "email":
-      return "email";
-    case "phone":
-      return "phone_number";
-    case "relation":
-      return "relation";
-    case "status":
-      return "status";
-    case "formula":
-    case "rollup":
-    case "files":
-    case "people":
-      return type; // Read-only types, shouldn't be written
-    default:
-      return "rich_text";
+  if (prop.postgresColumn && isSafeIdentifier(prop.postgresColumn)) {
+    return `ORDER BY ${prop.postgresColumn} ${direction}`;
   }
+  if (isSafeIdentifier(sortKey)) {
+    return `ORDER BY properties->>'${sortKey}' ${direction}`;
+  }
+  return "ORDER BY created_at DESC";
 }
 
-/**
- * Clamps a query parameter to an integer within bounds.
- */
-function clampInt(
-  value: unknown,
-  min: number,
-  max: number,
-  defaultVal: number
-): number {
+function clampInt(value: unknown, min: number, max: number, defaultVal: number): number {
   const parsed = parseInt(String(value), 10);
   if (isNaN(parsed)) return defaultVal;
   return Math.max(min, Math.min(max, parsed));
 }
 
-/**
- * Sends a JSON error response.
- */
 function sendError(res: Response, status: number, message: string): void {
   res.status(status).json({ success: false, error: message } as ApiResponse<never>);
 }
 
-/**
- * Handles unexpected errors in route handlers.
- */
 function handleError(res: Response, err: unknown, context: string): void {
   const message = err instanceof Error ? err.message : String(err);
   const status = (err as { status?: number }).status;
   logger.error(`Error ${context}`, { error: message });
   sendError(res, status ?? 500, `Internal error while ${context}: ${message}`);
 }
+
+// Exported for testing
+export {
+  conceptToTable,
+  isSafeIdentifier,
+  separateProperties,
+  buildWhereClause,
+  buildOrderBy,
+  rowToDomainRecord,
+};
