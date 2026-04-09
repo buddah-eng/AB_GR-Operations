@@ -17,6 +17,7 @@ import { ontologyRouter } from "./api/ontology-routes";
 import { actionRouter } from "./api/actions";
 import { configRouter } from "./api/config";
 import { externalRouter } from "./api/external";
+import { adminAuditRouter } from "./api/admin-audit";
 import { registerWebhookDelivery } from "./api/webhooks";
 import { registerWorkflowEngine } from "./workflows/engine";
 
@@ -83,6 +84,7 @@ app.use("/api/action", actionRouter);
 app.use("/api/domains", domainRouter);
 app.use("/api/ontology", ontologyRouter);
 app.use("/api/external", externalRouter);
+app.use("/api/admin", adminAuditRouter);
 
 // Register event bus handlers
 registerWorkflowEngine();

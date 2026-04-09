@@ -21,6 +21,7 @@ import { roleEngine } from "../roles/engine";
 import { emit, createDomainEvent } from "../events/bus";
 import { requireAuth } from "../auth/middleware";
 import { auditContextFromRequest, logAuditClaim } from "../audit/context";
+import { encryptPiiFields, decryptPiiFields, isEncryptionConfigured } from "../encryption/crypto";
 import type { ApiResponse, DomainRecord, Property } from "../ontology/types";
 
 // --- Router ---
@@ -124,7 +125,9 @@ domainRouter.get("/:concept", async (req: Request, res: Response) => {
         const filteredProps = await roleEngine.filterRecord(
           roleKey, conceptKey, record.properties
         );
-        return { ...record, properties: filteredProps };
+        // Decrypt PII only after RBAC filter — if role can't see the field, decryption never runs
+        const decryptedProps = isEncryptionConfigured() ? decryptPiiFields(filteredProps) : filteredProps;
+        return { ...record, properties: decryptedProps };
       })
     );
 
@@ -171,10 +174,11 @@ domainRouter.get("/:concept/:id", async (req: Request, res: Response) => {
     const filteredProps = await roleEngine.filterRecord(
       roleKey, conceptKey, record.properties
     );
+    const decryptedProps = isEncryptionConfigured() ? decryptPiiFields(filteredProps) : filteredProps;
 
     res.json({
       success: true,
-      data: { ...record, properties: filteredProps },
+      data: { ...record, properties: decryptedProps },
     } as ApiResponse<DomainRecord>);
   } catch (err) {
     handleError(res, err, "fetching record");
@@ -207,8 +211,11 @@ domainRouter.post("/:concept", async (req: Request, res: Response) => {
     const { coreColumns, jsonbProperties } = separateProperties(filteredPayload, properties);
     coreColumns.created_by = req.user?.uid ?? null;
 
+    // Encrypt PII fields before writing to Postgres
+    const encryptedProps = isEncryptionConfigured() ? encryptPiiFields(jsonbProperties) : jsonbProperties;
+
     const auditCtx = auditContextFromRequest(req);
-    const row = await insertRecord(table, coreColumns, jsonbProperties);
+    const row = await insertRecord(table, coreColumns, encryptedProps);
     const record = rowToDomainRecord(row, conceptKey);
 
     // Log audit claim for rogue-actor detection
@@ -281,8 +288,11 @@ domainRouter.put("/:concept/:id", async (req: Request, res: Response) => {
       return;
     }
 
+    // Encrypt PII fields before writing to Postgres
+    const encryptedProps = isEncryptionConfigured() ? encryptPiiFields(jsonbProperties) : jsonbProperties;
+
     const auditCtx = auditContextFromRequest(req);
-    const row = await updateRecord(table, id, coreColumns, jsonbProperties);
+    const row = await updateRecord(table, id, coreColumns, encryptedProps);
     const record = rowToDomainRecord(row, conceptKey);
 
     logAuditClaim(auditCtx, `PUT /api/domains/${conceptKey}/${id}`);

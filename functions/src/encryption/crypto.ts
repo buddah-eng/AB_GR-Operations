@@ -94,6 +94,15 @@ export function isPiiField(fieldKey: string): boolean {
 }
 
 /**
+ * Returns true if the encryption key is configured.
+ * When false, encrypt/decrypt operations are skipped (dev/test environments).
+ */
+export function isEncryptionConfigured(): boolean {
+  const keyHex = process.env.ENCRYPTION_KEY;
+  return typeof keyHex === "string" && keyHex.length === 64;
+}
+
+/**
  * Encrypts PII fields in a record before writing to Postgres.
  * Non-PII fields pass through unchanged.
  */
