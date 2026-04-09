@@ -33,12 +33,18 @@ vi.mock("../db/client", () => ({
 const mockValidateScopePermission = vi.fn();
 const mockBuildScopeFilter = vi.fn();
 const mockCheckPropertyConflict = vi.fn();
+const mockFormatPropertyKey = vi.fn();
+const mockStripPropertyPrefix = vi.fn();
+const mockGetVisibleProperties = vi.fn();
 vi.mock("../ontology/scoping", () => ({
   DIRECTOR_PRIORITY: 0,
   ADMIN_PRIORITY_THRESHOLD: -1,
   validateScopePermission: (...args: unknown[]) => mockValidateScopePermission(...args),
   buildScopeFilter: (...args: unknown[]) => mockBuildScopeFilter(...args),
   checkPropertyConflict: (...args: unknown[]) => mockCheckPropertyConflict(...args),
+  formatPropertyKey: (...args: unknown[]) => mockFormatPropertyKey(...args),
+  stripPropertyPrefix: (...args: unknown[]) => mockStripPropertyPrefix(...args),
+  getVisibleProperties: (...args: unknown[]) => mockGetVisibleProperties(...args),
 }));
 
 const mockUpdateOntologyRecord = vi.fn();
@@ -372,7 +378,9 @@ describe("POST /concepts/:key/properties (create)", () => {
   it("validates scope and conflict for department property", async () => {
     mockValidateScopePermission.mockReturnValue({ allowed: true });
     mockCheckPropertyConflict.mockResolvedValue({ conflict: false });
-    mockQuery.mockResolvedValue({ rows: [sampleProperty()] });
+    mockFormatPropertyKey.mockReturnValue("programming__title");
+    mockStripPropertyPrefix.mockReturnValue("title");
+    mockQuery.mockResolvedValue({ rows: [sampleProperty({ key: "programming__title" })] });
 
     const req = mockReq({
       params: { key: "session" },
@@ -391,6 +399,7 @@ describe("POST /concepts/:key/properties (create)", () => {
     expect(res.status).toHaveBeenCalledWith(201);
     expect(mockCheckPropertyConflict).toHaveBeenCalledWith("session", "title", "programming");
     expect(mockValidateScopePermission).toHaveBeenCalled();
+    expect(mockFormatPropertyKey).toHaveBeenCalledWith("title", "programming");
   });
 
   it("rejects hidden+required combination", async () => {
@@ -435,8 +444,8 @@ describe("DELETE /properties/:id (deprecate)", () => {
     // First query: find the property
     mockQuery
       .mockResolvedValueOnce({ rows: [sampleProperty()] })
-      // Second query: data check returns count > 0
-      .mockResolvedValueOnce({ rows: [{ cnt: "5" }] });
+      // Second query: data check returns has_data = true
+      .mockResolvedValueOnce({ rows: [{ has_data: true }] });
 
     const req = mockReq({ params: { id: "prop-1" } });
     const res = mockRes();
@@ -555,7 +564,8 @@ describe("Mutation side effects", () => {
   it("calls reloadOntology for cache invalidation on property creation", async () => {
     const handler = findHandler("post", "/concepts/:key/properties");
     mockValidateScopePermission.mockReturnValue({ allowed: true });
-    mockQuery.mockResolvedValue({ rows: [sampleProperty()] });
+    mockStripPropertyPrefix.mockReturnValue("location");
+    mockQuery.mockResolvedValue({ rows: [sampleProperty({ key: "location" })] });
     mockCreateDomainEvent.mockReturnValue({ eventId: "evt-p", eventName: "property.created" });
 
     const req = mockReq({

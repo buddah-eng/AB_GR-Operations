@@ -88,6 +88,12 @@ vi.mock("./bulk-limit", () => ({
   checkBulkLimit: (...args: unknown[]) => mockCheckBulkLimit(...args),
 }));
 
+vi.mock("../encryption/crypto", () => ({
+  encryptPiiFields: (record: Record<string, unknown>) => record,
+  decryptPiiFields: (record: Record<string, unknown>) => record,
+  isEncryptionConfigured: () => false,
+}));
+
 // --- Import module under test ---
 
 import { mcpRouter, TOOL_REGISTRY, TOOL_MAP, DESTRUCTIVE_TOOLS, sessionMutationCounts } from "./mcp";
@@ -384,6 +390,9 @@ describe("POST /execute", () => {
     mockFilterWritePayload.mockResolvedValue({ name: "Bob", status: "draft" });
     mockGetPropertiesForConcept.mockResolvedValue(GUEST_PROPERTIES);
     mockQuery.mockResolvedValue({ rows: [sampleRow({ id: "new-row", name: "Bob" })] });
+    mockFilterRecord.mockImplementation(
+      (_role: string, _concept: string, props: Record<string, unknown>) => Promise.resolve(props)
+    );
 
     const req = mockReq({
       body: {
@@ -478,6 +487,9 @@ describe("POST /execute", () => {
     mockFilterWritePayload.mockResolvedValue({ name: "Test" });
     mockGetPropertiesForConcept.mockResolvedValue(GUEST_PROPERTIES);
     mockQuery.mockResolvedValue({ rows: [sampleRow()] });
+    mockFilterRecord.mockImplementation(
+      (_role: string, _concept: string, props: Record<string, unknown>) => Promise.resolve(props)
+    );
 
     const sessionId = "bulk-bypass-session";
     sessionMutationCounts.set(sessionId, 4);
@@ -577,6 +589,9 @@ describe("POST /execute", () => {
     mockFilterWritePayload.mockResolvedValue({ name: "Carol" });
     mockGetPropertiesForConcept.mockResolvedValue(GUEST_PROPERTIES);
     mockQuery.mockResolvedValue({ rows: [sampleRow({ name: "Carol" })] });
+    mockFilterRecord.mockImplementation(
+      (_role: string, _concept: string, props: Record<string, unknown>) => Promise.resolve(props)
+    );
 
     const req = mockReq({
       body: {

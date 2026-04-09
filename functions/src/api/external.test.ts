@@ -52,6 +52,12 @@ vi.mock("../audit/context", () => ({
   },
 }));
 
+vi.mock("../encryption/crypto", () => ({
+  encryptPiiFields: (record: Record<string, unknown>) => record,
+  decryptPiiFields: (record: Record<string, unknown>) => record,
+  isEncryptionConfigured: () => false,
+}));
+
 // --- Import module under test ---
 
 import { externalRouter, resetRateLimits, hashToken, getNextTransportStatus } from "./external";

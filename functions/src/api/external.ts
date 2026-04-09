@@ -23,6 +23,11 @@ import {
   withAuditContext,
   logAuditClaim,
 } from "../audit/context";
+import {
+  encryptPiiFields,
+  decryptPiiFields,
+  isEncryptionConfigured,
+} from "../encryption/crypto";
 
 // --- Types ---
 
@@ -180,14 +185,22 @@ externalRouter.get("/guest-form", async (req: Request, res: Response) => {
     // Merge: prefill is overridden by saved form_data
     const merged = { ...prefill, ...session.form_data };
 
+    // Decrypt PII fields before responding if encryption is configured
+    const decryptedMerged = isEncryptionConfigured()
+      ? decryptPiiFields(merged, { recordId: session.guest_id, actorId: `guest:${session.guest_id}` })
+      : merged;
+    const decryptedPrefill = isEncryptionConfigured()
+      ? decryptPiiFields(prefill, { recordId: session.guest_id, actorId: `guest:${session.guest_id}` })
+      : prefill;
+
     res.json({
       success: true,
       data: {
         sessionId: session.id,
         guestId: session.guest_id,
         status: session.status,
-        formData: merged,
-        prefill,
+        formData: decryptedMerged,
+        prefill: decryptedPrefill,
       },
     });
   } catch (err) {
@@ -283,6 +296,11 @@ externalRouter.post("/guest-form/submit", async (req: Request, res: Response) =>
     // Build audit context for the write pipeline
     const auditCtx = auditContextFromRequest(req);
 
+    // Encrypt PII fields before DB write if encryption is configured
+    const encryptedFormData = isEncryptionConfigured()
+      ? encryptPiiFields(mergedFormData)
+      : mergedFormData;
+
     // Use withAuditContext for the transactional write
     await withAuditContext(auditCtx, async (client) => {
       // Mark session as submitted
@@ -293,7 +311,7 @@ externalRouter.post("/guest-form/submit", async (req: Request, res: Response) =>
              submitted_at = now(),
              last_saved_at = now()
          WHERE id = $2`,
-        [JSON.stringify(mergedFormData), session.id]
+        [JSON.stringify(encryptedFormData), session.id]
       );
 
       // Update the guest record with submitted form data
@@ -302,7 +320,7 @@ externalRouter.post("/guest-form/submit", async (req: Request, res: Response) =>
          SET properties = properties || $1::jsonb,
              updated_at = now()
          WHERE id = $2`,
-        [JSON.stringify(mergedFormData), session.guest_id]
+        [JSON.stringify(encryptedFormData), session.guest_id]
       );
     });
 

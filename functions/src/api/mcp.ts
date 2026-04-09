@@ -21,6 +21,11 @@ import { emit, createDomainEvent } from "../events/bus";
 import { requireAuth } from "../auth/middleware";
 import { auditContextFromRequest, withAuditContext, logAuditClaim } from "../audit/context";
 import { checkBulkLimit } from "./bulk-limit";
+import {
+  encryptPiiFields,
+  decryptPiiFields,
+  isEncryptionConfigured,
+} from "../encryption/crypto";
 import type { ApiResponse } from "../ontology/types";
 
 // --- Types ---
@@ -444,7 +449,12 @@ async function handleCreateRecord(
   const properties = await getPropertiesForConcept(conceptKey);
   const table = conceptToTable(conceptKey);
 
-  const { coreColumns, jsonbProperties } = separateProperties(filteredPayload, properties);
+  // Encrypt PII fields before DB write if encryption is configured
+  const securedPayload = isEncryptionConfigured()
+    ? encryptPiiFields(filteredPayload)
+    : filteredPayload;
+
+  const { coreColumns, jsonbProperties } = separateProperties(securedPayload, properties);
   coreColumns.created_by = req.user?.uid ?? null;
 
   const auditCtx = auditContextFromRequest(req);
@@ -461,6 +471,12 @@ async function handleCreateRecord(
 
   const record = rowToRecord(row, conceptKey);
 
+  // Decrypt PII fields after filterRecord for response
+  const filteredProps = await roleEngine.filterRecord(roleKey, conceptKey, record.properties);
+  const decryptedProps = isEncryptionConfigured()
+    ? decryptPiiFields(filteredProps, { recordId: record.id, actorId: req.user?.uid ?? "anonymous" })
+    : filteredProps;
+
   logAuditClaim(auditCtx, `POST /api/mcp/execute (create_record:${conceptKey})`);
 
   const event = createDomainEvent({
@@ -475,7 +491,7 @@ async function handleCreateRecord(
   });
   await emit(event);
 
-  return record;
+  return { ...record, properties: decryptedProps };
 }
 
 async function handleUpdateRecord(
@@ -502,7 +518,12 @@ async function handleUpdateRecord(
   const properties = await getPropertiesForConcept(conceptKey);
   const table = conceptToTable(conceptKey);
 
-  const { coreColumns, jsonbProperties } = separateProperties(filteredPayload, properties);
+  // Encrypt PII fields before DB write if encryption is configured
+  const securedPayload = isEncryptionConfigured()
+    ? encryptPiiFields(filteredPayload)
+    : filteredPayload;
+
+  const { coreColumns, jsonbProperties } = separateProperties(securedPayload, properties);
 
   const auditCtx = auditContextFromRequest(req);
   const row = await withAuditContext(auditCtx, async (client) => {
@@ -536,6 +557,12 @@ async function handleUpdateRecord(
 
   const record = rowToRecord(row, conceptKey);
 
+  // Decrypt PII fields after filterRecord for response
+  const filteredProps = await roleEngine.filterRecord(roleKey, conceptKey, record.properties);
+  const decryptedProps = isEncryptionConfigured()
+    ? decryptPiiFields(filteredProps, { recordId: record.id, actorId: req.user?.uid ?? "anonymous" })
+    : filteredProps;
+
   logAuditClaim(auditCtx, `POST /api/mcp/execute (update_record:${conceptKey}/${id})`);
 
   const event = createDomainEvent({
@@ -551,7 +578,7 @@ async function handleUpdateRecord(
   });
   await emit(event);
 
-  return record;
+  return { ...record, properties: decryptedProps };
 }
 
 async function handleRunWorkflow(

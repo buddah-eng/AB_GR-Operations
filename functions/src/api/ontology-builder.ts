@@ -17,7 +17,15 @@ import type { Request, Response } from "express";
 import * as logger from "firebase-functions/logger";
 import { query } from "../db/client";
 import { requireAuth, requireRole } from "../auth/middleware";
-import { DIRECTOR_PRIORITY, validateScopePermission, buildScopeFilter, checkPropertyConflict } from "../ontology/scoping";
+import {
+  DIRECTOR_PRIORITY,
+  validateScopePermission,
+  buildScopeFilter,
+  checkPropertyConflict,
+  formatPropertyKey,
+  stripPropertyPrefix,
+  getVisibleProperties,
+} from "../ontology/scoping";
 import type { OwnerScope } from "../ontology/scoping";
 import { updateOntologyRecord } from "../versioning/service";
 import { auditContextFromRequest, logAuditClaim, withAuditContext } from "../audit/context";
@@ -333,16 +341,20 @@ ontologyBuilderRouter.get("/concepts/:key/properties", async (req: Request, res:
   try {
     const { key } = req.params;
     const { rolePriority, callerDepartment } = callerScope(req);
-    const { clause, params } = buildScopeFilter(rolePriority, callerDepartment);
 
-    const result = await query(
-      `SELECT * FROM ontology_properties
-       WHERE concept_key = $${params.length + 1} AND status = 'active' AND ${clause}
-       ORDER BY sort_order`,
-      [...params, key]
+    const properties = await getVisibleProperties(
+      key,
+      callerDepartment,
+      rolePriority
     );
 
-    res.json({ success: true, data: result.rows } as ApiResponse<unknown>);
+    // Strip namespace prefix from keys before responding
+    const stripped = properties.map((p) => ({
+      ...p,
+      key: stripPropertyPrefix(p.key),
+    }));
+
+    res.json({ success: true, data: stripped } as ApiResponse<unknown>);
   } catch (err) {
     handleError(res, err, "listing properties");
   }
@@ -389,6 +401,11 @@ ontologyBuilderRouter.post("/concepts/:key/properties", async (req: Request, res
 
     const auditCtx = auditContextFromRequest(req);
 
+    // Namespace department-scoped property keys for JSONB storage
+    const storageKey = ownerScope === "department" && ownerDepartment
+      ? formatPropertyKey(body.key as string, ownerDepartment)
+      : body.key;
+
     const row = await withAuditContext(auditCtx, async (client) => {
       const result = await client.query(
         `INSERT INTO ontology_properties
@@ -399,7 +416,7 @@ ontologyBuilderRouter.post("/concepts/:key/properties", async (req: Request, res
          RETURNING *`,
         [
           conceptKey,
-          body.key,
+          storageKey,
           body.label ?? body.key,
           body.type ?? "text",
           body.required ?? false,
@@ -433,7 +450,13 @@ ontologyBuilderRouter.post("/concepts/:key/properties", async (req: Request, res
 
     await reloadOntology();
 
-    res.status(201).json({ success: true, data: row } as ApiResponse<unknown>);
+    // Strip namespace prefix from the key before responding
+    const responseRow = {
+      ...row,
+      key: stripPropertyPrefix(row.key as string),
+    };
+
+    res.status(201).json({ success: true, data: responseRow } as ApiResponse<unknown>);
   } catch (err) {
     handleError(res, err, "creating property");
   }
@@ -531,16 +554,22 @@ ontologyBuilderRouter.delete("/properties/:id", async (req: Request, res: Respon
     }
 
     const current = existing.rows[0];
-    const conceptKey = current.concept_key as string;
     const propertyKey = current.key as string;
 
     // Guardrail: check if property has data (non-null values in domain records)
     const dataCheck = await query(
-      `SELECT COUNT(*) AS cnt FROM ontology_data_check
-       WHERE concept_key = $1 AND property_key = $2`,
-      [conceptKey, propertyKey]
+      `SELECT EXISTS(
+        SELECT 1 FROM guests WHERE properties ? $1
+        UNION ALL
+        SELECT 1 FROM staff WHERE properties ? $1
+        UNION ALL
+        SELECT 1 FROM schedule_events WHERE properties ? $1
+        UNION ALL
+        SELECT 1 FROM prep_items WHERE properties ? $1
+      ) AS has_data`,
+      [propertyKey]
     );
-    const hasData = parseInt(dataCheck.rows[0]?.cnt as string ?? "0", 10) > 0;
+    const hasData = dataCheck.rows[0]?.has_data === true;
 
     if (hasData) {
       sendError(
