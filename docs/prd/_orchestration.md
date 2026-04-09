@@ -16,6 +16,7 @@ These have no upstream dependencies. Everything else depends on them.
 | `platform/vision.md` | Problem, thesis, platform-as-service model | All other docs (framing) |
 | `platform/architecture.md` | Layers, request lifecycle, module map | All implementation |
 | `data/postgres-schema.md` | Tables, JSONB strategy, indexes, FK constraints | All data access |
+| `data/integration-testing.md` | Testcontainers infrastructure, migration runner, schema/trigger/constraint verification | All integration tests |
 | `core/ontology-engine.md` | Concept/property/relationship loading + caching | All domain features |
 | `core/event-bus.md` | Domain event pub/sub, pattern matching | Workflows, audit, integrations |
 | `core/rbac-engine.md` | Permissions, field-level filtering, data scoping. Roles are ontology-defined. | All access control |
@@ -23,6 +24,7 @@ These have no upstream dependencies. Everything else depends on them.
 
 **Parallel tracks in Phase 1:**
 - Schema + ontology engine can be built simultaneously (ontology reads from schema)
+- Integration testing infrastructure can be built alongside schema (depends on migration files existing)
 - RBAC + auth can be built simultaneously (auth resolves identity, RBAC evaluates permissions)
 - Event bus is independent
 

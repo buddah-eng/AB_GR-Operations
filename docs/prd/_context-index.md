@@ -52,6 +52,7 @@ to decide if you need to load the full document.
 | Doc | Path | Shorthand | Tags | Status |
 |-----|------|-----------|------|--------|
 | Postgres Schema | `data/postgres-schema.md` | Typed core columns + JSONB properties. 6 table families (ontology, config, RBAC, domain, audit, infra). Versioning columns on all ontology tables. GIN indexes. Audit triggers. Full CREATE TABLE SQL. | `postgres`, `schema`, `jsonb`, `indexes`, `fk-constraints` | done |
+| Integration Testing | `data/integration-testing.md` | Testcontainers-based integration tests. Real Postgres 16 in Docker. Schema verification, trigger verification, constraint enforcement, E2E data flow. Separate vitest config. CI pipeline. | `testing`, `testcontainers`, `integration`, `postgres`, `ci` | done |
 | Versioning & Backups | `data/versioning-backups.md` | Row-level versioning (version chain, status swap rollback). Nightly pg_dump per table (90-day retention). Postgres audit triggers. Rogue actor protection (5 layers). Disaster recovery playbook. | `versioning`, `backups`, `audit-triggers`, `rogue-actor`, `rollback` | done |
 | YoY Registry | `data/yoy-registry.md` | is_registry=true concepts persist cross-year. guest_registry + vendor_registry tables. Pre-population for returning guests. Analytics queries (return rates, cohort). Post-convention archive strategy. | `registry`, `cross-year`, `pre-population`, `analytics` | done |
 | Encryption | `data/encryption.md` | AES-256-GCM column-level encryption for PII. 11 encrypted field types. Application-layer (key never reaches DB). Decrypt only after RBAC field filter. Key in Secret Manager. | `encryption`, `pii`, `aes-256`, `secret-manager` | done |
@@ -127,7 +128,8 @@ to decide if you need to load the full document.
 | `rbac` | core/rbac-engine, api/domain-crud, api/external-surfaces, api/mcp-surface, platform/multi-tenancy |
 | `auth` | core/auth-system, api/integration-patterns, api/external-surfaces, api/mcp-surface |
 | `conditions` | core/condition-expression, ui/condition-builder-ui, automation/workflow-engine, modules/gr/contracts |
-| `postgres` | data/postgres-schema, data/versioning-backups, data/yoy-registry, data/encryption |
+| `postgres` | data/postgres-schema, data/integration-testing, data/versioning-backups, data/yoy-registry, data/encryption |
+| `testing` | data/integration-testing |
 | `events` | core/event-bus, core/audit-system, automation/workflow-engine |
 | `workflows` | automation/workflow-engine, automation/workflow-actions, automation/workflow-builder |
 | `api` | api/domain-crud, api/integration-patterns, api/external-surfaces, api/mcp-surface |
