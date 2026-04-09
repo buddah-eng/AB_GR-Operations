@@ -85,14 +85,20 @@ export async function updateOntologyRecord(
   recordKey: string,
   updates: Record<string, unknown>,
   changedBy: string,
-  changeReason: string
+  changeReason: string,
+  auditContext?: AuditContext
 ): Promise<VersioningResult<OntologyRecord>> {
   const tableError = validateTableName(tableName);
   if (tableError) {
     return { success: false, error: tableError };
   }
 
-  return withTransaction(async (client: PoolClient) => {
+  const runInTransaction = auditContext
+    ? (fn: (client: PoolClient) => Promise<VersioningResult<OntologyRecord>>) =>
+        withAuditContext(auditContext, fn)
+    : withTransaction;
+
+  return runInTransaction(async (client: PoolClient) => {
     // 1. Read active row (FOR UPDATE prevents concurrent version races)
     const activeResult = await client.query(
       `SELECT * FROM ${tableName} WHERE key = $1 AND status = 'active' FOR UPDATE`,

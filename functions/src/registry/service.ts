@@ -6,6 +6,7 @@
  */
 
 import { query, withTransaction } from "../db/client";
+import type { PoolClient } from "pg";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -132,37 +133,45 @@ export async function getReturningGuests(
 
 /**
  * Create a new guest registry entry.
+ * Accepts an optional PoolClient for use within withAuditContext transactions.
  */
 export async function createRegistryEntry(
-  data: CreateRegistryEntryData
+  data: CreateRegistryEntryData,
+  client?: PoolClient
 ): Promise<GuestRegistryRecord> {
-  const result = await query<GuestRegistryRecord>(
-    `INSERT INTO guest_registry (canonical_name, email, first_attended, last_attended, attendance_count, properties)
+  const sql = `INSERT INTO guest_registry (canonical_name, email, first_attended, last_attended, attendance_count, properties)
      VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING *`,
-    [
-      data.canonical_name,
-      data.email ?? null,
-      data.first_attended,
-      data.last_attended ?? null,
-      data.attendance_count ?? 1,
-      JSON.stringify(data.properties ?? {}),
-    ]
-  );
+     RETURNING *`;
+  const params = [
+    data.canonical_name,
+    data.email ?? null,
+    data.first_attended,
+    data.last_attended ?? null,
+    data.attendance_count ?? 1,
+    JSON.stringify(data.properties ?? {}),
+  ];
+  const result = client
+    ? await client.query<GuestRegistryRecord>(sql, params)
+    : await query<GuestRegistryRecord>(sql, params);
   return result.rows[0];
 }
 
 /**
  * Link a convention-year guest record to a registry entry.
+ * Accepts an optional PoolClient for use within withAuditContext transactions.
  */
 export async function linkGuestToRegistry(
   guestId: string,
-  registryId: string
+  registryId: string,
+  client?: PoolClient
 ): Promise<void> {
-  await query(
-    `UPDATE guests SET registry_id = $1, updated_at = now() WHERE id = $2`,
-    [registryId, guestId]
-  );
+  const sql = `UPDATE guests SET registry_id = $1, updated_at = now() WHERE id = $2`;
+  const params = [registryId, guestId];
+  if (client) {
+    await client.query(sql, params);
+  } else {
+    await query(sql, params);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -174,15 +183,22 @@ export async function linkGuestToRegistry(
  * for all returning guests within the lookback window.
  *
  * Returns the count of draft records created.
+ * Accepts an optional PoolClient for use within withAuditContext transactions.
  */
 export async function prePopulateConventionYear(
   year: number,
-  lookbackYear: number
+  lookbackYear: number,
+  auditClient?: PoolClient
 ): Promise<number> {
-  const returning = await query<GuestRegistryRecord>(
-    `SELECT * FROM guest_registry WHERE last_attended >= $1`,
-    [lookbackYear]
-  );
+  const returning = auditClient
+    ? await auditClient.query<GuestRegistryRecord>(
+        `SELECT * FROM guest_registry WHERE last_attended >= $1`,
+        [lookbackYear]
+      )
+    : await query<GuestRegistryRecord>(
+        `SELECT * FROM guest_registry WHERE last_attended >= $1`,
+        [lookbackYear]
+      );
 
   if (returning.rows.length === 0) {
     return 0;
@@ -190,7 +206,7 @@ export async function prePopulateConventionYear(
 
   let created = 0;
 
-  await withTransaction(async (client) => {
+  const doInserts = async (client: PoolClient) => {
     for (const reg of returning.rows) {
       const name = reg.canonical_name;
       const type = (reg.properties as Record<string, unknown>).type ?? null;
@@ -204,7 +220,13 @@ export async function prePopulateConventionYear(
       );
       created += 1;
     }
-  });
+  };
+
+  if (auditClient) {
+    await doInserts(auditClient);
+  } else {
+    await withTransaction(doInserts);
+  }
 
   return created;
 }
@@ -219,11 +241,17 @@ export async function prePopulateConventionYear(
  *    preferences (dietary, travel_prefs) from the convention-year guest record.
  * 2. Mark all convention-year guest records as archived.
  * 3. Return a summary of counts.
+ * Accepts an optional PoolClient for use within withAuditContext transactions.
  */
 export async function archiveConventionYear(
-  year: number
+  year: number,
+  client?: PoolClient
 ): Promise<ArchiveSummary> {
-  const registryResult = await query(
+  const runQuery = client
+    ? (sql: string, params?: unknown[]) => client.query(sql, params)
+    : (sql: string, params?: unknown[]) => query(sql, params);
+
+  const registryResult = await runQuery(
     `UPDATE guest_registry gr
      SET last_attended = $1,
          attendance_count = gr.attendance_count + 1,
@@ -242,7 +270,7 @@ export async function archiveConventionYear(
     [year]
   );
 
-  const archiveResult = await query(
+  const archiveResult = await runQuery(
     `UPDATE guests SET archived = true, updated_at = now()
      WHERE convention_year = $1 AND archived = false`,
     [year]
@@ -412,9 +440,11 @@ export async function detectDuplicates(
  * Create an analytics snapshot table for a completed convention year.
  * Aggregates key metrics into analytics_snapshot_{year}.
  * Part of the archive process (PRD section 5).
+ * Accepts an optional PoolClient for use within withAuditContext transactions.
  */
 export async function createAnalyticsSnapshot(
-  conventionYear: number
+  conventionYear: number,
+  client?: PoolClient
 ): Promise<{ snapshotTable: string; rowCount: number }> {
   if (!/^\d{4}$/.test(String(conventionYear))) {
     throw new Error(
@@ -423,7 +453,11 @@ export async function createAnalyticsSnapshot(
   }
   const tableName = `analytics_snapshot_${conventionYear}`;
 
-  await query(
+  const runQuery = client
+    ? (sql: string, params?: unknown[]) => client.query(sql, params)
+    : (sql: string, params?: unknown[]) => query(sql, params);
+
+  await runQuery(
     `CREATE TABLE IF NOT EXISTS ${tableName} AS
      SELECT
        g.convention_year,
@@ -439,9 +473,13 @@ export async function createAnalyticsSnapshot(
     [conventionYear]
   );
 
-  const countResult = await query<{ readonly [key: string]: unknown; count: number }>(
-    `SELECT COUNT(*)::INTEGER AS count FROM ${tableName}`
-  );
+  const countResult = client
+    ? await client.query<{ readonly [key: string]: unknown; count: number }>(
+        `SELECT COUNT(*)::INTEGER AS count FROM ${tableName}`
+      )
+    : await query<{ readonly [key: string]: unknown; count: number }>(
+        `SELECT COUNT(*)::INTEGER AS count FROM ${tableName}`
+      );
 
   return {
     snapshotTable: tableName,

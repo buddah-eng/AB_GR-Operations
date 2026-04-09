@@ -14,6 +14,8 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import * as logger from "firebase-functions/logger";
 import { requireAuth, requireRole } from "../auth/middleware";
+import { auditContextFromRequest, withAuditContext, logAuditClaim } from "../audit/context";
+import { emit, createDomainEvent } from "../events/bus";
 import {
   findGuestByEmail,
   findGuestByName,
@@ -109,7 +111,8 @@ registryRouter.post(
         return;
       }
 
-      const entry = await createRegistryEntry({
+      const auditCtx = auditContextFromRequest(req);
+      const entryData = {
         canonical_name: data.canonical_name,
         email: typeof data.email === "string" ? data.email : undefined,
         first_attended: data.first_attended,
@@ -118,7 +121,23 @@ registryRouter.post(
         properties: typeof data.properties === "object" && data.properties !== null
           ? data.properties as Record<string, unknown>
           : undefined,
+      };
+      const entry = await withAuditContext(auditCtx, (client) =>
+        createRegistryEntry(entryData, client)
+      );
+
+      logAuditClaim(auditCtx, "POST /api/registry/guests");
+
+      const event = createDomainEvent({
+        eventName: "registry.guest_created",
+        domain: "registry",
+        action: "created",
+        recordId: entry.id,
+        newValues: entryData,
+        triggeredBy: req.user?.email ?? "system",
+        changeSet: auditCtx.changeSet,
       });
+      await emit(event);
 
       res.status(201).json({ success: true, data: entry });
     } catch (err: unknown) {
@@ -135,7 +154,24 @@ registryRouter.put(
   async (req: Request, res: Response) => {
     try {
       const { id: registryId, guestId } = req.params;
-      await linkGuestToRegistry(guestId, registryId);
+      const auditCtx = auditContextFromRequest(req);
+      await withAuditContext(auditCtx, (client) =>
+        linkGuestToRegistry(guestId, registryId, client)
+      );
+
+      logAuditClaim(auditCtx, `PUT /api/registry/guests/${registryId}/link/${guestId}`);
+
+      const event = createDomainEvent({
+        eventName: "registry.guest_linked",
+        domain: "registry",
+        action: "updated",
+        recordId: registryId,
+        triggeredBy: req.user?.email ?? "system",
+        changeSet: auditCtx.changeSet,
+        metadata: { guestId },
+      });
+      await emit(event);
+
       res.json({ success: true, data: null });
     } catch (err: unknown) {
       handleError(res, err, "linking guest to registry");
@@ -163,7 +199,24 @@ registryRouter.post(
         return;
       }
 
-      const count = await prePopulateConventionYear(year, lookbackYear);
+      const auditCtx = auditContextFromRequest(req);
+      const count = await withAuditContext(auditCtx, (client) =>
+        prePopulateConventionYear(year, lookbackYear, client)
+      );
+
+      logAuditClaim(auditCtx, "POST /api/registry/pre-populate");
+
+      const event = createDomainEvent({
+        eventName: "registry.pre_populated",
+        domain: "registry",
+        action: "created",
+        recordId: String(year),
+        triggeredBy: req.user?.email ?? "system",
+        changeSet: auditCtx.changeSet,
+        metadata: { year, lookbackYear, draftRecordsCreated: count },
+      });
+      await emit(event);
+
       res.json({ success: true, data: { draftRecordsCreated: count } });
     } catch (err: unknown) {
       handleError(res, err, "pre-populating convention year");
@@ -188,7 +241,24 @@ registryRouter.post(
         return;
       }
 
-      const summary = await archiveConventionYear(year);
+      const auditCtx = auditContextFromRequest(req);
+      const summary = await withAuditContext(auditCtx, (client) =>
+        archiveConventionYear(year, client)
+      );
+
+      logAuditClaim(auditCtx, "POST /api/registry/archive");
+
+      const event = createDomainEvent({
+        eventName: "registry.archived",
+        domain: "registry",
+        action: "updated",
+        recordId: String(year),
+        triggeredBy: req.user?.email ?? "system",
+        changeSet: auditCtx.changeSet,
+        metadata: { year, ...summary },
+      });
+      await emit(event);
+
       res.json({ success: true, data: summary });
     } catch (err: unknown) {
       handleError(res, err, "archiving convention year");
@@ -278,7 +348,24 @@ registryRouter.post(
         return;
       }
 
-      const result = await createAnalyticsSnapshot(conventionYear);
+      const auditCtx = auditContextFromRequest(req);
+      const result = await withAuditContext(auditCtx, (client) =>
+        createAnalyticsSnapshot(conventionYear, client)
+      );
+
+      logAuditClaim(auditCtx, "POST /api/registry/analytics/snapshot");
+
+      const event = createDomainEvent({
+        eventName: "registry.snapshot_created",
+        domain: "registry",
+        action: "created",
+        recordId: result.snapshotTable,
+        triggeredBy: req.user?.email ?? "system",
+        changeSet: auditCtx.changeSet,
+        metadata: { conventionYear, ...result },
+      });
+      await emit(event);
+
       res.json({ success: true, data: result });
     } catch (err: unknown) {
       handleError(res, err, "creating analytics snapshot");

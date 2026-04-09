@@ -20,6 +20,7 @@ import {
   queryDeletedRecords,
   getChangeSetSummary,
 } from "../audit/forensics";
+import { validateDatabaseIntegrity } from "../backups/recovery";
 
 // --- Router ---
 
@@ -27,6 +28,22 @@ export const adminAuditRouter = Router();
 
 adminAuditRouter.use(requireAuth);
 adminAuditRouter.use(requireRole(10));
+
+// --- Database integrity check ---
+
+adminAuditRouter.get("/integrity", async (_req: Request, res: Response) => {
+  try {
+    const result = await validateDatabaseIntegrity();
+    res.json({ success: true, data: result });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error("Integrity check failed", { error: message });
+    res.status(500).json({
+      success: false,
+      error: `Integrity check failed: ${message}`,
+    });
+  }
+});
 
 // --- Query dispatch ---
 

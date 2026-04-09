@@ -14,7 +14,8 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import * as logger from "firebase-functions/logger";
 import { requireAuth, requireRole } from "../auth/middleware";
-import { auditContextFromRequest } from "../audit/context";
+import { auditContextFromRequest, logAuditClaim } from "../audit/context";
+import { emit, createDomainEvent } from "../events/bus";
 import {
   updateOntologyRecord,
   rollbackOntologyRecord,
@@ -88,12 +89,26 @@ versioningRouter.post(
       }
 
       const changedBy = req.user?.uid ?? "anonymous";
-      const result = await updateOntologyRecord(table, key, updates, changedBy, changeReason);
+      const auditCtx = auditContextFromRequest(req);
+      const result = await updateOntologyRecord(table, key, updates, changedBy, changeReason, auditCtx);
 
       if (!result.success) {
         res.status(400).json({ success: false, error: result.error.message });
         return;
       }
+
+      logAuditClaim(auditCtx, `POST /api/ontology/version/${table}/${key}`);
+
+      const event = createDomainEvent({
+        eventName: "ontology.version_created",
+        domain: "ontology",
+        action: "created",
+        recordId: result.data.id,
+        newValues: updates,
+        triggeredBy: req.user?.email ?? "system",
+        changeSet: auditCtx.changeSet,
+      });
+      await emit(event);
 
       res.status(201).json({ success: true, data: result.data });
     } catch (err: unknown) {
@@ -132,6 +147,19 @@ versioningRouter.post(
         res.status(400).json({ success: false, error: result.error.message });
         return;
       }
+
+      logAuditClaim(auditCtx, `POST /api/ontology/rollback/${table}/${id}`);
+
+      const event = createDomainEvent({
+        eventName: "ontology.rolled_back",
+        domain: "ontology",
+        action: "updated",
+        recordId: result.data.id,
+        triggeredBy: req.user?.email ?? "system",
+        changeSet: auditCtx.changeSet,
+        metadata: { reason, rolledBackFrom: id },
+      });
+      await emit(event);
 
       res.json({ success: true, data: result.data });
     } catch (err: unknown) {
