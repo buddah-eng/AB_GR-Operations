@@ -172,10 +172,19 @@ async function executeAction(
       break;
 
     case "create_records":
+      await executeCreateRecords(action, event);
+      break;
+
     case "sync_calendar":
+      await executeSyncCalendar(action, event);
+      break;
+
     case "generate_doc":
+      await executeGenerateDoc(action, event);
+      break;
+
     case "call_api":
-      logger.info(`Action "${action.type}" is a stub — will be implemented in later phases`);
+      await executeCallApi(action, event);
       break;
 
     default:
@@ -309,6 +318,168 @@ async function executeLookupRegistry(
       [JSON.stringify(copied), event.recordId]
     );
   }
+}
+
+async function executeCreateRecords(
+  action: WorkflowAction,
+  event: DomainEvent
+): Promise<void> {
+  const concept = action.target;
+  if (!concept) throw new Error("create_records requires a target concept");
+
+  const template = action.template;
+  if (!template) throw new Error("create_records requires a template");
+
+  const templateResult = await query(
+    "SELECT properties FROM concept_templates WHERE concept_key = $1 AND template_key = $2",
+    [concept, template]
+  );
+
+  if (templateResult.rows.length === 0) {
+    throw new Error(`Template "${template}" not found for concept "${concept}"`);
+  }
+
+  const templateItems = templateResult.rows[0].properties as ReadonlyArray<Record<string, unknown>>;
+  const items = Array.isArray(templateItems) ? templateItems : [templateItems];
+  const defaults = action.defaults ?? {};
+
+  for (const item of items) {
+    const data = interpolateTokens({ ...defaults, ...item }, event);
+
+    if (action.link && event.recordId) {
+      data[action.link] = event.recordId;
+    }
+
+    const table = conceptToTable(concept);
+    const cols = Object.keys(data);
+    const vals = Object.values(data);
+    const placeholders = vals.map((_, i) => `$${i + 1}`);
+
+    const result = await query(
+      `INSERT INTO ${table} (${cols.join(", ")}, properties) VALUES (${placeholders.join(", ")}, $${vals.length + 1}) RETURNING id`,
+      [...vals, JSON.stringify(data)]
+    );
+
+    const newId = result.rows[0].id as string;
+
+    const newEvent = createDomainEvent({
+      eventName: `${concept}.created`,
+      domain: concept,
+      action: "created",
+      recordId: newId,
+      newValues: data,
+      triggeredBy: "workflow",
+      metadata: { workflowTriggeredBy: event.eventId, batchTemplate: template },
+    });
+    await emit(newEvent);
+  }
+}
+
+async function executeCallApi(
+  action: WorkflowAction,
+  event: DomainEvent
+): Promise<void> {
+  const defaults = interpolateTokens(action.defaults ?? {}, event);
+  const url = defaults.url as string | undefined;
+
+  if (!url) throw new Error("call_api requires a url in defaults");
+
+  const method = (defaults.method as string) ?? "GET";
+  const headers = (defaults.headers as Record<string, string>) ?? {};
+  const body = defaults.body as string | undefined;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+
+  try {
+    const response = await fetch(url, {
+      method,
+      headers,
+      body: method !== "GET" && method !== "HEAD" ? body : undefined,
+      signal: controller.signal,
+    });
+
+    logger.info("call_api completed", {
+      url,
+      method,
+      status: response.status,
+      recordId: event.recordId,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.warn("call_api request failed (non-blocking)", {
+      url,
+      method,
+      error: message,
+      recordId: event.recordId,
+    });
+    // Do not re-throw: HTTP errors should not fail the workflow
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function executeSyncCalendar(
+  action: WorkflowAction,
+  event: DomainEvent
+): Promise<void> {
+  const defaults = interpolateTokens(action.defaults ?? {}, event);
+
+  const calendarEvent = createDomainEvent({
+    eventName: "calendar.sync_requested",
+    domain: "calendar",
+    action: "created",
+    recordId: event.recordId,
+    newValues: {
+      name: defaults.name ?? defaults.title ?? event.newValues?.name,
+      startTime: defaults.startTime ?? defaults.start ?? event.newValues?.startTime,
+      endTime: defaults.endTime ?? defaults.end ?? event.newValues?.endTime,
+      venue: defaults.venue ?? event.newValues?.venue,
+      guests: defaults.guests ?? event.newValues?.guests,
+      sourceEvent: event.eventName,
+      sourceDomain: event.domain,
+    },
+    triggeredBy: "workflow",
+    metadata: { workflowTriggeredBy: event.eventId },
+  });
+
+  await emit(calendarEvent);
+
+  logger.info("calendar.sync_requested emitted", {
+    recordId: event.recordId,
+    eventName: event.eventName,
+  });
+}
+
+async function executeGenerateDoc(
+  action: WorkflowAction,
+  event: DomainEvent
+): Promise<void> {
+  const defaults = interpolateTokens(action.defaults ?? {}, event);
+
+  const docEvent = createDomainEvent({
+    eventName: "document.generation_requested",
+    domain: "document",
+    action: "created",
+    recordId: event.recordId,
+    newValues: {
+      templateName: defaults.templateName ?? action.templateName ?? "default",
+      recordId: event.recordId,
+      outputFormat: defaults.outputFormat ?? "pdf",
+      data: defaults,
+      sourceDomain: event.domain,
+      sourceEvent: event.eventName,
+    },
+    triggeredBy: "workflow",
+    metadata: { workflowTriggeredBy: event.eventId },
+  });
+
+  await emit(docEvent);
+
+  logger.info("document.generation_requested emitted", {
+    recordId: event.recordId,
+    templateName: defaults.templateName ?? action.templateName ?? "default",
+  });
 }
 
 // --- Helpers ---
