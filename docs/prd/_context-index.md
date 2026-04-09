@@ -20,7 +20,17 @@ to decide if you need to load the full document.
 |-----|------|-----------|--------|
 | README | `README.md` | Navigation, principles, document format. Start here. | done |
 | Orchestration | `_orchestration.md` | Build phases (dependency-ordered), agent rules, prompt template, lessons learned. | done |
-| Context Index | `_context-index.md` | This file. 53 docs across 9 folders. Semantic tags + dependency graph. | living |
+| Context Index | `_context-index.md` | This file. 58 docs across 10 folders. Semantic tags + dependency graph. | living |
+
+### Process (Evergreen — Apply to Every Phase)
+
+| Doc | Path | Shorthand | Tags | Status |
+|-----|------|-----------|------|--------|
+| Wiring Audit | `process/wiring-audit.md` | No dead exports, no orphan columns, no broken cross-module dependencies. Run after every PRD. | `process`, `verification`, `quality` | done |
+| Write Pipeline | `process/write-pipeline.md` | Every write endpoint follows full 10-step pipeline (auth→RBAC→audit→validate→encrypt→write→event→claim). | `process`, `verification`, `write-path` | done |
+| Acceptance Gate | `process/acceptance-gate.md` | Line-by-line verification of every acceptance criteria with evidence before phase advancement. | `process`, `verification`, `gate` | done |
+| Phase Discipline | `process/phase-discipline.md` | One phase at a time. Read PRD before code. No combining. Honest status reporting. | `process`, `discipline` | done |
+| Session State | `process/session-state.md` | Save corrections, gap analyses, phase status to memory immediately. No deferred saves. | `process`, `memory`, `state` | done |
 
 ### Platform
 
@@ -130,6 +140,7 @@ to decide if you need to load the full document.
 | `conditions` | core/condition-expression, ui/condition-builder-ui, automation/workflow-engine, modules/gr/contracts |
 | `postgres` | data/postgres-schema, data/integration-testing, data/versioning-backups, data/yoy-registry, data/encryption |
 | `testing` | data/integration-testing |
+| `process` | process/wiring-audit, process/write-pipeline, process/acceptance-gate, process/phase-discipline, process/session-state |
 | `events` | core/event-bus, core/audit-system, automation/workflow-engine |
 | `workflows` | automation/workflow-engine, automation/workflow-actions, automation/workflow-builder |
 | `api` | api/domain-crud, api/integration-patterns, api/external-surfaces, api/mcp-surface |

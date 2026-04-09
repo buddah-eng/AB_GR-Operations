@@ -2,6 +2,22 @@
 
 How to build the platform, in what order, and why.
 
+## Process PRDs (Evergreen — Apply to Every Phase)
+
+These are not features. They are mandatory verification procedures that run after every PRD implementation and before every phase advancement. They exist because the project repeatedly failed at wiring, completeness, and honest status reporting.
+
+| PRD | What | When to Run |
+|-----|------|-------------|
+| `process/wiring-audit.md` | No dead exports, no orphan columns, no broken cross-module dependencies | After every PRD implementation |
+| `process/write-pipeline.md` | Every write endpoint follows the full 10-step pipeline (auth→RBAC→audit→validate→encrypt→write→event→claim) | After implementing any write endpoint |
+| `process/acceptance-gate.md` | Line-by-line verification of every acceptance criteria with evidence (file+line+test) | Before declaring any phase complete |
+| `process/phase-discipline.md` | One phase at a time, read PRD before coding, no combining phases, honest status | Always |
+| `process/session-state.md` | Save corrections, gap analyses, and phase status to memory immediately | Always |
+
+**These are not optional.** A phase cannot be declared complete unless all 5 process PRDs are satisfied.
+
+---
+
 ## Build Phases (Dependency-Ordered)
 
 Phases represent build ORDER based on what depends on what. Everything ships.
