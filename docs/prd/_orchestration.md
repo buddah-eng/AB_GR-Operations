@@ -15,6 +15,8 @@ These are not features. They are mandatory verification procedures that run afte
 | `process/session-state.md` | Save corrections, gap analyses, and phase status to memory immediately | Always |
 | `process/phase-completion.md` | Iterative multi-pass verification cycle. Automated scans → write pipeline → acceptance criteria → fresh-eyes → build. Loops until zero findings. | Before declaring ANY phase complete |
 | `process/deferred-backlog.md` | Living tracker for deferred acceptance criteria. Each has a gate condition. Gates checked at phase start. Met gates become current-phase requirements. | At phase start and when deferring |
+| `process/user-language-standard.md` | Terminology translation table. Property.label is the single source of truth for user-facing text. No jargon. Referenced by all UI PRDs. | When implementing any user-facing text |
+| `process/ux-checklist.md` | Every screen answers 4 questions + empty states + loading + errors + a11y + feedback. Checked during acceptance gate. | When implementing any UI screen |
 
 **These are not optional.** A phase cannot be declared complete unless all 7 process PRDs are satisfied. The phase-completion protocol is the final gate — it runs in cycles until a complete cycle finds zero issues. Any deferred items must be in the backlog with gate conditions.
 

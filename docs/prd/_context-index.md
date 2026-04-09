@@ -33,6 +33,8 @@ to decide if you need to load the full document.
 | Session State | `process/session-state.md` | Save corrections, gap analyses, phase status to memory immediately. No deferred saves. | `process`, `memory`, `state` | done |
 | Phase Completion | `process/phase-completion.md` | Iterative multi-pass verification: automated scans → write pipeline → acceptance criteria → fresh-eyes → build. Cycles until zero findings. | `process`, `verification`, `gate`, `convergence` | done |
 | Deferred Backlog | `process/deferred-backlog.md` | Living tracker for deferred acceptance criteria with gate conditions. Checked at every phase start. Met gates become requirements. | `process`, `deferred`, `gate`, `tracking` | living |
+| User Language Standard | `process/user-language-standard.md` | Property.label is single source of truth for user-facing text. Terminology translation table. Error message standards. Role-specific language. | `process`, `ux`, `language`, `terminology` | done |
+| UX Checklist | `process/ux-checklist.md` | Every screen: 4 questions, empty states, loading states, error handling, accessibility, feedback. Verified during acceptance gate. | `process`, `ux`, `accessibility`, `verification` | done |
 
 ### Platform
 
@@ -44,6 +46,7 @@ to decide if you need to load the full document.
 | Scaling | `platform/scaling.md` | Cloud Functions → Cloud Run + Redis + Pub/Sub. Scale to zero ($0 off-season). 50-100 concurrent users during con. ~$50-80/mo active. | `scaling`, `cloud-run`, `redis`, `pub-sub`, `cost` | done |
 | OSS Model | `platform/oss-model.md` | Engine (repo) vs application (DB). AGPL-3.0. Fork → deploy → populate ontology. No convention-specific data in source. | `oss`, `engine-vs-app`, `fork-model` | done |
 | Branding | `platform/branding.md` | Colors/fonts/logo as config, not code. ab-* → primary-*. Tailwind from env vars. Runtime branding from DB. Settings UI with color picker. | `branding`, `theming`, `tailwind`, `config` | done |
+| Template Infrastructure | `platform/template-infrastructure.md` | Unified template system: one table for record sets, notifications, documents, form/view presets, workflows. Versioned, scoped, CRUD API, import/export. Replaces 6+ separate template tables. | `templates`, `infrastructure`, `versioning`, `import-export` | done |
 
 ### Core Engine
 
@@ -95,6 +98,7 @@ to decide if you need to load the full document.
 | Form & View Builder | `ui/form-view-builder.md` | Drag-drop form canvas with layout picker and wizard step editor. View type config with column/filter/sort/groupBy. Quick-create defaults. CI/QA pipeline integration. | `drag-drop`, `form-builder`, `view-builder`, `config-ui` | done |
 | Condition Builder UI | `ui/condition-builder-ui.md` | Shared ConditionExpression visual component. Field picker, operator filtering by type, compound and/or/not grouping, human-readable preview. Used in 5+ places. | `condition-ui`, `visual-logic`, `shared-component` | done |
 | In-App Documents | `ui/in-app-documents.md` | Contracts (conditional clause assembly, Handlebars, 14 clause inventory) and itineraries (per-guest schedule aggregation) as in-app views. PDF export via HTML→PDF. Template management via ontology. | `contracts`, `itineraries`, `in-app-views`, `pdf-export` | done |
+| Builder-to-Operator | `ui/builder-to-operator.md` | Property→input mapping (17 types), property→column mapping, default form/view/page auto-generation, ontology change impact on operators, builder guardrails. | `ux`, `translation`, `defaults`, `guardrails` | done |
 
 ### Shared Services
 
