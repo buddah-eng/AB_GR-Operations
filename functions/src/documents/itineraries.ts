@@ -8,6 +8,21 @@
 
 import { query } from "../db/client";
 
+// --- HTML escaping (XSS prevention) ---
+
+/**
+ * Escapes HTML special characters to prevent XSS when inserting
+ * dynamic values into HTML output.
+ */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 // --- Types ---
 
 export interface ItineraryItem {
@@ -62,7 +77,7 @@ async function loadTransportBookings(
     date: row.travel_date as string,
     time: row.departure_time as string,
     endTime: (row.arrival_time as string) ?? undefined,
-    title: `Transport: ${row.origin as string} to ${row.destination as string}`,
+    title: `Transport: ${escapeHtml(row.origin as string)} to ${escapeHtml(row.destination as string)}`,
     description: (row.description as string) ?? undefined,
     type: "transport" as const,
     location: row.origin as string,
@@ -83,7 +98,7 @@ async function loadPairings(
     date: row.pairing_date as string,
     time: row.start_time as string,
     endTime: (row.end_time as string) ?? undefined,
-    title: `${row.activity as string} with ${row.partner_name as string}`,
+    title: `${escapeHtml(row.activity as string)} with ${escapeHtml(row.partner_name as string)}`,
     description: undefined,
     type: "pairing" as const,
     location: (row.location as string) ?? undefined,
@@ -161,22 +176,22 @@ function typeIcon(type: ItineraryItem["type"]): string {
 
 function renderItem(item: ItineraryItem): string {
   const timeRange = item.endTime
-    ? `${formatTime(item.time)} &ndash; ${formatTime(item.endTime)}`
-    : formatTime(item.time);
+    ? `${escapeHtml(formatTime(item.time))} &ndash; ${escapeHtml(formatTime(item.endTime))}`
+    : escapeHtml(formatTime(item.time));
 
   const locationHtml = item.location
-    ? `<span class="location">${item.location}</span>`
+    ? `<span class="location">${escapeHtml(item.location)}</span>`
     : "";
 
   const descHtml = item.description
-    ? `<p class="desc">${item.description}</p>`
+    ? `<p class="desc">${escapeHtml(item.description)}</p>`
     : "";
 
   return [
     `<div class="item item-${item.type}">`,
     `  <span class="icon">${typeIcon(item.type)}</span>`,
     `  <span class="time">${timeRange}</span>`,
-    `  <span class="title">${item.title}</span>`,
+    `  <span class="title">${escapeHtml(item.title)}</span>`,
     locationHtml,
     descHtml,
     "</div>",

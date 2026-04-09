@@ -264,9 +264,9 @@ async function executeCreateRecords(
 
   const templateResult = await query<{
     id: string;
-    record_defaults: Record<string, unknown>;
+    content: { items?: ReadonlyArray<Record<string, unknown>> } & Record<string, unknown>;
   }>(
-    `SELECT id, record_defaults FROM workflow_templates WHERE name = $1`,
+    `SELECT id, content FROM templates WHERE name = $1 AND template_type = 'record_set' AND status = 'active'`,
     [templateName]
   );
 
@@ -277,8 +277,9 @@ async function executeCreateRecords(
   const auditCtx = createAuditContext("system", "system");
 
   for (const templateRow of templateResult.rows) {
+    const recordDefaults = templateRow.content.items?.[0] ?? templateRow.content;
     const fields = {
-      ...templateRow.record_defaults,
+      ...recordDefaults,
       ...interpolatedDefaults,
     };
 

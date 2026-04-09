@@ -370,7 +370,7 @@ describe("POST /:id/apply", () => {
     expect(body.success).toBe(true);
     expect(body.data.records_created).toBe(5);
 
-    expect(mockApplyTemplate).toHaveBeenCalledWith("tpl-1", { table_name: "domain_records" });
+    expect(mockApplyTemplate).toHaveBeenCalledWith("tpl-1", { table_name: "domain_records" }, AUDIT_CTX);
     expect(mockCreateDomainEvent).toHaveBeenCalledWith(
       expect.objectContaining({ eventName: "template.applied" })
     );

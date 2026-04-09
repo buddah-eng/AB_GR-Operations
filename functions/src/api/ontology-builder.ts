@@ -31,7 +31,9 @@ import { updateOntologyRecord } from "../versioning/service";
 import { auditContextFromRequest, logAuditClaim, withAuditContext } from "../audit/context";
 import { emit, createDomainEvent } from "../events/bus";
 import { reloadOntology } from "../ontology/loader";
-import type { ApiResponse } from "../ontology/types";
+import { generateDefaultForm, generateDefaultView } from "../rendering/defaults";
+import { checkGuardrails } from "../rendering/guardrails";
+import type { ApiResponse, Property } from "../ontology/types";
 
 // --- Router ---
 
@@ -191,6 +193,20 @@ ontologyBuilderRouter.post("/concepts", async (req: Request, res: Response) => {
     await emit(event);
 
     await reloadOntology();
+
+    // Auto-generate default form and view configs for the new concept
+    try {
+      const conceptKey = body.key as string;
+      await Promise.all([
+        generateDefaultForm(conceptKey),
+        generateDefaultView(conceptKey),
+      ]);
+    } catch (defaultsErr) {
+      // Non-blocking: defaults generation failure should not fail concept creation
+      logger.warn("Auto-generating defaults failed", {
+        error: defaultsErr instanceof Error ? defaultsErr.message : String(defaultsErr),
+      });
+    }
 
     res.status(201).json({ success: true, data: row } as ApiResponse<unknown>);
   } catch (err) {
@@ -450,13 +466,41 @@ ontologyBuilderRouter.post("/concepts/:key/properties", async (req: Request, res
 
     await reloadOntology();
 
+    // Run guardrails on the concept's full property set and return warnings
+    let guardrailWarnings: ReadonlyArray<{ severity: string; code: string; message: string }> = [];
+    try {
+      const allPropsResult = await query(
+        "SELECT * FROM ontology_properties WHERE concept_key = $1 AND status = 'active'",
+        [conceptKey]
+      );
+      const conceptResult = await query(
+        "SELECT * FROM ontology_concepts WHERE key = $1 AND status = 'active'",
+        [conceptKey]
+      );
+      if (conceptResult.rows.length > 0) {
+        const guardrailResult = checkGuardrails(
+          conceptResult.rows[0] as unknown as import("../ontology/types").Concept,
+          allPropsResult.rows as unknown as Property[]
+        );
+        guardrailWarnings = guardrailResult.issues;
+      }
+    } catch (guardrailErr) {
+      logger.warn("Guardrail check failed", {
+        error: guardrailErr instanceof Error ? guardrailErr.message : String(guardrailErr),
+      });
+    }
+
     // Strip namespace prefix from the key before responding
     const responseRow = {
       ...row,
       key: stripPropertyPrefix(row.key as string),
     };
 
-    res.status(201).json({ success: true, data: responseRow } as ApiResponse<unknown>);
+    res.status(201).json({
+      success: true,
+      data: responseRow,
+      ...(guardrailWarnings.length > 0 ? { warnings: guardrailWarnings } : {}),
+    } as ApiResponse<unknown>);
   } catch (err) {
     handleError(res, err, "creating property");
   }

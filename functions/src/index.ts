@@ -26,6 +26,7 @@ import { ciQaRouter } from "./api/ci-qa";
 import { templateRouter } from "./api/templates";
 import { registerWebhookDelivery } from "./api/webhooks";
 import { workflowRouter } from "./api/workflows";
+import { documentsRouter } from "./api/documents";
 import { registerWorkflowEngine } from "./workflows/engine";
 import { rateLimiter } from "./api/rate-limiter";
 
@@ -104,6 +105,7 @@ app.use("/api/builder", ontologyBuilderRouter);
 app.use("/api/config-changes", ciQaRouter);
 app.use("/api/templates", templateRouter);
 app.use("/api/workflows", workflowRouter);
+app.use("/api", documentsRouter);
 
 // --- Webhook delivery & workflow engine ---
 

@@ -553,8 +553,8 @@ describe("Action: create_records (batch)", () => {
   it("creates records from template", async () => {
     mockQuery.mockResolvedValue({
       rows: [
-        { id: "tpl-1", record_defaults: { role: "security" } },
-        { id: "tpl-2", record_defaults: { role: "greeter" } },
+        { id: "tpl-1", content: { items: [{ role: "security" }] } },
+        { id: "tpl-2", content: { items: [{ role: "greeter" }] } },
       ],
     });
 
@@ -573,7 +573,7 @@ describe("Action: create_records (batch)", () => {
     await executeWorkflow(workflow, event);
 
     expect(mockQuery).toHaveBeenCalledWith(
-      expect.stringContaining("workflow_templates"),
+      expect.stringContaining("templates"),
       ["event-staff"]
     );
 

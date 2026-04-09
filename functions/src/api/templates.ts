@@ -163,7 +163,7 @@ templateRouter.post(
         return;
       }
 
-      logAuditClaim(auditCtx, "POST /api/templates");
+      await logAuditClaim(auditCtx, "POST /api/templates");
 
       const event = createDomainEvent({
         eventName: "template.created",
@@ -225,7 +225,7 @@ templateRouter.put(
         return;
       }
 
-      logAuditClaim(auditCtx, `PUT /api/templates/${req.params.id}`);
+      await logAuditClaim(auditCtx, `PUT /api/templates/${req.params.id}`);
 
       const event = createDomainEvent({
         eventName: "template.updated",
@@ -256,14 +256,14 @@ templateRouter.delete(
     try {
       const auditCtx = auditContextFromRequest(req);
 
-      const result = await deleteTemplate(req.params.id);
+      const result = await deleteTemplate(req.params.id, auditCtx);
 
       if (!result.success) {
         res.status(404).json({ success: false, error: result.error });
         return;
       }
 
-      logAuditClaim(auditCtx, `DELETE /api/templates/${req.params.id}`);
+      await logAuditClaim(auditCtx, `DELETE /api/templates/${req.params.id}`);
 
       const event = createDomainEvent({
         eventName: "template.deleted",
@@ -295,14 +295,14 @@ templateRouter.post(
 
       const auditCtx = auditContextFromRequest(req);
 
-      const result = await applyTemplate(req.params.id, context);
+      const result = await applyTemplate(req.params.id, context, auditCtx);
 
       if (!result.success) {
         res.status(400).json({ success: false, error: result.error });
         return;
       }
 
-      logAuditClaim(auditCtx, `POST /api/templates/${req.params.id}/apply`);
+      await logAuditClaim(auditCtx, `POST /api/templates/${req.params.id}/apply`);
 
       const event = createDomainEvent({
         eventName: "template.applied",
@@ -350,7 +350,7 @@ templateRouter.post(
         return;
       }
 
-      logAuditClaim(auditCtx, "POST /api/templates/import");
+      await logAuditClaim(auditCtx, "POST /api/templates/import");
 
       const event = createDomainEvent({
         eventName: "template.imported",

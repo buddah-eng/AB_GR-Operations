@@ -282,10 +282,30 @@ export async function updateTemplate(
 
 /**
  * Soft-delete a template by deprecating it.
+ * When an audit context is provided, wraps the query in withAuditContext.
  */
 export async function deleteTemplate(
-  id: string
+  id: string,
+  auditContext?: AuditContext
 ): Promise<ServiceResult<Template>> {
+  if (auditContext) {
+    return withAuditContext(auditContext, async (client) => {
+      const result = await client.query(
+        `UPDATE templates SET status = 'deprecated' WHERE id = $1 AND status = 'active' RETURNING *`,
+        [id]
+      );
+
+      if (result.rows.length === 0) {
+        return {
+          success: false,
+          error: `No active template found with id "${id}"`,
+        };
+      }
+
+      return { success: true, data: result.rows[0] as unknown as Template };
+    });
+  }
+
   const result = await query(
     `UPDATE templates SET status = 'deprecated' WHERE id = $1 AND status = 'active' RETURNING *`,
     [id]
@@ -334,7 +354,8 @@ export async function getTemplateHistory(
  */
 export async function applyTemplate(
   id: string,
-  context: Record<string, unknown>
+  context: Record<string, unknown>,
+  auditContext?: AuditContext
 ): Promise<ServiceResult<ApplyResult>> {
   const templateResult = await getTemplateById(id);
   if (!templateResult.success || !templateResult.data) {
@@ -359,11 +380,11 @@ export async function applyTemplate(
     case "record_set":
       return applyRecordSet(template, conceptKey, context);
     case "form_preset":
-      return applyFormPreset(template, conceptKey);
+      return applyFormPreset(template, conceptKey, auditContext);
     case "view_preset":
-      return applyViewPreset(template, conceptKey);
+      return applyViewPreset(template, conceptKey, auditContext);
     case "workflow":
-      return applyWorkflow(template);
+      return applyWorkflow(template, auditContext);
     case "notification":
     case "document":
       return {
@@ -524,23 +545,26 @@ async function applyRecordSet(
 
 async function applyFormPreset(
   template: Template,
-  conceptKey: string | null
+  conceptKey: string | null,
+  auditContext?: AuditContext
 ): Promise<ServiceResult<ApplyResult>> {
   if (!conceptKey) {
     return { success: false, error: "form_preset template requires a concept_key" };
   }
 
-  const result = await query(
-    `INSERT INTO form_configs (concept_key, key, config, version, status, changed_by, changed_at, change_reason)
+  const params = [
+    conceptKey,
+    `form_${conceptKey}_${Date.now()}`,
+    JSON.stringify(template.content),
+    `Applied from template "${template.name}"`,
+  ];
+  const sql = `INSERT INTO form_configs (concept_key, key, config, version, status, changed_by, changed_at, change_reason)
      VALUES ($1, $2, $3, 1, 'active', 'template_system', now(), $4)
-     RETURNING id`,
-    [
-      conceptKey,
-      `form_${conceptKey}_${Date.now()}`,
-      JSON.stringify(template.content),
-      `Applied from template "${template.name}"`,
-    ]
-  );
+     RETURNING id`;
+
+  const result = auditContext
+    ? await withAuditContext(auditContext, async (client) => client.query(sql, params))
+    : await query(sql, params);
 
   return {
     success: true,
@@ -555,23 +579,26 @@ async function applyFormPreset(
 
 async function applyViewPreset(
   template: Template,
-  conceptKey: string | null
+  conceptKey: string | null,
+  auditContext?: AuditContext
 ): Promise<ServiceResult<ApplyResult>> {
   if (!conceptKey) {
     return { success: false, error: "view_preset template requires a concept_key" };
   }
 
-  const result = await query(
-    `INSERT INTO view_configs (concept_key, key, config, version, status, changed_by, changed_at, change_reason)
+  const params = [
+    conceptKey,
+    `view_${conceptKey}_${Date.now()}`,
+    JSON.stringify(template.content),
+    `Applied from template "${template.name}"`,
+  ];
+  const sql = `INSERT INTO view_configs (concept_key, key, config, version, status, changed_by, changed_at, change_reason)
      VALUES ($1, $2, $3, 1, 'active', 'template_system', now(), $4)
-     RETURNING id`,
-    [
-      conceptKey,
-      `view_${conceptKey}_${Date.now()}`,
-      JSON.stringify(template.content),
-      `Applied from template "${template.name}"`,
-    ]
-  );
+     RETURNING id`;
+
+  const result = auditContext
+    ? await withAuditContext(auditContext, async (client) => client.query(sql, params))
+    : await query(sql, params);
 
   return {
     success: true,
@@ -585,18 +612,21 @@ async function applyViewPreset(
 }
 
 async function applyWorkflow(
-  template: Template
+  template: Template,
+  auditContext?: AuditContext
 ): Promise<ServiceResult<ApplyResult>> {
-  const result = await query(
-    `INSERT INTO workflow_configs (key, config, version, status, changed_by, changed_at, change_reason)
+  const params = [
+    `wf_${template.name.replace(/\s+/g, "_").toLowerCase()}_${Date.now()}`,
+    JSON.stringify(template.content),
+    `Applied from template "${template.name}"`,
+  ];
+  const sql = `INSERT INTO workflow_configs (key, config, version, status, changed_by, changed_at, change_reason)
      VALUES ($1, $2, 1, 'active', 'template_system', now(), $3)
-     RETURNING id`,
-    [
-      `wf_${template.name.replace(/\s+/g, "_").toLowerCase()}_${Date.now()}`,
-      JSON.stringify(template.content),
-      `Applied from template "${template.name}"`,
-    ]
-  );
+     RETURNING id`;
+
+  const result = auditContext
+    ? await withAuditContext(auditContext, async (client) => client.query(sql, params))
+    : await query(sql, params);
 
   return {
     success: true,

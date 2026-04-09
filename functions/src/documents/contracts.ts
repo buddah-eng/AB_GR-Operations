@@ -39,6 +39,21 @@ export interface GuestContract {
   readonly created_at: string;
 }
 
+// --- HTML escaping (XSS prevention) ---
+
+/**
+ * Escapes HTML special characters to prevent XSS when inserting
+ * dynamic values into HTML output.
+ */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 // --- Variable replacement ---
 
 const VARIABLE_PATTERN = /\{\{(\w+(?:\.\w+)*)\}\}/g;
@@ -47,6 +62,7 @@ const VARIABLE_PATTERN = /\{\{(\w+(?:\.\w+)*)\}\}/g;
  * Replaces all {{variable}} placeholders in text with values from the
  * context object. Supports dot-path resolution (e.g., {{guest.name}}).
  * Missing variables are replaced with an empty string.
+ * All values are HTML-escaped to prevent XSS.
  */
 function replaceVariables(
   text: string,
@@ -55,7 +71,7 @@ function replaceVariables(
   return text.replace(VARIABLE_PATTERN, (_match, path: string) => {
     const value = resolveDotPath(context, path);
     if (value === undefined || value === null) return "";
-    return String(value);
+    return escapeHtml(String(value));
   });
 }
 
