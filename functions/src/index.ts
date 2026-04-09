@@ -23,7 +23,10 @@ import { externalRouter } from "./api/external";
 import { mcpRouter } from "./api/mcp";
 import { ontologyBuilderRouter } from "./api/ontology-builder";
 import { ciQaRouter } from "./api/ci-qa";
+import { templateRouter } from "./api/templates";
 import { registerWebhookDelivery } from "./api/webhooks";
+import { workflowRouter } from "./api/workflows";
+import { registerWorkflowEngine } from "./workflows/engine";
 import { rateLimiter } from "./api/rate-limiter";
 
 // --- Initialize Firebase Admin ---
@@ -99,10 +102,13 @@ app.use("/api/external", externalRouter);
 app.use("/api/mcp", mcpRouter);
 app.use("/api/builder", ontologyBuilderRouter);
 app.use("/api/config-changes", ciQaRouter);
+app.use("/api/templates", templateRouter);
+app.use("/api/workflows", workflowRouter);
 
-// --- Webhook delivery ---
+// --- Webhook delivery & workflow engine ---
 
 registerWebhookDelivery();
+registerWorkflowEngine();
 
 // --- 404 handler ---
 
