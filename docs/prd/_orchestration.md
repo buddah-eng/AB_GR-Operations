@@ -99,10 +99,14 @@ Depends on Phase 2-3 core + API.
 | `ui/condition-builder-ui.md` | Shared visual builder for ConditionExpressions | condition-expression |
 | `ui/form-view-builder.md` | Drag-drop config UI for forms + views | dynamic-forms, view-renderer, condition-builder-ui, ontology-web-builder |
 | `ui/in-app-documents.md` | Contract/itinerary rendering as first-class views, PDF export | dynamic-forms, view-renderer |
+| `ui/builder-to-operator.md` | Property→input/column mapping, default form/view auto-generation, ontology change impact, builder guardrails | ontology-engine, dynamic-forms, view-renderer |
+| `platform/template-infrastructure.md` | Unified template system (record sets, notifications, documents, presets, workflows). Replaces 6+ separate template tables. | ontology-engine, versioning, workflow-actions |
 
 **Parallel tracks in Phase 4:**
 - Automation (engine → actions → builder) is sequential
 - UI rendering (forms + views + condition builder) can run in parallel
+- builder-to-operator defines rendering rules that dynamic-forms and view-renderer implement
+- template-infrastructure provides the storage that workflow-actions and in-app-documents consume
 - form-view-builder depends on both forms and views completing
 - in-app-documents depends on forms + views
 
