@@ -41,8 +41,12 @@ export interface RogueDetectionResult {
 // --- Known system actors ---
 
 /**
- * Actor IDs that are expected to write directly to the database
- * (migrations, cron jobs, etc.). These are excluded from rogue detection.
+ * Table names that are expected to receive direct writes from system processes
+ * (migrations, cron jobs, seed scripts, etc.). Unclaimed trigger rows from
+ * these tables are excluded from rogue detection.
+ *
+ * Note: direct SQL always produces actor_id='pg_trigger_fallback', so we
+ * filter by table_name rather than actor_id.
  */
 export const KNOWN_SYSTEM_ACTORS: ReadonlySet<string> = new Set([
   "migration",
@@ -68,10 +72,12 @@ export async function detectRogueAccess(
     findUnmatchedApiClaims(minutesBack),
   ]);
 
-  // Filter out known system actors from unclaimed rows
-  const knownActorArray = Array.from(knownActors);
+  // Filter out rows from known system tables.
+  // Unclaimed trigger rows all have actor_id='pg_trigger_fallback' so we cannot
+  // distinguish by actor. Instead we exclude rows whose table_name exactly
+  // matches a known system table pattern (migrations, cron, etc.).
   const filteredUnclaimed = unclaimedRows.filter(
-    (row) => !knownActorArray.some((actor) => row.table_name.includes(actor))
+    (row) => !knownActors.has(row.table_name)
   );
 
   let alertsCreated = 0;

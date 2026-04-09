@@ -104,6 +104,7 @@ export async function emit(event: DomainEvent): Promise<EventLogEntry> {
     recordId: event.recordId,
     triggeredBy: event.triggeredBy,
     timestamp: event.timestamp,
+    changeSet: event.changeSet,
     workflowsTriggered: matchingSubscriptions.map((s) => s.pattern),
     actionsExecuted,
   };
@@ -174,14 +175,15 @@ export function matchesPattern(pattern: string, eventName: string): boolean {
 async function logEventToPostgres(entry: EventLogEntry): Promise<void> {
   try {
     await query(
-      `INSERT INTO event_log (event_id, event_name, record_id, triggered_by, timestamp, workflows_triggered, actions_executed)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      `INSERT INTO event_log (event_id, event_name, record_id, triggered_by, timestamp, change_set, workflows_triggered, actions_executed)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [
         entry.eventId,
         entry.eventName,
         entry.recordId,
         entry.triggeredBy,
         entry.timestamp,
+        entry.changeSet ?? null,
         entry.workflowsTriggered,
         JSON.stringify(entry.actionsExecuted),
       ]

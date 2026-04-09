@@ -44,10 +44,15 @@ function registryRow(overrides: Record<string, unknown> = {}) {
     id: "reg-1",
     canonical_name: "Tanaka Ichiro",
     email: "tanaka@example.com",
-    external_ids: {},
-    first_year: 2023,
-    last_year: 2025,
-    total_visits: 3,
+    company: "TechCorp",
+    type: "JP",
+    department: "Engineering",
+    dietary: null,
+    travel_prefs: {},
+    notes: {},
+    first_attended: 2023,
+    last_attended: 2025,
+    attendance_count: 3,
     properties: { department: "Engineering", type: "JP", company: "TechCorp" },
     created_at: "2023-01-01T00:00:00Z",
     updated_at: "2025-01-01T00:00:00Z",
@@ -109,15 +114,15 @@ describe("Registry Service", () => {
 
   describe("getReturningGuests", () => {
     it("returns guests within lookback window", async () => {
-      const row = registryRow({ last_year: 2025 });
+      const row = registryRow({ last_attended: 2025 });
       mockQuery.mockResolvedValue({ rows: [row], rowCount: 1 });
 
       const results = await getReturningGuests(2025);
 
       expect(results).toHaveLength(1);
-      expect(results[0].last_year).toBe(2025);
+      expect(results[0].last_attended).toBe(2025);
       expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining("last_year >= $1"),
+        expect.stringContaining("last_attended >= $1"),
         [2025]
       );
     });
@@ -196,7 +201,7 @@ describe("Registry Service", () => {
   // =========================================================================
 
   describe("archiveConventionYear", () => {
-    it("updates registry last_year and total_visits", async () => {
+    it("updates registry last_attended, attendance_count, dietary, and travel_prefs", async () => {
       mockQuery
         .mockResolvedValueOnce({ rows: [], rowCount: 5 })  // registry update
         .mockResolvedValueOnce({ rows: [], rowCount: 5 }); // archive update
@@ -205,8 +210,10 @@ describe("Registry Service", () => {
 
       const registryCall = mockQuery.mock.calls[0];
       expect(registryCall[0]).toContain("UPDATE guest_registry");
-      expect(registryCall[0]).toContain("last_year = $1");
-      expect(registryCall[0]).toContain("total_visits = gr.total_visits + 1");
+      expect(registryCall[0]).toContain("last_attended = $1");
+      expect(registryCall[0]).toContain("attendance_count = gr.attendance_count + 1");
+      expect(registryCall[0]).toContain("dietary");
+      expect(registryCall[0]).toContain("travel_prefs");
       expect(registryCall[1]).toEqual([2026]);
     });
 
@@ -244,8 +251,8 @@ describe("Registry Service", () => {
   describe("getFrequentGuests", () => {
     it("returns guests with N+ visits", async () => {
       const rows = [
-        registryRow({ id: "r1", total_visits: 5 }),
-        registryRow({ id: "r2", total_visits: 3 }),
+        registryRow({ id: "r1", attendance_count: 5 }),
+        registryRow({ id: "r2", attendance_count: 3 }),
       ];
       mockQuery.mockResolvedValue({ rows, rowCount: 2 });
 
@@ -253,7 +260,7 @@ describe("Registry Service", () => {
 
       expect(result).toHaveLength(2);
       expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining("total_visits >= $1"),
+        expect.stringContaining("attendance_count >= $1"),
         [3]
       );
     });
@@ -305,7 +312,7 @@ describe("Registry Service", () => {
       const result = await createRegistryEntry({
         canonical_name: "Tanaka Ichiro",
         email: "tanaka@example.com",
-        first_year: 2023,
+        first_attended: 2023,
       });
 
       expect(result.id).toBe("new-id");
@@ -348,7 +355,7 @@ describe("Registry Service", () => {
         total: 8,
       });
       expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining("vendor_registry"),
+        expect.stringContaining("last_attended = $1"),
         [2026]
       );
     });
@@ -389,7 +396,7 @@ describe("Registry Service", () => {
       expect(result[1].attended_year).toBe(2024);
       expect(result[2].guests_in_cohort).toBe(15);
       expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining("first_year AS cohort_year")
+        expect.stringContaining("first_attended AS cohort_year")
       );
     });
 

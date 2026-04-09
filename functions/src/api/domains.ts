@@ -22,7 +22,9 @@ import { roleEngine } from "../roles/engine";
 import { emit, createDomainEvent } from "../events/bus";
 import { requireAuth } from "../auth/middleware";
 import { auditContextFromRequest, withAuditContext, logAuditClaim } from "../audit/context";
-import { encryptPiiFields, decryptPiiFields, isEncryptionConfigured } from "../encryption/crypto";
+import { encryptPiiFields, decryptPiiFields, isEncryptionConfigured, computeHmac, isHmacConfigured } from "../encryption/crypto";
+import { validateCondition } from "../conditions/evaluator";
+import { checkBulkLimit, sendBulkConfirmationRequired } from "./bulk-limit";
 import type { ApiResponse, DomainRecord, Property } from "../ontology/types";
 
 // --- Router ---
@@ -103,20 +105,33 @@ domainRouter.get("/:concept", async (req: Request, res: Response) => {
       req.user?.uid ?? ""
     );
 
+    // Apply data scope filter from RBAC
+    const dataScopeFilter = await roleEngine.buildDataScopeFilter(roleKey, conceptKey, req.user?.uid ?? "");
+    let dataScopeClause = "";
+    const dataScopeParams: unknown[] = [];
+    if (dataScopeFilter && isSafeIdentifier(dataScopeFilter.column)) {
+      const paramIndex = filterParams.length + 1;
+      dataScopeClause = ` AND ${dataScopeFilter.column} ${dataScopeFilter.operator} $${paramIndex}`;
+      dataScopeParams.push(dataScopeFilter.value);
+    }
+
+    const combinedParams = [...filterParams, ...dataScopeParams];
+    const combinedWhereClause = whereClause + dataScopeClause;
+
     // Build ORDER BY
     const orderBy = buildOrderBy(req.query, properties);
 
     // Count total
     const countResult = await query(
-      `SELECT COUNT(*) FROM ${table} WHERE NOT archived ${whereClause}`,
-      filterParams
+      `SELECT COUNT(*) FROM ${table} WHERE NOT archived ${combinedWhereClause}`,
+      combinedParams
     );
     const total = parseInt(countResult.rows[0].count as string, 10);
 
     // Fetch page
     const dataResult = await query(
-      `SELECT * FROM ${table} WHERE NOT archived ${whereClause} ${orderBy} LIMIT $${filterParams.length + 1} OFFSET $${filterParams.length + 2}`,
-      [...filterParams, limit, offset]
+      `SELECT * FROM ${table} WHERE NOT archived ${combinedWhereClause} ${orderBy} LIMIT $${combinedParams.length + 1} OFFSET $${combinedParams.length + 2}`,
+      [...combinedParams, limit, offset]
     );
 
     // Filter visible properties per record
@@ -206,11 +221,25 @@ domainRouter.post("/:concept", async (req: Request, res: Response) => {
     const rawPayload = req.body as Record<string, unknown>;
     const filteredPayload = await roleEngine.filterWritePayload(roleKey, conceptKey, rawPayload);
 
+    // W-2: Validate condition field if present
+    if (filteredPayload.condition && typeof filteredPayload.condition === "object") {
+      const conditionError = validateCondition(filteredPayload.condition);
+      if (conditionError) {
+        sendError(res, 400, `Invalid condition: ${conditionError}`);
+        return;
+      }
+    }
+
     const properties = await getPropertiesForConcept(conceptKey);
     const table = conceptToTable(conceptKey);
 
     const { coreColumns, jsonbProperties } = separateProperties(filteredPayload, properties);
     coreColumns.created_by = req.user?.uid ?? null;
+
+    // C-5: Compute HMAC blind index for email
+    if (typeof filteredPayload.email === "string" && isEncryptionConfigured() && isHmacConfigured()) {
+      coreColumns.email_hmac = computeHmac(filteredPayload.email);
+    }
 
     // Encrypt PII fields before writing to Postgres
     const encryptedProps = isEncryptionConfigured() ? encryptPiiFields(jsonbProperties) : jsonbProperties;
@@ -224,6 +253,7 @@ domainRouter.post("/:concept", async (req: Request, res: Response) => {
     // Log audit claim for rogue-actor detection
     logAuditClaim(auditCtx, `POST /api/domains/${conceptKey}`);
 
+    // C-4: Pass changeSet to domain event
     const event = createDomainEvent({
       eventName: `${conceptKey}.created`,
       domain: conceptKey,
@@ -231,12 +261,19 @@ domainRouter.post("/:concept", async (req: Request, res: Response) => {
       recordId: record.id,
       newValues: filteredPayload,
       triggeredBy: req.user?.email ?? "system",
+      changeSet: auditCtx.changeSet,
     });
     await emit(event);
 
+    // W-1: Apply RBAC filtering and decryption to write response
+    const filteredProps = await roleEngine.filterRecord(
+      roleKey, conceptKey, record.properties
+    );
+    const decryptedProps = isEncryptionConfigured() ? decryptPiiFields(filteredProps) : filteredProps;
+
     res.status(201).json({
       success: true,
-      data: record,
+      data: { ...record, properties: decryptedProps },
     } as ApiResponse<DomainRecord>);
   } catch (err) {
     handleError(res, err, "creating record");
@@ -261,9 +298,9 @@ domainRouter.put("/:concept/:id", async (req: Request, res: Response) => {
 
     const table = conceptToTable(conceptKey);
 
-    // Get existing record for change tracking
+    // Get existing record for change tracking (include archived to distinguish 404 vs write-protected)
     const existing = await query(
-      `SELECT * FROM ${table} WHERE id = $1 AND NOT archived`,
+      `SELECT * FROM ${table} WHERE id = $1`,
       [id]
     );
     if (existing.rows.length === 0) {
@@ -272,11 +309,31 @@ domainRouter.put("/:concept/:id", async (req: Request, res: Response) => {
     }
 
     const existingRow = existing.rows[0];
+
+    // S-6: Archived records are write-protected
+    if (existingRow.archived === true) {
+      sendError(res, 400, "Cannot modify archived records.");
+      return;
+    }
     const rawPayload = req.body as Record<string, unknown>;
     const filteredPayload = await roleEngine.filterWritePayload(roleKey, conceptKey, rawPayload);
 
+    // W-2: Validate condition field if present
+    if (filteredPayload.condition && typeof filteredPayload.condition === "object") {
+      const conditionError = validateCondition(filteredPayload.condition);
+      if (conditionError) {
+        sendError(res, 400, `Invalid condition: ${conditionError}`);
+        return;
+      }
+    }
+
     const properties = await getPropertiesForConcept(conceptKey);
     const { coreColumns, jsonbProperties } = separateProperties(filteredPayload, properties);
+
+    // C-5: Compute HMAC blind index for email
+    if (typeof filteredPayload.email === "string" && isEncryptionConfigured() && isHmacConfigured()) {
+      coreColumns.email_hmac = computeHmac(filteredPayload.email);
+    }
 
     // Determine changed fields
     const existingProps = (existingRow.properties ?? {}) as Record<string, unknown>;
@@ -306,6 +363,7 @@ domainRouter.put("/:concept/:id", async (req: Request, res: Response) => {
       changedFields.map((key) => [key, allExisting[key]])
     );
 
+    // C-4: Pass changeSet to domain event
     const event = createDomainEvent({
       eventName: `${conceptKey}.updated`,
       domain: conceptKey,
@@ -317,16 +375,30 @@ domainRouter.put("/:concept/:id", async (req: Request, res: Response) => {
         changedFields.map((key) => [key, filteredPayload[key]])
       ),
       triggeredBy: req.user?.email ?? "system",
+      changeSet: auditCtx.changeSet,
     });
     await emit(event);
 
-    res.json({ success: true, data: record } as ApiResponse<DomainRecord>);
+    // W-1: Apply RBAC filtering and decryption to write response
+    const filteredProps = await roleEngine.filterRecord(
+      roleKey, conceptKey, record.properties
+    );
+    const decryptedProps = isEncryptionConfigured() ? decryptPiiFields(filteredProps) : filteredProps;
+
+    res.json({ success: true, data: { ...record, properties: decryptedProps } } as ApiResponse<DomainRecord>);
   } catch (err) {
     handleError(res, err, "updating record");
   }
 });
 
 // --- Delete (archive) record ---
+//
+// Bulk-limit note (PRD versioning-backups section 4):
+// When batch DELETE endpoints are added, apply checkBulkLimit() here before
+// processing. For single-record deletes the threshold (5) is never reached.
+// Also consider cascade: archiving a record may affect related records
+// (e.g., archiving a guest should cascade to their pairings, contracts).
+// When cascade logic is added, count cascading records toward the bulk limit.
 
 domainRouter.delete("/:concept/:id", async (req: Request, res: Response) => {
   try {
@@ -354,12 +426,14 @@ domainRouter.delete("/:concept/:id", async (req: Request, res: Response) => {
 
     logAuditClaim(auditCtx, `DELETE /api/domains/${conceptKey}/${id}`);
 
+    // C-4: Pass changeSet to domain event
     const event = createDomainEvent({
       eventName: `${conceptKey}.deleted`,
       domain: conceptKey,
       action: "deleted",
       recordId: id,
       triggeredBy: req.user?.email ?? "system",
+      changeSet: auditCtx.changeSet,
     });
     await emit(event);
 
@@ -586,3 +660,9 @@ export {
   buildOrderBy,
   rowToDomainRecord,
 };
+
+// C-7: Re-export bulk-limit utilities for future batch endpoints (Phase 3+).
+// Currently unused by single-record CRUD, but wired in so the infrastructure
+// is connected. When batch endpoints are added, import these and call
+// checkBulkLimit() before processing any batch operation.
+export { checkBulkLimit, sendBulkConfirmationRequired };

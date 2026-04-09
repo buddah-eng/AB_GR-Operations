@@ -187,7 +187,56 @@ export async function queryMostActiveActors(
   return result.rows as unknown as ReadonlyArray<ActorActivity>;
 }
 
-// --- Query 6: Deleted records recovery ---
+// --- Query 6: Change set summary ---
+
+export interface ChangeSetSummary {
+  readonly change_set: string;
+  readonly actor_id: string;
+  readonly actor_type: string;
+  readonly started_at: string;
+  readonly ended_at: string;
+  readonly mutation_count: number;
+  readonly tables_affected: string[];
+}
+
+export async function getChangeSetSummary(
+  changeSetId: string,
+  options?: { readonly logTable?: AuditLogTable }
+): Promise<ChangeSetSummary | null> {
+  const table = validateLogTable(options?.logTable ?? "domain_audit_log");
+
+  const result = await query(
+    `SELECT
+       change_set,
+       MIN(actor_id) AS actor_id,
+       MIN(actor_type) AS actor_type,
+       MIN(created_at)::text AS started_at,
+       MAX(created_at)::text AS ended_at,
+       COUNT(*)::int AS mutation_count,
+       ARRAY_AGG(DISTINCT table_name) AS tables_affected
+     FROM ${table}
+     WHERE change_set = $1
+     GROUP BY change_set`,
+    [changeSetId]
+  );
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  const row = result.rows[0] as Record<string, unknown>;
+  return {
+    change_set: row.change_set as string,
+    actor_id: row.actor_id as string,
+    actor_type: row.actor_type as string,
+    started_at: row.started_at as string,
+    ended_at: row.ended_at as string,
+    mutation_count: row.mutation_count as number,
+    tables_affected: row.tables_affected as string[],
+  };
+}
+
+// --- Query 7: Deleted records recovery ---
 
 export async function queryDeletedRecords(
   tableName: string,

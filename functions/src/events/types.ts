@@ -16,6 +16,7 @@ export interface DomainEvent {
   readonly newValues?: Readonly<Record<string, unknown>>
   readonly triggeredBy: string     // user email or "system"
   readonly timestamp: string       // ISO 8601
+  readonly changeSet?: string      // audit change_set UUID
   readonly metadata?: Readonly<Record<string, unknown>>
 }
 
@@ -45,6 +46,7 @@ export interface EventLogEntry {
   readonly recordId: string
   readonly triggeredBy: string
   readonly timestamp: string
+  readonly changeSet?: string
   readonly workflowsTriggered: ReadonlyArray<string>
   readonly actionsExecuted: ReadonlyArray<{
     readonly workflowName: string

@@ -9,6 +9,7 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
 import { runNightlyBackup } from "./snapshot";
+import { query } from "../db/client";
 
 const BACKUP_BUCKET = process.env.BACKUP_BUCKET ?? "gr-ops-backups";
 
@@ -67,10 +68,47 @@ export const nightlyBackupJob = onSchedule(
         logger.error(`Nightly backup completed with ${summary.errors.length} error(s)`, {
           failedTables: summary.errors.map((e) => e.table),
         });
+
+        // S-2: Alert on partial backup failure
+        try {
+          await query(
+            "INSERT INTO admin_alerts (severity, category, title, details) VALUES ($1, $2, $3, $4)",
+            [
+              "critical",
+              "backup_failure",
+              `Nightly backup completed with ${summary.errors.length} error(s)`,
+              JSON.stringify({
+                failedTables: summary.errors.map((e) => e.table),
+                errors: summary.errors,
+                tablesBackedUp: summary.tablesBackedUp,
+                totalRows: summary.totalRows,
+              }),
+            ]
+          );
+        } catch (alertErr) {
+          const alertMsg = alertErr instanceof Error ? alertErr.message : String(alertErr);
+          logger.error("Failed to create backup failure alert", { error: alertMsg });
+        }
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       logger.error("Nightly backup failed", { error: message });
+
+      // S-2: Alert on total backup failure
+      try {
+        await query(
+          "INSERT INTO admin_alerts (severity, category, title, details) VALUES ($1, $2, $3, $4)",
+          [
+            "critical",
+            "backup_failure",
+            "Nightly backup failed",
+            JSON.stringify({ error: message }),
+          ]
+        );
+      } catch (alertErr) {
+        const alertMsg = alertErr instanceof Error ? alertErr.message : String(alertErr);
+        logger.error("Failed to create backup failure alert", { error: alertMsg });
+      }
     }
   }
 );

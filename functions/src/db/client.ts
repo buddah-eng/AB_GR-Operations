@@ -21,7 +21,11 @@ function getPool(): Pool {
       database: process.env.DB_NAME ?? "gr_ops",
       user: process.env.DB_USER ?? "gr_ops",
       password: process.env.DB_PASSWORD ?? "",
-      ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
+      ssl: process.env.NODE_ENV === "test"
+        ? false
+        : process.env.DB_SSL === "false"
+          ? false
+          : { rejectUnauthorized: false },
       max: parseInt(process.env.DB_POOL_MAX ?? "10", 10),
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 5_000,

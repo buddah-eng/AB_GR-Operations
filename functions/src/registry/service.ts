@@ -16,10 +16,15 @@ export interface GuestRegistryRecord {
   id: string;
   canonical_name: string;
   email: string | null;
-  external_ids: Record<string, unknown>;
-  first_year: number;
-  last_year: number | null;
-  total_visits: number;
+  company: string | null;
+  type: string | null;
+  department: string | null;
+  dietary: string | null;
+  travel_prefs: Record<string, unknown>;
+  notes: Record<string, unknown>;
+  first_attended: number;
+  last_attended: number | null;
+  attendance_count: number;
   properties: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -28,9 +33,9 @@ export interface GuestRegistryRecord {
 export interface CreateRegistryEntryData {
   canonical_name: string;
   email?: string;
-  first_year: number;
-  last_year?: number;
-  total_visits?: number;
+  first_attended: number;
+  last_attended?: number;
+  attendance_count?: number;
   properties?: Record<string, unknown>;
 }
 
@@ -52,9 +57,9 @@ export interface FrequentGuestRow {
   id: string;
   canonical_name: string;
   email: string | null;
-  total_visits: number;
-  first_year: number;
-  last_year: number | null;
+  attendance_count: number;
+  first_attended: number;
+  last_attended: number | null;
 }
 
 export interface YoyGrowthRow {
@@ -109,13 +114,13 @@ export async function findGuestByName(
 }
 
 /**
- * Find guests whose last_year >= the given lookback year.
+ * Find guests whose last_attended >= the given lookback year.
  */
 export async function getReturningGuests(
   lookbackYear: number
 ): Promise<GuestRegistryRecord[]> {
   const result = await query<GuestRegistryRecord>(
-    `SELECT * FROM guest_registry WHERE last_year >= $1 ORDER BY canonical_name`,
+    `SELECT * FROM guest_registry WHERE last_attended >= $1 ORDER BY canonical_name`,
     [lookbackYear]
   );
   return result.rows;
@@ -132,15 +137,15 @@ export async function createRegistryEntry(
   data: CreateRegistryEntryData
 ): Promise<GuestRegistryRecord> {
   const result = await query<GuestRegistryRecord>(
-    `INSERT INTO guest_registry (canonical_name, email, first_year, last_year, total_visits, properties)
+    `INSERT INTO guest_registry (canonical_name, email, first_attended, last_attended, attendance_count, properties)
      VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING *`,
     [
       data.canonical_name,
       data.email ?? null,
-      data.first_year,
-      data.last_year ?? null,
-      data.total_visits ?? 1,
+      data.first_attended,
+      data.last_attended ?? null,
+      data.attendance_count ?? 1,
       JSON.stringify(data.properties ?? {}),
     ]
   );
@@ -175,7 +180,7 @@ export async function prePopulateConventionYear(
   lookbackYear: number
 ): Promise<number> {
   const returning = await query<GuestRegistryRecord>(
-    `SELECT * FROM guest_registry WHERE last_year >= $1`,
+    `SELECT * FROM guest_registry WHERE last_attended >= $1`,
     [lookbackYear]
   );
 
@@ -210,7 +215,8 @@ export async function prePopulateConventionYear(
 
 /**
  * Archive a completed convention year:
- * 1. Update guest_registry last_year and total_visits for all guests of that year.
+ * 1. Update guest_registry last_attended, attendance_count, and persistent
+ *    preferences (dietary, travel_prefs) from the convention-year guest record.
  * 2. Mark all convention-year guest records as archived.
  * 3. Return a summary of counts.
  */
@@ -219,8 +225,15 @@ export async function archiveConventionYear(
 ): Promise<ArchiveSummary> {
   const registryResult = await query(
     `UPDATE guest_registry gr
-     SET last_year = $1,
-         total_visits = gr.total_visits + 1,
+     SET last_attended = $1,
+         attendance_count = gr.attendance_count + 1,
+         dietary = COALESCE(g.properties->>'dietary', gr.dietary),
+         travel_prefs = COALESCE(
+           CASE WHEN g.properties->'travel_prefs' IS NOT NULL
+                THEN g.properties->'travel_prefs'
+                ELSE NULL END,
+           gr.travel_prefs
+         ),
          updated_at = now()
      FROM guests g
      WHERE g.registry_id = gr.id
@@ -255,9 +268,9 @@ export async function getReturnRateByDepartment(): Promise<ReturnRateRow[]> {
     `SELECT
        properties->>'department' AS department,
        COUNT(DISTINCT id)::INTEGER AS total_guests,
-       COUNT(DISTINCT CASE WHEN total_visits > 1 THEN id END)::INTEGER AS returning_guests,
+       COUNT(DISTINCT CASE WHEN attendance_count > 1 THEN id END)::INTEGER AS returning_guests,
        ROUND(
-         COUNT(DISTINCT CASE WHEN total_visits > 1 THEN id END)::NUMERIC
+         COUNT(DISTINCT CASE WHEN attendance_count > 1 THEN id END)::NUMERIC
          / NULLIF(COUNT(DISTINCT id), 0) * 100, 1
        ) AS return_rate_pct
      FROM guest_registry
@@ -274,10 +287,10 @@ export async function getFrequentGuests(
   minVisits: number
 ): Promise<FrequentGuestRow[]> {
   const result = await query<FrequentGuestRow>(
-    `SELECT id, canonical_name, email, total_visits, first_year, last_year
+    `SELECT id, canonical_name, email, attendance_count, first_attended, last_attended
      FROM guest_registry
-     WHERE total_visits >= $1
-     ORDER BY total_visits DESC`,
+     WHERE attendance_count >= $1
+     ORDER BY attendance_count DESC`,
     [minVisits]
   );
   return result.rows;
@@ -308,8 +321,10 @@ export async function getYoyGrowth(): Promise<YoyGrowthRow[]> {
 // ---------------------------------------------------------------------------
 
 /**
- * Count new vs returning vendors for a given convention year.
- * A vendor is "new" if attendance_count === 1, "returning" if > 1.
+ * Count new vs returning vendors whose last_attended matches the given year.
+ * Filters vendor_registry by last_attended since there is no convention_year
+ * column on vendor_registry. A vendor is "new" if attendance_count === 1,
+ * "returning" if > 1.
  */
 export async function getNewVsReturningVendors(
   conventionYear: number
@@ -325,7 +340,7 @@ export async function getNewVsReturningVendors(
        COUNT(CASE WHEN attendance_count > 1 THEN 1 END)::INTEGER AS returning_count,
        COUNT(*)::INTEGER AS total
      FROM vendor_registry
-     WHERE convention_year = $1`,
+     WHERE last_attended = $1`,
     [conventionYear]
   );
 
@@ -348,13 +363,13 @@ export async function getNewVsReturningVendors(
 export async function getCohortAnalysis(): Promise<ReadonlyArray<CohortRow>> {
   const result = await query<CohortRow>(
     `SELECT
-       gr.first_year AS cohort_year,
+       gr.first_attended AS cohort_year,
        g.convention_year AS attended_year,
        COUNT(DISTINCT gr.id)::INTEGER AS guests_in_cohort
      FROM guest_registry gr
      JOIN guests g ON g.registry_id = gr.id
      WHERE g.archived = false
-     GROUP BY gr.first_year, g.convention_year
+     GROUP BY gr.first_attended, g.convention_year
      ORDER BY cohort_year, attended_year`
   );
   return result.rows;
@@ -411,7 +426,7 @@ export async function createAnalyticsSnapshot(
        g.type,
        COUNT(*)::INTEGER AS guest_count,
        COUNT(DISTINCT g.registry_id)::INTEGER AS unique_registry_entries,
-       COUNT(CASE WHEN gr.total_visits > 1 THEN 1 END)::INTEGER AS returning_count
+       COUNT(CASE WHEN gr.attendance_count > 1 THEN 1 END)::INTEGER AS returning_count
      FROM guests g
      LEFT JOIN guest_registry gr ON gr.id = g.registry_id
      WHERE g.convention_year = $1

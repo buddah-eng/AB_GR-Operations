@@ -11,6 +11,8 @@
  */
 
 import { query, withTransaction } from "../db/client";
+import { withAuditContext } from "../audit/context";
+import type { AuditContext } from "../audit/context";
 import type { PoolClient } from "pg";
 
 // --- Types ---
@@ -91,9 +93,9 @@ export async function updateOntologyRecord(
   }
 
   return withTransaction(async (client: PoolClient) => {
-    // 1. Read active row
+    // 1. Read active row (FOR UPDATE prevents concurrent version races)
     const activeResult = await client.query(
-      `SELECT * FROM ${tableName} WHERE key = $1 AND status = 'active'`,
+      `SELECT * FROM ${tableName} WHERE key = $1 AND status = 'active' FOR UPDATE`,
       [recordKey]
     );
 
@@ -178,17 +180,23 @@ export async function rollbackOntologyRecord(
   tableName: string,
   activeRecordId: string,
   changedBy: string,
-  reason: string
+  reason: string,
+  auditContext?: AuditContext
 ): Promise<VersioningResult<OntologyRecord>> {
   const tableError = validateTableName(tableName);
   if (tableError) {
     return { success: false, error: tableError };
   }
 
-  return withTransaction(async (client: PoolClient) => {
-    // 1. Find the active row
+  const runInTransaction = auditContext
+    ? (fn: (client: PoolClient) => Promise<VersioningResult<OntologyRecord>>) =>
+        withAuditContext(auditContext, fn)
+    : withTransaction;
+
+  return runInTransaction(async (client: PoolClient) => {
+    // 1. Find the active row (FOR UPDATE prevents concurrent rollback races)
     const activeResult = await client.query(
-      `SELECT * FROM ${tableName} WHERE id = $1 AND status = 'active'`,
+      `SELECT * FROM ${tableName} WHERE id = $1 AND status = 'active' FOR UPDATE`,
       [activeRecordId]
     );
 

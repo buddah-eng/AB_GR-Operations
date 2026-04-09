@@ -35,11 +35,13 @@ vi.mock("../ontology/loader", () => ({
 const mockCanPerformAction = vi.fn();
 const mockFilterRecord = vi.fn();
 const mockFilterWritePayload = vi.fn();
+const mockBuildDataScopeFilter = vi.fn();
 vi.mock("../roles/engine", () => ({
   roleEngine: {
     canPerformAction: (...args: unknown[]) => mockCanPerformAction(...args),
     filterRecord: (...args: unknown[]) => mockFilterRecord(...args),
     filterWritePayload: (...args: unknown[]) => mockFilterWritePayload(...args),
+    buildDataScopeFilter: (...args: unknown[]) => mockBuildDataScopeFilter(...args),
   },
 }));
 
@@ -48,6 +50,19 @@ const mockCreateDomainEvent = vi.fn();
 vi.mock("../events/bus", () => ({
   emit: (...args: unknown[]) => mockEmit(...args),
   createDomainEvent: (...args: unknown[]) => mockCreateDomainEvent(...args),
+}));
+
+const mockValidateCondition = vi.fn();
+vi.mock("../conditions/evaluator", () => ({
+  validateCondition: (...args: unknown[]) => mockValidateCondition(...args),
+}));
+
+vi.mock("../encryption/crypto", () => ({
+  encryptPiiFields: (record: Record<string, unknown>) => record,
+  decryptPiiFields: (record: Record<string, unknown>) => record,
+  isEncryptionConfigured: () => false,
+  isHmacConfigured: () => false,
+  computeHmac: vi.fn(),
 }));
 
 const mockAuditContextFromRequest = vi.fn();
@@ -64,6 +79,11 @@ vi.mock("../audit/context", () => ({
 
 vi.mock("../auth/middleware", () => ({
   requireAuth: (_req: Request, _res: Response, next: () => void) => next(),
+}));
+
+vi.mock("./bulk-limit", () => ({
+  checkBulkLimit: vi.fn(),
+  sendBulkConfirmationRequired: vi.fn(),
 }));
 
 // --- Import module under test ---
@@ -446,6 +466,7 @@ describe("GET /:concept (list)", () => {
     vi.clearAllMocks();
     handler = findHandler("get", "/:concept");
     mockAuditContextFromRequest.mockReturnValue(AUDIT_CTX);
+    mockBuildDataScopeFilter.mockResolvedValue(undefined);
   });
 
   it("returns paginated records for valid concept", async () => {
@@ -574,6 +595,9 @@ describe("POST /:concept (create)", () => {
     mockFilterWritePayload.mockResolvedValue({ name: "Alice", status: "confirmed" });
     mockGetPropertiesForConcept.mockResolvedValue(GUEST_PROPERTIES);
     mockQuery.mockResolvedValue({ rows: [sampleRow()] });
+    mockFilterRecord.mockImplementation((_role: string, _concept: string, props: Record<string, unknown>) =>
+      Promise.resolve(props)
+    );
 
     const req = mockReq({
       params: { concept: "guest" },
@@ -593,6 +617,7 @@ describe("POST /:concept (create)", () => {
       expect.objectContaining({
         eventName: "guest.created",
         action: "created",
+        changeSet: "cs-123",
       })
     );
     expect(mockLogAuditClaim).toHaveBeenCalledTimes(1);
@@ -652,6 +677,9 @@ describe("PUT /:concept/:id (update)", () => {
       .mockResolvedValueOnce({ rows: [updatedRow] });    // UPDATE RETURNING
     mockFilterWritePayload.mockResolvedValue({ name: "Bob" });
     mockGetPropertiesForConcept.mockResolvedValue(GUEST_PROPERTIES);
+    mockFilterRecord.mockImplementation((_role: string, _concept: string, props: Record<string, unknown>) =>
+      Promise.resolve(props)
+    );
 
     const req = mockReq({
       params: { concept: "guest", id: "row-1" },
@@ -669,6 +697,7 @@ describe("PUT /:concept/:id (update)", () => {
         eventName: "guest.updated",
         action: "updated",
         changedFields: ["name"],
+        changeSet: "cs-123",
       })
     );
     expect(mockEmit).toHaveBeenCalledTimes(1);
@@ -728,6 +757,28 @@ describe("PUT /:concept/:id (update)", () => {
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(403);
+    expect(mockEmit).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when attempting to modify archived record (S-6)", async () => {
+    const archivedRow = sampleRow({ archived: true });
+
+    mockGetConceptByKey.mockResolvedValue(GUEST_CONCEPT);
+    mockCanPerformAction.mockResolvedValue(true);
+    mockQuery.mockResolvedValueOnce({ rows: [archivedRow] });
+
+    const req = mockReq({
+      params: { concept: "guest", id: "row-1" },
+      body: { name: "Bob" },
+    });
+    const res = mockRes();
+
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    const body = res._json as { success: boolean; error: string };
+    expect(body.success).toBe(false);
+    expect(body.error).toContain("Cannot modify archived records");
     expect(mockEmit).not.toHaveBeenCalled();
   });
 });

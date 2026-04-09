@@ -178,9 +178,9 @@ describe("Rogue Actor Detection", () => {
     });
 
     it("uses custom known actors set when provided", async () => {
-      const customKnown = new Set(["custom_cron"]);
+      const customKnown = new Set(["custom_cron_jobs"]);
 
-      // Unclaimed row from custom_cron table
+      // Unclaimed row from custom_cron_jobs table
       mockQuery.mockResolvedValueOnce({
         rows: [
           {
@@ -196,7 +196,7 @@ describe("Rogue Actor Detection", () => {
 
       const result = await detectRogueAccess(10, customKnown);
 
-      // Should be filtered out because table_name contains "custom_cron"
+      // Should be filtered out because table_name exactly matches "custom_cron_jobs"
       expect(result.unclaimedTriggerRows).toHaveLength(0);
       expect(result.alertsCreated).toBe(0);
     });

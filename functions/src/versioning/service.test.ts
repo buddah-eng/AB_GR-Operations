@@ -28,6 +28,11 @@ vi.mock("../db/client", () => ({
   withTransaction: (...args: unknown[]) => mockWithTransaction(...args),
 }));
 
+const mockWithAuditContext = vi.fn();
+vi.mock("../audit/context", () => ({
+  withAuditContext: (...args: unknown[]) => mockWithAuditContext(...args),
+}));
+
 // --- Import module under test ---
 
 import {

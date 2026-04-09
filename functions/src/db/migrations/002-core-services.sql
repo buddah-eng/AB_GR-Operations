@@ -41,6 +41,9 @@ CREATE TABLE guest_registry (
 CREATE UNIQUE INDEX idx_guest_registry_email ON guest_registry (email) WHERE email IS NOT NULL;
 CREATE INDEX idx_guest_registry_name ON guest_registry (canonical_name);
 CREATE INDEX idx_guest_registry_company ON guest_registry (company);
+CREATE INDEX idx_guest_registry_properties ON guest_registry USING GIN (properties);
+CREATE INDEX idx_guest_registry_notes ON guest_registry USING GIN (notes);
+CREATE INDEX idx_guest_registry_travel_prefs ON guest_registry USING GIN (travel_prefs);
 
 CREATE TABLE vendor_registry (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
