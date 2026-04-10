@@ -39,8 +39,19 @@
 
     <!-- View dispatcher -->
     <template v-else>
+      <ViewCardRows
+        v-if="config.viewType === 'table' && config.renderMode !== 'dense-table'"
+        :config="config"
+        :data="data"
+        :total-records="totalRecords"
+        @sort="(s) => emit('sort', s)"
+        @filter="(f) => emit('filter', f as ViewFilter)"
+        @page="(e) => emit('page', e)"
+        @row-click="(r) => emit('row-click', r)"
+      />
+
       <ViewTable
-        v-if="config.viewType === 'table'"
+        v-else-if="config.viewType === 'table' && config.renderMode === 'dense-table'"
         :config="config"
         :data="data"
         :total-records="totalRecords"
@@ -85,6 +96,7 @@ import { computed } from 'vue'
 
 import type { ViewConfig, ViewPreset, ViewSort, ViewFilter } from '@/types/views'
 import ViewTable from './ViewTable.vue'
+import ViewCardRows from './ViewCardRows.vue'
 import ViewKanban from './ViewKanban.vue'
 import ViewTimeline from './ViewTimeline.vue'
 import ViewDetail from './ViewDetail.vue'

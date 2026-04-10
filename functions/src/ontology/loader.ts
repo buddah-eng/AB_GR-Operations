@@ -279,6 +279,31 @@ export async function getFormConfig(conceptKey: string): Promise<FormConfig | un
   );
 }
 
+export async function getFormConfigByName(
+  conceptKey: string,
+  name: string
+): Promise<FormConfig | undefined> {
+  const cacheKey = `${FORMS_CACHE_PREFIX}${conceptKey}:${name}`;
+
+  return cache.getOrLoad(
+    cacheKey,
+    async () => {
+      try {
+        const result = await query(
+          "SELECT * FROM form_configs WHERE concept_key = $1 AND name = $2 AND status = 'active' LIMIT 1",
+          [conceptKey, name]
+        );
+        if (result.rows.length === 0) return undefined;
+        return parseFormConfig(result.rows[0]);
+      } catch {
+        logger.warn(`No form config found: ${conceptKey}/${name}`);
+        return undefined;
+      }
+    },
+    TTL_ONTOLOGY_MS
+  );
+}
+
 // --- View config loader ---
 
 export async function getViewConfigs(
@@ -304,6 +329,31 @@ export async function getViewConfigs(
   );
 }
 
+export async function getViewConfigByName(
+  conceptKey: string,
+  name: string
+): Promise<ViewConfig | undefined> {
+  const cacheKey = `${VIEWS_CACHE_PREFIX}${conceptKey}:${name}`;
+
+  return cache.getOrLoad(
+    cacheKey,
+    async () => {
+      try {
+        const result = await query(
+          "SELECT * FROM view_configs WHERE concept_key = $1 AND name = $2 AND status = 'active' LIMIT 1",
+          [conceptKey, name]
+        );
+        if (result.rows.length === 0) return undefined;
+        return parseViewConfig(result.rows[0]);
+      } catch {
+        logger.warn(`No view config found: ${conceptKey}/${name}`);
+        return undefined;
+      }
+    },
+    TTL_ONTOLOGY_MS
+  );
+}
+
 // --- Page config loader ---
 
 export async function getPageConfigs(): Promise<ReadonlyArray<PageConfig>> {
@@ -318,6 +368,30 @@ export async function getPageConfigs(): Promise<ReadonlyArray<PageConfig>> {
       } catch {
         logger.warn("No page configs found");
         return [];
+      }
+    },
+    TTL_ONTOLOGY_MS
+  );
+}
+
+export async function getPageConfigBySlug(
+  slug: string
+): Promise<PageConfig | undefined> {
+  const cacheKey = `page:${slug}`;
+
+  return cache.getOrLoad(
+    cacheKey,
+    async () => {
+      try {
+        const result = await query(
+          "SELECT * FROM page_configs WHERE slug = $1 AND status = 'active' LIMIT 1",
+          [slug]
+        );
+        if (result.rows.length === 0) return undefined;
+        return parsePageConfig(result.rows[0]);
+      } catch {
+        logger.warn(`No page config found for slug: ${slug}`);
+        return undefined;
       }
     },
     TTL_ONTOLOGY_MS

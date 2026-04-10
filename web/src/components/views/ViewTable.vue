@@ -42,7 +42,7 @@
         >
           <template #body="{ data: row }">
             <span :class="getCellClass(col)">
-              {{ formatCellValue(row[col.key], col) }}
+              {{ formatCellValue(row[col.key ?? col.propertyKey ?? ''], col) }}
             </span>
           </template>
         </Column>

@@ -553,7 +553,7 @@ async function loadExistingConfig(): Promise<void> {
     if (configs.length > 0) {
       const config = configs[0]
       viewId.value = config.id
-      viewName.value = config.title
+      viewName.value = config.title ?? 'New View'
       selectedViewType.value = config.viewType
       tableColumns.value = config.columns ?? []
       groupByField.value = config.groupBy

@@ -16,8 +16,11 @@ import {
   getPropertiesForConcept,
   getRelationshipsForConcept,
   getFormConfig,
+  getFormConfigByName,
   getViewConfigs,
+  getViewConfigByName,
   getPageConfigs,
+  getPageConfigBySlug,
 } from "../ontology/loader";
 import { requireAuth, requireRole } from "../auth/middleware";
 import type { ApiResponse, OntologyCache } from "../ontology/types";
@@ -96,6 +99,90 @@ ontologyRouter.get("/concepts/:key", async (req: Request, res: Response) => {
     handleError(res, err, "loading concept");
   }
 });
+
+// --- GET /api/ontology/configs/views/:concept/:name ---
+// Returns a single named view config
+ontologyRouter.get(
+  "/configs/views/:concept/:name",
+  async (req: Request, res: Response) => {
+    try {
+      const { concept, name } = req.params;
+      const viewConfig = await getViewConfigByName(concept, name);
+
+      if (!viewConfig) {
+        res.status(404).json({
+          success: false,
+          error: `No view config "${name}" found for concept "${concept}".`,
+        } as ApiResponse<never>);
+        return;
+      }
+
+      const response: ApiResponse<typeof viewConfig> = {
+        success: true,
+        data: viewConfig,
+      };
+      res.json(response);
+    } catch (err) {
+      handleError(res, err, "loading view config");
+    }
+  }
+);
+
+// --- GET /api/ontology/configs/forms/:concept/:name ---
+// Returns a single named form config
+ontologyRouter.get(
+  "/configs/forms/:concept/:name",
+  async (req: Request, res: Response) => {
+    try {
+      const { concept, name } = req.params;
+      const formConfig = await getFormConfigByName(concept, name);
+
+      if (!formConfig) {
+        res.status(404).json({
+          success: false,
+          error: `No form config "${name}" found for concept "${concept}".`,
+        } as ApiResponse<never>);
+        return;
+      }
+
+      const response: ApiResponse<typeof formConfig> = {
+        success: true,
+        data: formConfig,
+      };
+      res.json(response);
+    } catch (err) {
+      handleError(res, err, "loading form config");
+    }
+  }
+);
+
+// --- GET /api/ontology/configs/pages/:slug ---
+// Returns a single page config by slug
+ontologyRouter.get(
+  "/configs/pages/:slug",
+  async (req: Request, res: Response) => {
+    try {
+      const { slug } = req.params;
+      const pageConfig = await getPageConfigBySlug(slug);
+
+      if (!pageConfig) {
+        res.status(404).json({
+          success: false,
+          error: `No page config found for slug "${slug}".`,
+        } as ApiResponse<never>);
+        return;
+      }
+
+      const response: ApiResponse<typeof pageConfig> = {
+        success: true,
+        data: pageConfig,
+      };
+      res.json(response);
+    } catch (err) {
+      handleError(res, err, "loading page config");
+    }
+  }
+);
 
 // --- GET /api/ontology/configs/forms/:concept ---
 // Returns the form config for a concept

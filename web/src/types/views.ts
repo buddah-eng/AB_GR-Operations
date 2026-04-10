@@ -12,10 +12,12 @@ export type SortDirection = 'asc' | 'desc'
 
 /** Column configuration for table views */
 export interface ViewColumn {
-  /** Property key from ontology */
-  key: string
-  /** Display header label */
-  label: string
+  /** Property key (backend format) */
+  propertyKey?: string
+  /** Property key (frontend format) */
+  key?: string
+  /** Display header label (resolved from ontology if absent) */
+  label?: string
   /** Whether column is sortable */
   sortable?: boolean
   /** Whether column is filterable */
@@ -30,6 +32,14 @@ export interface ViewColumn {
   format?: string
   /** Alignment */
   align?: 'left' | 'center' | 'right'
+  /** Custom renderer name */
+  renderer?: string
+  /** Section for detail views */
+  section?: string
+  /** Column span for detail views */
+  span?: string
+  /** Whether column is editable inline */
+  editable?: boolean
 }
 
 /** Filter configuration */
@@ -79,12 +89,22 @@ export interface DashboardWidget {
   config?: Record<string, unknown>
 }
 
+/** Tab configuration for detail views */
+export interface ViewTab {
+  label: string
+  conceptKey: string
+  filter: Record<string, string>
+  viewName: string
+}
+
 /** Top-level view configuration */
 export interface ViewConfig {
   /** Unique view identifier */
   id: string
-  /** View title */
-  title: string
+  /** Config name identifier (from backend) */
+  name?: string
+  /** Display title (computed from concept label if absent) */
+  title?: string
   /** Description */
   description?: string
   /** View type to render */
@@ -95,14 +115,26 @@ export interface ViewConfig {
   columns?: ViewColumn[]
   /** Active filters */
   filters?: ViewFilter[]
-  /** Active sorts */
+  /** Single sort (backend format) */
+  sort?: ViewSort
+  /** Multiple sorts (frontend legacy) */
   sorts?: ViewSort[]
   /** Field to group by (kanban) */
   groupBy?: string
-  /** Date field for timeline */
+  /** Timeline start field (backend format) */
+  timelineStart?: string
+  /** Timeline end field (backend format) */
+  timelineEnd?: string
+  /** Legacy timeline fields */
   dateField?: string
-  /** End date field for timeline */
+  /** Legacy end date field for timeline */
   endDateField?: string
+  /** Row action on click */
+  rowAction?: 'navigate_to_detail' | 'inline_edit' | 'none'
+  /** Rendering mode for table views */
+  renderMode?: 'card-rows' | 'dense-table'
+  /** Tabs for detail views */
+  tabs?: ViewTab[]
   /** Widgets for dashboard */
   widgets?: DashboardWidget[]
   /** Saved presets */

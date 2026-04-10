@@ -86,9 +86,9 @@ const displayFields = computed<DisplayField[]>(() => {
     return props.config.columns
       .filter((col) => col.visible !== false)
       .map((col) => ({
-        key: col.key,
-        label: col.label,
-        value: props.data?.[col.key],
+        key: col.key ?? col.propertyKey ?? '',
+        label: col.label ?? col.key ?? '',
+        value: props.data?.[col.key ?? col.propertyKey ?? ''],
         type: col.type,
       }))
   }
