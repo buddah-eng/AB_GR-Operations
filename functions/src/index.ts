@@ -27,8 +27,21 @@ import { templateRouter } from "./api/templates";
 import { registerWebhookDelivery } from "./api/webhooks";
 import { workflowRouter } from "./api/workflows";
 import { documentsRouter } from "./api/documents";
+import { dataQualityRouter } from "./api/data-quality";
+import { dataLineageRouter } from "./api/data-lineage";
+import { dataSecurityRouter } from "./api/data-security";
 import { registerWorkflowEngine } from "./workflows/engine";
+import { registerQualityChecker } from "./data-quality/service";
+import { dataRoutesRouter } from "./api/data-routes";
+import { registerDataRouting } from "./data-routing/service";
+import { notificationRouter } from "./api/notifications";
+import { registerNotificationHandler } from "./notifications/service";
+import { createSSEHandler, registerRealtimeHandler } from "./real-time/service";
 import { rateLimiter } from "./api/rate-limiter";
+import { pipelinesRouter } from "./api/pipelines";
+import { externalConnectionsRouter } from "./api/external-connections";
+import { observabilityRouter } from "./api/observability";
+import { registerPipelineEngine } from "./pipelines/service";
 
 // --- Initialize Firebase Admin ---
 
@@ -106,11 +119,48 @@ app.use("/api/config-changes", ciQaRouter);
 app.use("/api/templates", templateRouter);
 app.use("/api/workflows", workflowRouter);
 app.use("/api", documentsRouter);
+app.use("/api/quality", dataQualityRouter);
+app.use("/api/lineage", dataLineageRouter);
+app.use("/api/security", dataSecurityRouter);
+app.use("/api/data-routes", dataRoutesRouter);
+app.use("/api/notifications", notificationRouter);
+app.use("/api/pipelines", pipelinesRouter);
+app.use("/api/external-connections", externalConnectionsRouter);
+app.use("/api/observability", observabilityRouter);
+app.get("/api/stream", createSSEHandler());
+app.get("/api/search", async (req, res) => {
+  try {
+    const { search } = await import("./search/service");
+    const q = (req.query.q as string) ?? "";
+    const concepts = req.query.concepts
+      ? (req.query.concepts as string).split(",").map((c) => c.trim())
+      : undefined;
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+    const roleKey = req.role?.roleKey ?? "viewer";
+
+    const result = await search(q, roleKey, concepts, undefined, undefined, limit);
+
+    if (!result.success) {
+      res.status(500).json({ success: false, error: result.error });
+      return;
+    }
+
+    res.json({ success: true, data: result.data });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ success: false, error: `Search failed: ${message}` });
+  }
+});
 
 // --- Webhook delivery & workflow engine ---
 
 registerWebhookDelivery();
 registerWorkflowEngine();
+registerQualityChecker();
+registerDataRouting();
+registerNotificationHandler();
+registerRealtimeHandler();
+registerPipelineEngine();
 
 // --- 404 handler ---
 
