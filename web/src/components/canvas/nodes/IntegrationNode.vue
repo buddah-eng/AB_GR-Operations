@@ -1,29 +1,25 @@
 <template>
   <div
-    :class="[
-      'integration-node rounded-lg border-2 shadow-sm px-4 py-3 min-w-[140px] cursor-pointer',
-      'transition-all duration-150 hover:shadow-md',
-      selected ? 'border-sky-500 ring-2 ring-sky-200' : 'border-sky-300',
-    ]"
+    :class="['integration-node', 'canvas-node', selected ? 'selected' : '']"
   >
     <!-- Header row -->
-    <div class="flex items-center gap-2">
-      <i class="pi pi-cloud text-sm text-sky-500" />
-      <span class="text-sm font-semibold text-surface-900 truncate">
+    <div class="integration-node__header">
+      <i class="pi pi-cloud integration-node__icon" />
+      <span class="integration-node__label">
         {{ data.label }}
       </span>
     </div>
 
     <!-- Type indicator -->
-    <div class="flex items-center gap-1 mt-1.5">
-      <span class="text-[10px] font-medium text-sky-600 bg-sky-50 rounded-full px-2 py-0.5">
+    <div class="integration-node__badge-row">
+      <span class="integration-node__badge">
         External System
       </span>
     </div>
 
     <!-- Connection handles -->
-    <Handle type="target" :position="Position.Left" class="!bg-sky-400 !w-2 !h-2" />
-    <Handle type="source" :position="Position.Right" class="!bg-sky-400 !w-2 !h-2" />
+    <Handle type="target" :position="Position.Left" class="integration-node__handle" />
+    <Handle type="source" :position="Position.Right" class="integration-node__handle" />
   </div>
 </template>
 
@@ -43,5 +39,68 @@ const selected = computed(() => node.selected)
 <style scoped>
 .integration-node {
   background: #f0f9ff;
+  min-width: 160px;
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  border-color: #7dd3fc;
+}
+
+.integration-node.selected {
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+}
+
+.integration-node__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.integration-node__icon {
+  font-size: var(--text-sm);
+  color: #0ea5e9;
+  flex-shrink: 0;
+}
+
+.integration-node__label {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: var(--tracking-tight);
+}
+
+.integration-node__badge-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.integration-node__badge {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: var(--weight-semibold);
+  color: #0369a1;
+  background: rgba(14, 165, 233, 0.1);
+  border-radius: var(--radius-full);
+  padding: 2px var(--space-2);
+  letter-spacing: var(--tracking-wide);
+}
+
+.integration-node__handle {
+  width: 8px !important;
+  height: 8px !important;
+  background: #38bdf8 !important;
+  border: var(--border-thin) solid #f0f9ff !important;
+  transition: all var(--duration-fast) var(--ease-default);
+}
+
+.integration-node:hover .integration-node__handle {
+  background: #0ea5e9 !important;
+  transform: scale(1.2);
 }
 </style>

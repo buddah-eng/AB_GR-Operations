@@ -1,5 +1,5 @@
 <template>
-  <div class="canvas-viewport relative w-full h-full">
+  <div class="canvas-viewport">
     <VueFlow
       v-model:nodes="flowNodes"
       v-model:edges="flowEdges"
@@ -18,18 +18,18 @@
       @pane-click="handlePaneClick"
     >
       <!-- Background pattern -->
-      <Background :gap="20" :size="1" pattern-color="#e2e8f0" />
+      <Background :gap="20" :size="1" pattern-color="var(--surface-200)" />
 
       <!-- Minimap -->
       <MiniMap
         :node-color="getMinimapNodeColor"
         :pannable="true"
         :zoomable="true"
-        class="!bottom-4 !right-4"
+        class="viewport-minimap"
       />
 
       <!-- Zoom controls (built-in) -->
-      <Controls :show-interactive="false" class="!bottom-4 !left-4" />
+      <Controls :show-interactive="false" class="viewport-controls" />
     </VueFlow>
   </div>
 </template>
@@ -248,4 +248,50 @@ function getMinimapNodeColor(node: Node): string {
 @import '@vue-flow/core/dist/theme-default.css';
 @import '@vue-flow/controls/dist/style.css';
 @import '@vue-flow/minimap/dist/style.css';
+</style>
+
+<style scoped>
+.canvas-viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: var(--surface-50);
+}
+
+.canvas-viewport :deep(.vue-flow__pane) {
+  cursor: grab;
+}
+
+.canvas-viewport :deep(.vue-flow__pane:active) {
+  cursor: grabbing;
+}
+
+/* Minimap refinement */
+.canvas-viewport :deep(.viewport-minimap) {
+  bottom: var(--space-4);
+  right: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: var(--border-thin) solid var(--border-color);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+/* Controls refinement */
+.canvas-viewport :deep(.viewport-controls) {
+  bottom: var(--space-4);
+  left: var(--space-4);
+}
+
+.canvas-viewport :deep(.vue-flow__controls-button) {
+  background: var(--bg-card);
+  border: var(--border-thin) solid var(--border-color);
+  color: var(--text-secondary);
+  transition: all var(--duration-fast) var(--ease-default);
+}
+
+.canvas-viewport :deep(.vue-flow__controls-button:hover) {
+  background: var(--surface-50);
+  color: var(--primary-600);
+  transform: translateY(-1px);
+}
 </style>

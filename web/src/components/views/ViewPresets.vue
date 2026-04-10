@@ -1,5 +1,5 @@
 <template>
-  <div class="view-presets inline-flex items-center gap-2">
+  <div class="vp-root">
     <!-- Preset selector -->
     <Select
       v-model="selectedPresetId"
@@ -7,8 +7,8 @@
       optionLabel="label"
       optionValue="value"
       placeholder="Select view preset"
-      class="w-48"
-      :aria-label="'View preset selector'"
+      class="vp-select"
+      aria-label="View preset selector"
       @change="handlePresetChange"
     />
 
@@ -20,6 +20,7 @@
       rounded
       size="small"
       aria-label="Save current view as preset"
+      class="vp-save-btn"
       @click="showSaveDialog = true"
     />
 
@@ -28,12 +29,14 @@
       v-model:visible="showSaveDialog"
       header="Save View Preset"
       :modal="true"
-      :style="{ width: '24rem' }"
+      :style="{ width: '26rem' }"
+      :pt="{ root: { class: 'vp-dialog' } }"
     >
-      <div class="space-y-4">
-        <div class="flex flex-col gap-2">
-          <label for="preset-name" class="text-sm font-medium text-surface-700">
+      <div class="vp-dialog-body">
+        <div class="vp-form-field form-field">
+          <label for="preset-name" class="vp-field-label">
             Preset name
+            <span class="vp-required" aria-hidden="true" />
           </label>
           <InputText
             id="preset-name"
@@ -42,9 +45,10 @@
             aria-required="true"
           />
         </div>
-        <div class="flex flex-col gap-2">
-          <label for="preset-description" class="text-sm font-medium text-surface-700">
-            Description (optional)
+        <div class="vp-form-field form-field">
+          <label for="preset-description" class="vp-field-label">
+            Description
+            <span class="vp-optional">(optional)</span>
           </label>
           <InputText
             id="preset-description"
@@ -55,18 +59,20 @@
       </div>
 
       <template #footer>
-        <Button
-          label="Cancel"
-          severity="secondary"
-          text
-          @click="showSaveDialog = false"
-        />
-        <Button
-          label="Save"
-          icon="pi pi-check"
-          :disabled="!newPresetName.trim()"
-          @click="handleSave"
-        />
+        <div class="vp-dialog-footer">
+          <Button
+            label="Cancel"
+            severity="secondary"
+            text
+            @click="showSaveDialog = false"
+          />
+          <Button
+            label="Save Preset"
+            icon="pi pi-check"
+            :disabled="!newPresetName.trim()"
+            @click="handleSave"
+          />
+        </div>
       </template>
     </Dialog>
   </div>
@@ -137,3 +143,68 @@ function handleSave(): void {
   newPresetDescription.value = ''
 }
 </script>
+
+<style scoped>
+.vp-root {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.vp-select {
+  width: 12rem;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+}
+
+.vp-save-btn {
+  transition: color var(--duration-normal) var(--ease-default);
+}
+
+/* Dialog body */
+.vp-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.vp-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.vp-field-label {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+  letter-spacing: var(--tracking-wide);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Required dot indicator */
+.vp-required {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--accent-400);
+}
+
+.vp-optional {
+  font-weight: var(--weight-normal);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+/* Dialog footer */
+.vp-dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+</style>

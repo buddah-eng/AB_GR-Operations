@@ -1,13 +1,8 @@
 <template>
-  <div
-    class="condition-preview text-sm text-surface-700 bg-surface-50 rounded-lg p-3 border border-surface-100"
-    role="status"
-    aria-label="Condition preview"
-  >
-    <span v-if="!condition" class="text-surface-400 italic">
-      No conditions defined
-    </span>
-    <span v-else>{{ previewText }}</span>
+  <div class="cp-root" role="status" aria-label="Condition preview">
+    <i class="pi pi-code cp-icon" aria-hidden="true" />
+    <span v-if="!condition" class="cp-empty">No conditions defined</span>
+    <span v-else class="cp-text">{{ previewText }}</span>
   </div>
 </template>
 
@@ -113,3 +108,37 @@ function renderCondition(condition: ConditionExpression): string {
   }
 }
 </script>
+
+<style scoped>
+.cp-root {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-50);
+  border: var(--border-thin) solid var(--surface-100);
+  border-radius: var(--radius-lg);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  line-height: var(--leading-relaxed);
+}
+
+.cp-icon {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  margin-top: 2px;
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.cp-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  font-family: var(--font-body);
+}
+
+.cp-text {
+  word-break: break-word;
+}
+</style>

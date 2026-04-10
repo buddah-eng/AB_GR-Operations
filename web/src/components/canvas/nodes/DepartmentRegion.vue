@@ -1,24 +1,19 @@
 <template>
   <div
-    class="department-region rounded-xl border-2 border-dashed p-4 min-w-[280px] min-h-[200px]"
+    class="department-region"
     :style="{
-      borderColor: data.color + '80',
-      backgroundColor: data.color + '08',
+      '--region-color': data.color,
+      borderColor: data.color + '40',
+      backgroundColor: data.color + '06',
     }"
   >
     <!-- Region label -->
-    <div class="flex items-center gap-2 mb-3">
-      <span
-        class="w-3 h-3 rounded-full"
-        :style="{ backgroundColor: data.color }"
-      />
-      <span
-        class="text-xs font-bold uppercase tracking-widest"
-        :style="{ color: data.color }"
-      >
+    <div class="department-region__header">
+      <span class="department-region__dot" />
+      <span class="department-region__label">
         {{ data.label }}
       </span>
-      <span class="text-[10px] text-surface-400 ml-auto">
+      <span class="department-region__count">
         {{ data.nodeIds.length }} {{ data.nodeIds.length === 1 ? 'node' : 'nodes' }}
       </span>
     </div>
@@ -34,3 +29,52 @@ defineProps<{
   data: DepartmentRegionData
 }>()
 </script>
+
+<style scoped>
+.department-region {
+  border-radius: var(--radius-xl);
+  border: var(--border-medium) dashed;
+  padding: var(--space-5);
+  min-width: 300px;
+  min-height: 220px;
+  transition: all var(--duration-normal) var(--ease-default);
+}
+
+.department-region:hover {
+  border-color: var(--region-color, var(--primary-400)) !important;
+  background-color: color-mix(in srgb, var(--region-color, var(--primary-400)) 8%, transparent) !important;
+}
+
+.department-region__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.department-region__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-full);
+  background: var(--region-color, var(--primary-400));
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--region-color, var(--primary-400)) 20%, transparent);
+}
+
+.department-region__label {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-extrabold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--region-color, var(--primary-600));
+}
+
+.department-region__count {
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-left: auto;
+  letter-spacing: var(--tracking-wide);
+}
+</style>

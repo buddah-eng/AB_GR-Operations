@@ -13,15 +13,10 @@
         transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
         pointerEvents: 'all',
       }"
-      :class="[
-        'edge-label rounded px-1.5 py-0.5 text-[10px] font-medium shadow-sm',
-        hasPii
-          ? 'bg-red-50 border border-red-300 text-red-700'
-          : 'bg-amber-50 border border-amber-200 text-amber-700',
-      ]"
+      :class="['dataflow-edge-label', hasPii ? 'dataflow-edge-label--pii' : 'dataflow-edge-label--normal']"
     >
-      <span v-if="hasPii" class="mr-1">
-        <i class="pi pi-shield text-[9px]" />
+      <span v-if="hasPii" class="dataflow-edge-label__shield">
+        <i class="pi pi-shield" />
       </span>
       {{ labelText }}
     </div>
@@ -71,8 +66,48 @@ const labelText = computed(() => props.data?.label ?? '')
 const hasPii = computed(() => props.data?.hasPii ?? false)
 
 const edgeStyle = computed(() => ({
-  stroke: hasPii.value ? '#ef4444' : '#f59e0b',
+  stroke: hasPii.value ? 'var(--color-error)' : 'var(--accent-500)',
   strokeWidth: 2,
   strokeDasharray: '6 4',
 }))
 </script>
+
+<style scoped>
+.dataflow-edge-label {
+  border-radius: var(--radius-md);
+  padding: 2px var(--space-2);
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: var(--weight-semibold);
+  box-shadow: var(--shadow-xs);
+  transition: all var(--duration-fast) var(--ease-default);
+  cursor: default;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.dataflow-edge-label:hover {
+  box-shadow: var(--shadow-sm);
+  transform: scale(1.05);
+}
+
+.dataflow-edge-label--normal {
+  background: var(--accent-50);
+  border: var(--border-thin) solid var(--accent-200);
+  color: var(--accent-700);
+}
+
+.dataflow-edge-label--pii {
+  background: #fef2f2;
+  border: var(--border-thin) solid #fca5a5;
+  color: #b91c1c;
+}
+
+.dataflow-edge-label__shield {
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+}
+</style>

@@ -1,20 +1,15 @@
 <template>
-  <div class="dynamic-view">
+  <div class="dv-root">
     <!-- Header with title and preset selector -->
-    <div class="flex items-center justify-between mb-4">
-      <div>
-        <h2 v-if="config.title" class="text-xl font-bold text-surface-800">
-          {{ config.title }}
-        </h2>
-        <p
-          v-if="config.description"
-          class="text-sm text-surface-500 mt-0.5"
-        >
+    <div class="dv-header">
+      <div class="dv-header-text">
+        <h2 v-if="config.title" class="dv-title">{{ config.title }}</h2>
+        <p v-if="config.description" class="dv-description">
           {{ config.description }}
         </p>
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="dv-header-actions">
         <ViewPresets
           v-if="presets.length > 0"
           :presets="presets"
@@ -25,25 +20,22 @@
       </div>
     </div>
 
-    <!-- Loading state -->
+    <!-- Loading skeleton -->
     <div
       v-if="loading"
-      class="space-y-3"
+      class="dv-skeleton"
       aria-busy="true"
       aria-label="Loading view data"
     >
-      <Skeleton width="100%" height="3rem" />
-      <Skeleton v-for="n in 5" :key="n" width="100%" height="2.5rem" />
+      <div class="skeleton dv-skeleton-header" />
+      <div class="skeleton dv-skeleton-row" v-for="n in 5" :key="n" />
     </div>
 
     <!-- Error state -->
-    <Message
-      v-else-if="errorMessage"
-      severity="error"
-      :closable="false"
-    >
-      {{ errorMessage }}
-    </Message>
+    <div v-else-if="errorMessage" class="dv-error" role="alert">
+      <i class="pi pi-exclamation-triangle dv-error-icon" aria-hidden="true" />
+      <p class="dv-error-text">{{ errorMessage }}</p>
+    </div>
 
     <!-- View dispatcher -->
     <template v-else>
@@ -90,8 +82,6 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import Skeleton from 'primevue/skeleton'
-import Message from 'primevue/message'
 
 import type { ViewConfig, ViewPreset, ViewSort, ViewFilter } from '@/types/views'
 import ViewTable from './ViewTable.vue'
@@ -137,3 +127,88 @@ function handlePresetSave(_preset: Omit<ViewPreset, 'id'>): void {
   // Delegate up — parent manages persistence
 }
 </script>
+
+<style scoped>
+.dv-root {
+  font-family: var(--font-body);
+}
+
+/* Header */
+.dv-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--space-6);
+  gap: var(--space-4);
+}
+
+.dv-header-text {
+  min-width: 0;
+}
+
+.dv-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  letter-spacing: var(--tracking-display);
+  margin: 0;
+}
+
+.dv-description {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin: var(--space-1) 0 0;
+  line-height: var(--leading-relaxed);
+}
+
+.dv-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+/* Skeleton loading */
+.dv-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.dv-skeleton-header {
+  width: 100%;
+  height: 3rem;
+}
+
+.dv-skeleton-row {
+  width: 100%;
+  height: 2.5rem;
+}
+
+/* Error */
+.dv-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: #fef2f2;
+  border: var(--border-thin) solid #fecaca;
+  border-radius: var(--radius-lg);
+}
+
+.dv-error-icon {
+  color: var(--color-error);
+  font-size: var(--text-lg);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.dv-error-text {
+  color: #991b1b;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  margin: 0;
+}
+</style>

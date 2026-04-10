@@ -1,32 +1,28 @@
 <template>
-  <div class="dynamic-form" role="form" :aria-label="config.title">
-    <!-- Loading state -->
+  <div class="df-root" role="form" :aria-label="config.title">
+    <!-- Loading skeleton -->
     <div
       v-if="loading"
-      class="space-y-4"
+      class="df-skeleton"
       aria-busy="true"
       aria-label="Loading form"
     >
-      <Skeleton width="40%" height="2rem" />
-      <Skeleton v-for="n in 4" :key="n" width="100%" height="3rem" />
+      <div class="skeleton df-skeleton-title" />
+      <div class="skeleton df-skeleton-field" v-for="n in 4" :key="n" />
     </div>
 
     <!-- Error state -->
-    <Message
-      v-else-if="errorMessage"
-      severity="error"
-      :closable="false"
-      class="mb-4"
-    >
-      {{ errorMessage }}
-    </Message>
+    <div v-else-if="errorMessage" class="df-error" role="alert">
+      <i class="pi pi-exclamation-triangle df-error-icon" aria-hidden="true" />
+      <p class="df-error-text">{{ errorMessage }}</p>
+    </div>
 
     <!-- Form content -->
     <template v-else>
       <!-- Header -->
-      <div v-if="config.title" class="mb-6">
-        <h2 class="text-xl font-bold text-surface-800">{{ config.title }}</h2>
-        <p v-if="config.description" class="text-sm text-surface-500 mt-1">
+      <div v-if="config.title" class="df-header">
+        <h2 class="df-title">{{ config.title }}</h2>
+        <p v-if="config.description" class="df-description">
           {{ config.description }}
         </p>
       </div>
@@ -47,23 +43,23 @@
       <!-- Single or two-column layout -->
       <form
         v-else
-        class="space-y-5"
+        class="df-form"
         novalidate
         @submit.prevent="handleSubmit"
       >
         <div
           :class="[
-            config.layout === 'two-column'
-              ? 'grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5'
-              : 'space-y-5',
+            'df-fields',
+            config.layout === 'two-column' ? 'df-fields--two-col' : '',
           ]"
         >
           <div
             v-for="field in visibleSchemaFields"
             :key="field.name"
             :class="[
+              'df-field-wrapper',
               config.layout === 'two-column' && getFieldColSpan(field.name) === 2
-                ? 'md:col-span-2'
+                ? 'df-field-wrapper--full'
                 : '',
             ]"
           >
@@ -83,19 +79,22 @@
         </div>
 
         <!-- Empty state -->
-        <Message
+        <div
           v-if="visibleSchemaFields.length === 0"
-          severity="info"
-          :closable="false"
+          class="df-empty"
+          role="status"
         >
-          No fields are available for this form. Contact your administrator to
-          configure form fields.
-        </Message>
+          <i class="pi pi-file-edit df-empty-icon" aria-hidden="true" />
+          <h3 class="df-empty-heading">No fields available</h3>
+          <p class="df-empty-text">
+            Contact your administrator to configure form fields.
+          </p>
+        </div>
 
         <!-- Actions -->
         <div
           v-if="visibleSchemaFields.length > 0"
-          class="flex items-center gap-3 pt-4 border-t border-surface-200"
+          class="df-actions"
         >
           <Button
             type="submit"
@@ -120,8 +119,6 @@
 import { ref, computed, toRef, watch } from 'vue'
 import { FormKit } from '@formkit/vue'
 import Button from 'primevue/button'
-import Message from 'primevue/message'
-import Skeleton from 'primevue/skeleton'
 
 import type { OntologyProperty } from '@/types'
 import type { FormConfig } from '@/types/forms'
@@ -197,3 +194,145 @@ function handleCancel(): void {
   emit('cancel')
 }
 </script>
+
+<style scoped>
+.df-root {
+  font-family: var(--font-body);
+}
+
+/* Skeleton loading */
+.df-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.df-skeleton-title {
+  width: 40%;
+  height: 2rem;
+}
+
+.df-skeleton-field {
+  width: 100%;
+  height: 3rem;
+}
+
+/* Error */
+.df-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: #fef2f2;
+  border: var(--border-thin) solid #fecaca;
+  border-radius: var(--radius-lg);
+}
+
+.df-error-icon {
+  color: var(--color-error);
+  font-size: var(--text-lg);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.df-error-text {
+  color: #991b1b;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  margin: 0;
+}
+
+/* Header */
+.df-header {
+  margin-bottom: var(--space-8);
+}
+
+.df-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  letter-spacing: var(--tracking-display);
+  margin: 0;
+}
+
+.df-description {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin: var(--space-2) 0 0;
+  line-height: var(--leading-relaxed);
+}
+
+/* Form */
+.df-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* Fields layout */
+.df-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.df-fields--two-col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-5) var(--space-6);
+}
+
+@media (min-width: 768px) {
+  .df-fields--two-col {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.df-field-wrapper--full {
+  grid-column: 1 / -1;
+}
+
+/* Empty state */
+.df-empty {
+  text-align: center;
+  padding: var(--space-12) var(--space-8);
+  border: var(--border-medium) dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--surface-50);
+}
+
+.df-empty-icon {
+  font-size: var(--text-4xl);
+  color: var(--text-muted);
+  opacity: 0.4;
+  display: block;
+  margin-bottom: var(--space-4);
+}
+
+.df-empty-heading {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-2);
+}
+
+.df-empty-text {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin: 0;
+  line-height: var(--leading-relaxed);
+}
+
+/* Actions */
+.df-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-top: var(--space-6);
+  border-top: var(--border-thin) solid var(--border-color);
+}
+</style>

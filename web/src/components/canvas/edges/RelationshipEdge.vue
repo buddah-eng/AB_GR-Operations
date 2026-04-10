@@ -13,7 +13,7 @@
         transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
         pointerEvents: 'all',
       }"
-      class="edge-label bg-white border border-surface-200 rounded px-1.5 py-0.5 text-[10px] font-medium text-surface-600 shadow-sm"
+      class="relationship-edge-label"
     >
       {{ labelText }}
     </div>
@@ -67,7 +67,30 @@ const labelText = computed(() => {
 })
 
 const edgeStyle = computed(() => ({
-  stroke: '#94a3b8',
+  stroke: 'var(--primary-400)',
   strokeWidth: 2,
 }))
 </script>
+
+<style scoped>
+.relationship-edge-label {
+  background: var(--bg-card);
+  border: var(--border-thin) solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 2px var(--space-2);
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-xs);
+  transition: all var(--duration-fast) var(--ease-default);
+  cursor: default;
+  white-space: nowrap;
+}
+
+.relationship-edge-label:hover {
+  box-shadow: var(--shadow-sm);
+  color: var(--text-primary);
+  border-color: var(--primary-300);
+}
+</style>

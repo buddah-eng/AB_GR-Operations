@@ -1,19 +1,18 @@
 <template>
-  <div class="form-builder flex flex-col h-full" role="region" aria-label="Form Builder">
+  <div class="builder-shell" role="region" aria-label="Form Builder">
     <!-- Toolbar -->
-    <div class="shrink-0 flex items-center justify-between px-4 py-3 border-b border-surface-200 bg-white">
-      <div class="flex items-center gap-3">
-        <i class="pi pi-pencil text-primary-500" />
+    <div class="builder-toolbar">
+      <div class="builder-toolbar__left">
+        <i class="pi pi-pencil builder-toolbar__icon" />
         <InputText
           v-model="formName"
           placeholder="Form name"
-          class="text-lg font-semibold w-64"
+          class="builder-toolbar__name-input"
           aria-label="Form name"
         />
       </div>
 
-      <div class="flex items-center gap-2">
-        <!-- Layout picker -->
+      <div class="builder-toolbar__right">
         <SelectButton
           v-model="selectedLayout"
           :options="layoutOptions"
@@ -22,8 +21,6 @@
           :allow-empty="false"
           aria-label="Layout mode"
         />
-
-        <!-- Preview toggle -->
         <ToggleButton
           v-model="previewMode"
           on-label="Preview"
@@ -32,8 +29,6 @@
           off-icon="pi pi-pencil"
           aria-label="Toggle preview mode"
         />
-
-        <!-- Save -->
         <Button
           label="Save"
           icon="pi pi-save"
@@ -45,16 +40,13 @@
     </div>
 
     <!-- Validation warnings -->
-    <div
-      v-if="validationWarnings.length > 0"
-      class="shrink-0 px-4 py-2 bg-yellow-50 border-b border-yellow-200"
-    >
+    <div v-if="validationWarnings.length > 0" class="builder-warnings">
       <div
         v-for="(warning, idx) in validationWarnings"
         :key="idx"
-        class="flex items-center gap-2 text-sm text-yellow-700"
+        class="builder-warnings__item"
       >
-        <i class="pi pi-exclamation-triangle text-yellow-500" />
+        <i class="pi pi-exclamation-triangle builder-warnings__icon" />
         <span>{{ warning }}</span>
       </div>
     </div>
@@ -64,15 +56,15 @@
       v-if="validationError"
       severity="error"
       :closable="true"
-      class="mx-4 mt-2"
+      class="builder-message"
       @close="validationError = null"
     >
       {{ validationError }}
     </Message>
 
     <!-- Preview mode -->
-    <div v-if="previewMode" class="flex-1 overflow-y-auto p-6">
-      <div class="max-w-3xl mx-auto">
+    <div v-if="previewMode" class="builder-preview">
+      <div class="builder-preview__container">
         <DynamicForm
           :config="previewConfig"
           :properties="conceptProperties"
@@ -83,30 +75,28 @@
     </div>
 
     <!-- Edit mode: 3-panel layout -->
-    <div v-else class="flex-1 flex overflow-hidden">
+    <div v-else class="builder-panels">
       <!-- Left: Property list -->
-      <div class="w-64 shrink-0 border-r border-surface-200 bg-surface-50 flex flex-col">
-        <div class="p-3 border-b border-surface-200">
+      <div class="builder-sidebar builder-sidebar--left">
+        <div class="builder-sidebar__search">
           <InputText
             v-model="propertySearch"
             placeholder="Search properties..."
             class="w-full"
             aria-label="Search properties"
           />
-          <div class="text-xs text-surface-400 mt-2">
+          <div class="builder-sidebar__count">
             {{ unplacedCount }} unplaced
           </div>
         </div>
 
-        <div class="flex-1 overflow-y-auto p-2 space-y-1">
+        <div class="builder-sidebar__list">
           <div
             v-for="prop in filteredProperties"
             :key="prop.key"
             :class="[
-              'flex items-center gap-2 px-3 py-2 rounded-md text-sm cursor-grab transition-colors',
-              isPropertyPlaced(prop.key)
-                ? 'bg-surface-100 text-surface-400'
-                : 'bg-white border border-surface-200 hover:border-primary-300 text-surface-700',
+              'builder-prop-item',
+              isPropertyPlaced(prop.key) ? 'builder-prop-item--placed' : 'builder-prop-item--available',
             ]"
             draggable="true"
             :aria-label="`Drag ${prop.label} to canvas`"
@@ -114,10 +104,10 @@
           >
             <i
               v-if="isPropertyPlaced(prop.key)"
-              class="pi pi-check text-xs text-green-500"
+              class="pi pi-check builder-prop-item__check"
             />
-            <i v-else class="pi pi-grip-vertical text-xs text-surface-300" />
-            <span class="truncate">{{ prop.label }}</span>
+            <i v-else class="pi pi-grip-vertical builder-prop-item__grip" />
+            <span class="builder-prop-item__label">{{ prop.label }}</span>
             <Tag
               :value="prop.type"
               rounded
@@ -127,35 +117,27 @@
           </div>
 
           <!-- Empty property list -->
-          <div
-            v-if="filteredProperties.length === 0"
-            class="text-center py-8 text-sm text-surface-400"
-          >
-            No properties found.
+          <div v-if="filteredProperties.length === 0" class="empty-state">
+            <div class="icon">
+              <i class="pi pi-search" />
+            </div>
+            <p>No properties found.</p>
           </div>
         </div>
       </div>
 
       <!-- Center: Form canvas -->
-      <div class="flex-1 overflow-y-auto p-6 bg-surface-50">
+      <div class="builder-canvas">
         <!-- Wizard step navigator -->
-        <div
-          v-if="selectedLayout === 'wizard'"
-          class="flex items-center gap-2 mb-6 p-3 bg-white rounded-lg border border-surface-200"
-        >
+        <div v-if="selectedLayout === 'wizard'" class="builder-wizard-nav">
           <div
             v-for="(section, sIdx) in sections"
             :key="sIdx"
-            :class="[
-              'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm cursor-pointer transition-colors',
-              activeSection === sIdx
-                ? 'bg-primary-500 text-white'
-                : 'bg-surface-100 text-surface-600 hover:bg-surface-200',
-            ]"
+            :class="['builder-wizard-step', activeSection === sIdx ? 'builder-wizard-step--active' : '']"
             @click="activeSection = sIdx"
           >
-            <span class="font-medium">Step {{ sIdx + 1 }}:</span>
-            <span>{{ section.title }}</span>
+            <span class="builder-wizard-step__number">{{ sIdx + 1 }}</span>
+            <span class="builder-wizard-step__title">{{ section.title }}</span>
           </div>
           <Button
             icon="pi pi-plus"
@@ -168,20 +150,20 @@
           />
         </div>
 
-        <!-- Sections (or single section for non-wizard) -->
+        <!-- Sections -->
         <div
           v-for="(section, sIdx) in visibleSections"
           :key="sIdx"
-          class="mb-6"
+          class="builder-section"
         >
-          <!-- Section header (editable) -->
+          <!-- Section header -->
           <div
             v-if="sections.length > 1 || selectedLayout === 'wizard'"
-            class="flex items-center gap-2 mb-3"
+            class="builder-section__header"
           >
             <InputText
               v-model="section.title"
-              class="text-sm font-semibold flex-1"
+              class="builder-section__title-input"
               :placeholder="`Section ${sIdx + 1}`"
             />
             <Button
@@ -199,13 +181,9 @@
           <!-- Drop zone -->
           <div
             :class="[
-              'min-h-[120px] rounded-lg border-2 border-dashed p-4 transition-colors',
-              dragOverSection === sIdx
-                ? 'border-primary-400 bg-primary-50'
-                : 'border-surface-200 bg-white',
-              selectedLayout === 'two-column'
-                ? 'grid grid-cols-1 md:grid-cols-2 gap-4'
-                : 'space-y-3',
+              'builder-dropzone',
+              dragOverSection === sIdx ? 'builder-dropzone--active' : '',
+              selectedLayout === 'two-column' ? 'builder-dropzone--two-col' : '',
             ]"
             @dragover.prevent="dragOverSection = sIdx"
             @dragleave="dragOverSection = null"
@@ -216,13 +194,9 @@
               v-for="(field, fIdx) in section.fields"
               :key="field.key"
               :class="[
-                'flex items-center gap-2 px-3 py-2.5 rounded-md border cursor-pointer transition-all',
-                selectedFieldKey === field.key
-                  ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-200'
-                  : 'border-surface-200 bg-surface-50 hover:border-surface-300',
-                selectedLayout === 'two-column' && field.colSpan === 2
-                  ? 'md:col-span-2'
-                  : '',
+                'builder-field-card',
+                selectedFieldKey === field.key ? 'builder-field-card--selected' : '',
+                selectedLayout === 'two-column' && field.colSpan === 2 ? 'builder-field-card--full' : '',
               ]"
               draggable="true"
               @click="selectedFieldKey = field.key"
@@ -230,14 +204,14 @@
               @dragover.prevent
               @drop.stop="(e) => handleFieldReorder(e, sIdx, fIdx)"
             >
-              <i class="pi pi-grip-vertical text-xs text-surface-300 cursor-grab" />
-              <span class="text-sm font-medium text-surface-700 truncate">
+              <i class="pi pi-grip-vertical builder-field-card__grip" />
+              <span class="builder-field-card__label">
                 {{ field.label || getPropertyLabel(field.key) }}
               </span>
-              <div class="ml-auto flex items-center gap-1.5 shrink-0">
+              <div class="builder-field-card__actions">
                 <i
                   v-if="field.showIf"
-                  class="pi pi-eye text-[10px] text-blue-400"
+                  class="pi pi-eye builder-field-card__condition-icon"
                   title="Has visibility condition"
                 />
                 <Tag
@@ -263,13 +237,10 @@
             <!-- Empty drop zone hint -->
             <div
               v-if="section.fields.length === 0"
-              :class="[
-                'flex flex-col items-center justify-center py-8 text-surface-400',
-                selectedLayout === 'two-column' ? 'md:col-span-2' : '',
-              ]"
+              :class="['builder-dropzone__empty', selectedLayout === 'two-column' ? 'builder-dropzone__empty--full' : '']"
             >
-              <i class="pi pi-inbox text-2xl mb-2" />
-              <p class="text-sm">Drop properties here to add fields</p>
+              <i class="pi pi-inbox builder-dropzone__empty-icon" />
+              <p>Drop properties here to add fields</p>
             </div>
           </div>
         </div>
@@ -282,119 +253,104 @@
           severity="secondary"
           outlined
           size="small"
-          class="mt-2"
+          class="builder-add-section-btn"
           @click="addSection"
         />
       </div>
 
       <!-- Right: Field config panel -->
-      <div class="w-80 shrink-0 border-l border-surface-200 bg-white overflow-y-auto">
-        <div v-if="selectedField" class="p-4 space-y-4">
-          <div class="text-sm font-semibold text-surface-800 pb-2 border-b border-surface-100">
+      <div class="builder-sidebar builder-sidebar--right">
+        <div v-if="selectedField" class="builder-config">
+          <div class="builder-config__title section-header">
             Field Configuration
           </div>
 
-          <!-- Label override -->
-          <div>
-            <label class="text-xs font-medium text-surface-500 block mb-1">
-              Label
-            </label>
-            <InputText
-              v-model="selectedField.label"
-              :placeholder="getPropertyLabel(selectedField.key)"
-              class="w-full"
-            />
-          </div>
+          <div class="builder-config__fields">
+            <!-- Label override -->
+            <div class="form-field">
+              <label>Label</label>
+              <InputText
+                v-model="selectedField.label"
+                :placeholder="getPropertyLabel(selectedField.key)"
+                class="w-full"
+              />
+            </div>
 
-          <!-- Placeholder -->
-          <div>
-            <label class="text-xs font-medium text-surface-500 block mb-1">
-              Placeholder
-            </label>
-            <InputText
-              v-model="selectedField.placeholder"
-              placeholder="Placeholder text"
-              class="w-full"
-            />
-          </div>
+            <!-- Placeholder -->
+            <div class="form-field">
+              <label>Placeholder</label>
+              <InputText
+                v-model="selectedField.placeholder"
+                placeholder="Placeholder text"
+                class="w-full"
+              />
+            </div>
 
-          <!-- Help text -->
-          <div>
-            <label class="text-xs font-medium text-surface-500 block mb-1">
-              Help Text
-            </label>
-            <InputText
-              v-model="selectedField.helpText"
-              placeholder="Help text shown below field"
-              class="w-full"
-            />
-          </div>
+            <!-- Help text -->
+            <div class="form-field">
+              <label>Help Text</label>
+              <InputText
+                v-model="selectedField.helpText"
+                placeholder="Help text shown below field"
+                class="w-full"
+              />
+            </div>
 
-          <!-- ColSpan (two-column only) -->
-          <div v-if="selectedLayout === 'two-column'">
-            <label class="text-xs font-medium text-surface-500 block mb-1">
-              Column Span
-            </label>
-            <SelectButton
-              :model-value="selectedField.colSpan ?? 1"
-              :options="colSpanOptions"
-              option-label="label"
-              option-value="value"
-              :allow-empty="false"
-              @update:model-value="(v: 1 | 2) => { if (selectedField) selectedField.colSpan = v }"
-            />
-          </div>
+            <!-- ColSpan (two-column only) -->
+            <div v-if="selectedLayout === 'two-column'" class="form-field">
+              <label>Column Span</label>
+              <SelectButton
+                :model-value="selectedField.colSpan ?? 1"
+                :options="colSpanOptions"
+                option-label="label"
+                option-value="value"
+                :allow-empty="false"
+                @update:model-value="(v: 1 | 2) => { if (selectedField) selectedField.colSpan = v }"
+              />
+            </div>
 
-          <!-- Required -->
-          <div class="flex items-center justify-between">
-            <label class="text-xs font-medium text-surface-500">
-              Required
-            </label>
-            <ToggleButton
-              :model-value="selectedField.required ?? false"
-              on-label="Yes"
-              off-label="No"
-              class="!text-xs"
-              @update:model-value="(v: boolean) => { if (selectedField) selectedField.required = v }"
-            />
-          </div>
+            <!-- Required -->
+            <div class="builder-config__toggle-row">
+              <label class="form-field">Required</label>
+              <ToggleButton
+                :model-value="selectedField.required ?? false"
+                on-label="Yes"
+                off-label="No"
+                class="!text-xs"
+                @update:model-value="(v: boolean) => { if (selectedField) selectedField.required = v }"
+              />
+            </div>
 
-          <!-- Read only -->
-          <div class="flex items-center justify-between">
-            <label class="text-xs font-medium text-surface-500">
-              Read Only
-            </label>
-            <ToggleButton
-              :model-value="selectedField.readOnly ?? false"
-              on-label="Yes"
-              off-label="No"
-              class="!text-xs"
-              @update:model-value="(v: boolean) => { if (selectedField) selectedField.readOnly = v }"
-            />
-          </div>
+            <!-- Read only -->
+            <div class="builder-config__toggle-row">
+              <label class="form-field">Read Only</label>
+              <ToggleButton
+                :model-value="selectedField.readOnly ?? false"
+                on-label="Yes"
+                off-label="No"
+                class="!text-xs"
+                @update:model-value="(v: boolean) => { if (selectedField) selectedField.readOnly = v }"
+              />
+            </div>
 
-          <!-- ShowIf condition -->
-          <div>
-            <label class="text-xs font-medium text-surface-500 block mb-1">
-              Visibility Condition
-            </label>
-            <ConditionBuilder
-              :model-value="selectedField.showIf ?? null"
-              :properties="conceptProperties"
-              @update:model-value="(v) => { if (selectedField) selectedField.showIf = v ?? undefined }"
-            />
+            <!-- ShowIf condition -->
+            <div class="form-field">
+              <label>Visibility Condition</label>
+              <ConditionBuilder
+                :model-value="selectedField.showIf ?? null"
+                :properties="conceptProperties"
+                @update:model-value="(v) => { if (selectedField) selectedField.showIf = v ?? undefined }"
+              />
+            </div>
           </div>
         </div>
 
         <!-- No field selected -->
-        <div
-          v-else
-          class="flex flex-col items-center justify-center h-full text-surface-400 p-4"
-        >
-          <i class="pi pi-arrow-left text-2xl mb-2" />
-          <p class="text-sm text-center">
-            Click a field on the canvas to configure it
-          </p>
+        <div v-else class="empty-state">
+          <div class="icon">
+            <i class="pi pi-arrow-left" />
+          </div>
+          <p>Click a field on the canvas to configure it</p>
         </div>
       </div>
     </div>
@@ -807,3 +763,393 @@ watch(conceptKey, async () => {
   await loadExistingConfig()
 })
 </script>
+
+<style scoped>
+/* Shell */
+.builder-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-page);
+}
+
+/* Toolbar */
+.builder-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-5);
+  border-bottom: var(--border-thin) solid var(--border-color);
+  background: var(--bg-card);
+}
+
+.builder-toolbar__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.builder-toolbar__icon {
+  color: var(--primary-500);
+  font-size: var(--text-lg);
+}
+
+.builder-toolbar__name-input {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  width: 16rem;
+  letter-spacing: var(--tracking-tight);
+}
+
+.builder-toolbar__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Warnings */
+.builder-warnings {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-5);
+  background: var(--accent-50);
+  border-bottom: var(--border-thin) solid var(--accent-200);
+}
+
+.builder-warnings__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--accent-800);
+}
+
+.builder-warnings__icon {
+  color: var(--accent-500);
+}
+
+.builder-message {
+  margin: var(--space-2) var(--space-5) 0;
+}
+
+/* Preview */
+.builder-preview {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-8);
+}
+
+.builder-preview__container {
+  max-width: 48rem;
+  margin: 0 auto;
+}
+
+/* Panels */
+.builder-panels {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.builder-sidebar {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.builder-sidebar--left {
+  width: 16rem;
+  border-right: var(--border-thin) solid var(--border-color);
+  background: var(--surface-50);
+}
+
+.builder-sidebar--right {
+  width: 20rem;
+  border-left: var(--border-thin) solid var(--border-color);
+  background: var(--bg-card);
+}
+
+.builder-sidebar__search {
+  padding: var(--space-3);
+  border-bottom: var(--border-thin) solid var(--border-color);
+}
+
+.builder-sidebar__count {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-top: var(--space-2);
+  letter-spacing: var(--tracking-wide);
+}
+
+.builder-sidebar__list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* Property items */
+.builder-prop-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  cursor: grab;
+  transition: all var(--duration-fast) var(--ease-default);
+}
+
+.builder-prop-item--placed {
+  background: var(--surface-100);
+  color: var(--text-muted);
+}
+
+.builder-prop-item--available {
+  background: var(--bg-card);
+  border: var(--border-thin) solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.builder-prop-item--available:hover {
+  border-color: var(--primary-300);
+  box-shadow: var(--shadow-xs);
+  transform: translateY(-1px);
+}
+
+.builder-prop-item__check {
+  font-size: var(--text-xs);
+  color: var(--color-success);
+}
+
+.builder-prop-item__grip {
+  font-size: var(--text-xs);
+  color: var(--surface-300);
+}
+
+.builder-prop-item__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-body);
+}
+
+/* Canvas */
+.builder-canvas {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6);
+  background: var(--surface-50);
+}
+
+/* Wizard nav */
+.builder-wizard-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+  padding: var(--space-3);
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: var(--border-thin) solid var(--border-color);
+  box-shadow: var(--shadow-xs);
+}
+
+.builder-wizard-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-default);
+  background: var(--surface-100);
+  color: var(--text-secondary);
+}
+
+.builder-wizard-step:hover {
+  background: var(--surface-200);
+}
+
+.builder-wizard-step--active {
+  background: var(--primary-600);
+  color: var(--text-inverse);
+}
+
+.builder-wizard-step__number {
+  font-weight: var(--weight-bold);
+}
+
+.builder-wizard-step__title {
+  font-weight: var(--weight-medium);
+}
+
+/* Section */
+.builder-section {
+  margin-bottom: var(--space-6);
+}
+
+.builder-section__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.builder-section__title-input {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+/* Dropzone */
+.builder-dropzone {
+  min-height: 120px;
+  border-radius: var(--radius-lg);
+  border: var(--border-medium) dashed var(--border-color);
+  padding: var(--space-4);
+  transition: all var(--duration-fast) var(--ease-default);
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.builder-dropzone--active {
+  border-color: var(--primary-400);
+  background: var(--primary-50);
+}
+
+.builder-dropzone--two-col {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .builder-dropzone--two-col {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Field card */
+.builder-field-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: var(--border-thin) solid var(--border-color);
+  background: var(--surface-50);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-default);
+}
+
+.builder-field-card:hover {
+  border-color: var(--surface-300);
+  box-shadow: var(--shadow-xs);
+}
+
+.builder-field-card--selected {
+  border-color: var(--primary-500);
+  background: var(--primary-50);
+  box-shadow: 0 0 0 3px var(--primary-100);
+}
+
+.builder-field-card--full {
+  grid-column: span 2;
+}
+
+.builder-field-card__grip {
+  font-size: var(--text-xs);
+  color: var(--surface-300);
+  cursor: grab;
+}
+
+.builder-field-card__label {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.builder-field-card__actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.builder-field-card__condition-icon {
+  font-size: 10px;
+  color: var(--color-info);
+}
+
+.builder-dropzone__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) 0;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+}
+
+.builder-dropzone__empty--full {
+  grid-column: span 2;
+}
+
+.builder-dropzone__empty-icon {
+  font-size: var(--text-2xl);
+  margin-bottom: var(--space-2);
+  opacity: 0.4;
+}
+
+.builder-add-section-btn {
+  margin-top: var(--space-2);
+}
+
+/* Config panel */
+.builder-config {
+  padding: var(--space-5);
+}
+
+.builder-config__title {
+  margin-bottom: var(--space-4);
+}
+
+.builder-config__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.builder-config__toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.builder-config__toggle-row label {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+  letter-spacing: var(--tracking-wide);
+}
+</style>

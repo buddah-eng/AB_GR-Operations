@@ -1,18 +1,18 @@
 <template>
-  <div class="view-builder flex flex-col h-full" role="region" aria-label="View Builder">
+  <div class="builder-shell" role="region" aria-label="View Builder">
     <!-- Toolbar -->
-    <div class="shrink-0 flex items-center justify-between px-4 py-3 border-b border-surface-200 bg-white">
-      <div class="flex items-center gap-3">
-        <i class="pi pi-table text-primary-500" />
+    <div class="builder-toolbar">
+      <div class="builder-toolbar__left">
+        <i class="pi pi-table builder-toolbar__icon" />
         <InputText
           v-model="viewName"
           placeholder="View name"
-          class="text-lg font-semibold w-64"
+          class="builder-toolbar__name-input"
           aria-label="View name"
         />
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="builder-toolbar__right">
         <ToggleButton
           v-model="previewMode"
           on-label="Preview"
@@ -36,14 +36,14 @@
       v-if="validationError"
       severity="error"
       :closable="true"
-      class="mx-4 mt-2"
+      class="builder-message"
       @close="validationError = null"
     >
       {{ validationError }}
     </Message>
 
     <!-- Preview mode -->
-    <div v-if="previewMode" class="flex-1 overflow-y-auto p-6">
+    <div v-if="previewMode" class="builder-preview">
       <DynamicView
         :config="builtViewConfig"
         :data="[]"
@@ -52,9 +52,9 @@
     </div>
 
     <!-- Edit mode -->
-    <div v-else class="flex-1 flex flex-col overflow-hidden">
+    <div v-else class="builder-edit-shell">
       <!-- View type selector -->
-      <div class="shrink-0 px-4 py-3 border-b border-surface-200 bg-surface-50">
+      <div class="builder-type-bar">
         <SelectButton
           v-model="selectedViewType"
           :options="viewTypeOptions"
@@ -66,30 +66,30 @@
       </div>
 
       <!-- Config panels -->
-      <div class="flex-1 flex overflow-hidden">
+      <div class="builder-panels">
         <!-- Type-specific config -->
-        <div class="flex-1 overflow-y-auto p-6 space-y-6">
+        <div class="builder-main-config">
           <!-- TABLE config -->
           <template v-if="selectedViewType === 'table'">
             <div>
-              <h3 class="text-sm font-semibold text-surface-700 mb-3">Columns</h3>
-              <div class="space-y-2">
+              <h3 class="section-header">Columns</h3>
+              <div class="builder-column-list">
                 <div
                   v-for="(col, idx) in tableColumns"
                   :key="col.key"
-                  class="flex items-center gap-3 px-3 py-2 bg-white rounded-md border border-surface-200"
+                  class="builder-column-item"
                   draggable="true"
                   @dragstart="() => { columnDragIdx = idx }"
                   @dragover.prevent
                   @drop.prevent="() => handleColumnReorder(idx)"
                 >
-                  <i class="pi pi-grip-vertical text-xs text-surface-300 cursor-grab" />
-                  <span class="text-sm text-surface-700 flex-1">{{ col.label }}</span>
+                  <i class="pi pi-grip-vertical builder-grip" />
+                  <span class="builder-column-item__label">{{ col.label }}</span>
                   <Tag :value="col.type ?? 'text'" rounded class="!text-[10px]" severity="secondary" />
                   <InputText
                     :model-value="col.width ?? ''"
                     placeholder="auto"
-                    class="w-20 !text-xs"
+                    class="builder-column-item__width"
                     aria-label="Column width"
                     @update:model-value="(v) => updateColumnWidth(idx, String(v))"
                   />
@@ -114,8 +114,7 @@
                 </div>
               </div>
 
-              <!-- Add column -->
-              <div class="mt-3">
+              <div class="builder-add-column">
                 <Select
                   :options="availableColumnProps"
                   option-label="label"
@@ -127,11 +126,8 @@
               </div>
             </div>
 
-            <!-- Row action -->
-            <div>
-              <label class="text-sm font-semibold text-surface-700 block mb-2">
-                Row Click Action
-              </label>
+            <div class="form-field">
+              <label>Row Click Action</label>
               <Select
                 v-model="rowAction"
                 :options="rowActionOptions"
@@ -144,10 +140,8 @@
 
           <!-- KANBAN config -->
           <template v-if="selectedViewType === 'kanban'">
-            <div>
-              <label class="text-sm font-semibold text-surface-700 block mb-2">
-                Group By
-              </label>
+            <div class="form-field">
+              <label>Group By</label>
               <Select
                 v-model="groupByField"
                 :options="selectStatusProperties"
@@ -158,14 +152,14 @@
               />
             </div>
             <div>
-              <h3 class="text-sm font-semibold text-surface-700 mb-3">Card Fields</h3>
-              <div class="space-y-2">
+              <h3 class="section-header">Card Fields</h3>
+              <div class="builder-column-list">
                 <div
                   v-for="(field, idx) in kanbanCardFields"
                   :key="field"
-                  class="flex items-center gap-2 px-3 py-2 bg-white rounded-md border border-surface-200"
+                  class="builder-column-item"
                 >
-                  <span class="text-sm text-surface-700 flex-1">
+                  <span class="builder-column-item__label">
                     {{ getPropertyLabel(field) }}
                   </span>
                   <Button
@@ -184,7 +178,8 @@
                 option-label="label"
                 option-value="key"
                 placeholder="Add card field..."
-                class="w-full mt-2"
+                class="w-full"
+                style="margin-top: var(--space-2)"
                 @change="(e) => addKanbanField(e.value as string)"
               />
             </div>
@@ -192,10 +187,8 @@
 
           <!-- TIMELINE config -->
           <template v-if="selectedViewType === 'timeline'">
-            <div>
-              <label class="text-sm font-semibold text-surface-700 block mb-2">
-                Start Date Field
-              </label>
+            <div class="form-field">
+              <label>Start Date Field</label>
               <Select
                 v-model="timelineStartField"
                 :options="dateProperties"
@@ -205,10 +198,8 @@
                 class="w-full"
               />
             </div>
-            <div>
-              <label class="text-sm font-semibold text-surface-700 block mb-2">
-                End Date Field (optional)
-              </label>
+            <div class="form-field">
+              <label>End Date Field (optional)</label>
               <Select
                 v-model="timelineEndField"
                 :options="dateProperties"
@@ -223,20 +214,19 @@
 
           <!-- DASHBOARD config -->
           <template v-if="selectedViewType === 'dashboard'">
-            <div class="text-center py-12 text-surface-400">
-              <i class="pi pi-chart-bar text-3xl mb-3" />
-              <p class="text-sm">
-                Dashboard widget configuration is managed through the dashboard editor.
-              </p>
+            <div class="empty-state">
+              <div class="icon">
+                <i class="pi pi-chart-bar" />
+              </div>
+              <p>Dashboard widget configuration is managed through the dashboard editor.</p>
             </div>
           </template>
         </div>
 
-        <!-- Shared config sidebar: filters, sorts, presets -->
-        <div class="w-80 shrink-0 border-l border-surface-200 bg-white overflow-y-auto p-4 space-y-6">
-          <!-- Filters -->
-          <div>
-            <h3 class="text-sm font-semibold text-surface-700 mb-3">Filters</h3>
+        <!-- Shared config sidebar -->
+        <div class="builder-sidebar builder-sidebar--right">
+          <div class="builder-sidebar-section">
+            <h3 class="section-header">Filters</h3>
             <ConditionBuilder
               :model-value="filterCondition"
               :properties="conceptProperties"
@@ -244,14 +234,13 @@
             />
           </div>
 
-          <!-- Sort -->
-          <div>
-            <h3 class="text-sm font-semibold text-surface-700 mb-3">Sort</h3>
-            <div class="space-y-2">
+          <div class="builder-sidebar-section">
+            <h3 class="section-header">Sort</h3>
+            <div class="builder-sort-list">
               <div
                 v-for="(sort, idx) in sortRules"
                 :key="idx"
-                class="flex items-center gap-2"
+                class="builder-sort-row"
               >
                 <Select
                   :model-value="sort.field"
@@ -287,21 +276,20 @@
               severity="secondary"
               text
               size="small"
-              class="mt-2"
+              style="margin-top: var(--space-2)"
               @click="addSortRule"
             />
           </div>
 
-          <!-- Presets -->
-          <div>
-            <h3 class="text-sm font-semibold text-surface-700 mb-3">Presets</h3>
-            <div class="space-y-2">
+          <div class="builder-sidebar-section">
+            <h3 class="section-header">Presets</h3>
+            <div class="builder-preset-list">
               <div
                 v-for="(preset, idx) in presets"
                 :key="idx"
-                class="flex items-center gap-2 px-3 py-2 bg-surface-50 rounded-md border border-surface-200"
+                class="builder-preset-item"
               >
-                <span class="text-sm text-surface-700 flex-1 truncate">
+                <span class="builder-preset-item__name">
                   {{ preset.name }}
                 </span>
                 <Button
@@ -321,7 +309,7 @@
               severity="secondary"
               text
               size="small"
-              class="mt-2"
+              style="margin-top: var(--space-2)"
               @click="savePreset"
             />
           </div>
@@ -649,3 +637,187 @@ onMounted(async () => {
   await loadExistingConfig()
 })
 </script>
+
+<style scoped>
+.builder-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-page);
+}
+
+.builder-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-5);
+  border-bottom: var(--border-thin) solid var(--border-color);
+  background: var(--bg-card);
+}
+
+.builder-toolbar__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.builder-toolbar__icon {
+  color: var(--primary-500);
+  font-size: var(--text-lg);
+}
+
+.builder-toolbar__name-input {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  width: 16rem;
+  letter-spacing: var(--tracking-tight);
+}
+
+.builder-toolbar__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.builder-message {
+  margin: var(--space-2) var(--space-5) 0;
+}
+
+.builder-preview {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-8);
+}
+
+.builder-edit-shell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.builder-type-bar {
+  flex-shrink: 0;
+  padding: var(--space-3) var(--space-5);
+  border-bottom: var(--border-thin) solid var(--border-color);
+  background: var(--surface-50);
+}
+
+.builder-panels {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.builder-main-config {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.builder-sidebar {
+  flex-shrink: 0;
+}
+
+.builder-sidebar--right {
+  width: 20rem;
+  border-left: var(--border-thin) solid var(--border-color);
+  background: var(--bg-card);
+  overflow-y: auto;
+  padding: var(--space-5);
+}
+
+.builder-sidebar-section {
+  margin-bottom: var(--space-6);
+}
+
+.builder-column-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.builder-column-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  border: var(--border-thin) solid var(--border-color);
+  transition: all var(--duration-fast) var(--ease-default);
+}
+
+.builder-column-item:hover {
+  border-color: var(--surface-300);
+  box-shadow: var(--shadow-xs);
+}
+
+.builder-column-item__label {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.builder-column-item__width {
+  width: 5rem;
+  font-size: var(--text-xs) !important;
+}
+
+.builder-grip {
+  font-size: var(--text-xs);
+  color: var(--surface-300);
+  cursor: grab;
+}
+
+.builder-add-column {
+  margin-top: var(--space-3);
+}
+
+.builder-sort-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.builder-sort-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.builder-preset-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.builder-preset-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-50);
+  border-radius: var(--radius-md);
+  border: var(--border-thin) solid var(--border-color);
+}
+
+.builder-preset-item__name {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+</style>

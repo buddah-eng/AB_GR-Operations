@@ -1,50 +1,53 @@
 <template>
-  <div class="view-table">
+  <div class="vt-root">
     <!-- Empty state -->
-    <Message
+    <div
       v-if="!loading && data.length === 0"
-      severity="info"
-      :closable="false"
+      class="vt-empty"
+      role="status"
     >
-      No records found. Try adjusting your filters or create a new record to
-      get started.
-    </Message>
+      <i class="pi pi-table vt-empty-icon" aria-hidden="true" />
+      <h3 class="vt-empty-heading">No records found</h3>
+      <p class="vt-empty-text">
+        Try adjusting your filters or create a new record to get started.
+      </p>
+    </div>
 
     <!-- Data table -->
-    <DataTable
-      v-else
-      :value="data"
-      :loading="loading"
-      :paginator="totalRecords > pageSize"
-      :rows="pageSize"
-      :totalRecords="totalRecords"
-      :lazy="true"
-      stripedRows
-      :rowHover="true"
-      removableSort
-      dataKey="id"
-      tableStyle="min-width: 40rem"
-      :aria-label="config.title ?? 'Data table'"
-      @sort="handleSort"
-      @page="handlePage"
-      @row-click="handleRowClick"
-    >
-      <Column
-        v-for="col in visibleColumns"
-        :key="col.key"
-        :field="col.key"
-        :header="col.label"
-        :sortable="col.sortable !== false"
-        :style="col.width ? { width: col.width } : undefined"
-        :class="col.align ? `text-${col.align}` : ''"
+    <div v-else class="vt-table-wrap">
+      <DataTable
+        :value="data"
+        :loading="loading"
+        :paginator="totalRecords > pageSize"
+        :rows="pageSize"
+        :totalRecords="totalRecords"
+        :lazy="true"
+        stripedRows
+        :rowHover="true"
+        removableSort
+        dataKey="id"
+        tableStyle="min-width: 40rem"
+        :aria-label="config.title ?? 'Data table'"
+        @sort="handleSort"
+        @page="handlePage"
+        @row-click="handleRowClick"
       >
-        <template #body="{ data: row }">
-          <span :class="getCellClass(col)">
-            {{ formatCellValue(row[col.key], col) }}
-          </span>
-        </template>
-      </Column>
-    </DataTable>
+        <Column
+          v-for="col in visibleColumns"
+          :key="col.key"
+          :field="col.key"
+          :header="col.label"
+          :sortable="col.sortable !== false"
+          :style="col.width ? { width: col.width } : undefined"
+        >
+          <template #body="{ data: row }">
+            <span :class="getCellClass(col)">
+              {{ formatCellValue(row[col.key], col) }}
+            </span>
+          </template>
+        </Column>
+      </DataTable>
+    </div>
   </div>
 </template>
 
@@ -52,7 +55,6 @@
 import { computed } from 'vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
-import Message from 'primevue/message'
 
 import type { ViewConfig, ViewColumn, ViewSort } from '@/types/views'
 
@@ -140,3 +142,112 @@ function handleRowClick(event: { data: Record<string, unknown> }): void {
   emit('row-click', event.data)
 }
 </script>
+
+<style scoped>
+.vt-root {
+  font-family: var(--font-body);
+}
+
+/* Table wrapper */
+.vt-table-wrap {
+  border: var(--border-thin) solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-xs);
+}
+
+/* Cell alignment */
+.vt-cell-right {
+  text-align: right;
+}
+
+.vt-cell-center {
+  text-align: center;
+}
+
+.vt-cell-mono {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+/* Empty state */
+.vt-empty {
+  text-align: center;
+  padding: var(--space-16) var(--space-8);
+  border: var(--border-medium) dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--surface-50);
+}
+
+.vt-empty-icon {
+  font-size: var(--text-4xl);
+  color: var(--text-muted);
+  opacity: 0.35;
+  display: block;
+  margin-bottom: var(--space-4);
+}
+
+.vt-empty-heading {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-2);
+}
+
+.vt-empty-text {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin: 0;
+  max-width: 28rem;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: var(--leading-relaxed);
+}
+
+/* PrimeVue DataTable overrides within this component */
+.vt-table-wrap :deep(.p-datatable) {
+  font-family: var(--font-body);
+}
+
+.vt-table-wrap :deep(.p-datatable-thead > tr > th) {
+  font-family: var(--font-display);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  background: var(--surface-50);
+  color: var(--text-secondary);
+  border-bottom: var(--border-medium) solid var(--border-color);
+  padding: var(--space-3) var(--space-4);
+}
+
+.vt-table-wrap :deep(.p-datatable-tbody > tr) {
+  transition: background var(--duration-fast) var(--ease-default);
+}
+
+.vt-table-wrap :deep(.p-datatable-tbody > tr:hover) {
+  background: var(--primary-50);
+}
+
+.vt-table-wrap :deep(.p-datatable-tbody > tr > td) {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  border-bottom: var(--border-thin) solid var(--surface-100);
+}
+
+.vt-table-wrap :deep(.p-datatable-striped .p-datatable-tbody > tr:nth-child(even)) {
+  background: var(--surface-50);
+}
+
+.vt-table-wrap :deep(.p-paginator) {
+  border-top: var(--border-thin) solid var(--border-color);
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+}
+</style>

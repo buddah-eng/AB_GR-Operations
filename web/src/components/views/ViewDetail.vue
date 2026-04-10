@@ -1,60 +1,56 @@
 <template>
-  <div class="view-detail" role="article" :aria-label="title">
-    <!-- Loading state -->
-    <div v-if="loading" class="space-y-4" aria-busy="true">
-      <Skeleton width="60%" height="2rem" />
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Skeleton v-for="n in 6" :key="n" width="100%" height="2.5rem" />
+  <div class="vd-root" role="article" :aria-label="title">
+    <!-- Loading skeleton -->
+    <div v-if="loading" class="vd-skeleton" aria-busy="true">
+      <div class="skeleton vd-skeleton-title" />
+      <div class="vd-skeleton-grid">
+        <div class="skeleton vd-skeleton-field" v-for="n in 6" :key="n" />
       </div>
     </div>
 
     <!-- Empty / not found state -->
-    <Message
-      v-else-if="!data"
-      severity="info"
-      :closable="false"
-    >
-      No record selected. Choose a record from the list to view its details.
-    </Message>
+    <div v-else-if="!data" class="vd-empty" role="status">
+      <i class="pi pi-file vd-empty-icon" aria-hidden="true" />
+      <h3 class="vd-empty-heading">No record selected</h3>
+      <p class="vd-empty-text">
+        Choose a record from the list to view its details.
+      </p>
+    </div>
 
     <!-- Detail content -->
     <template v-else>
-      <div class="mb-6">
-        <h2 class="text-xl font-bold text-surface-800">{{ title }}</h2>
+      <div class="vd-header">
+        <h2 class="vd-title">{{ title }}</h2>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+      <dl class="vd-fields">
         <div
           v-for="field in displayFields"
           :key="field.key"
-          class="py-2"
+          class="vd-field"
         >
-          <dt class="text-xs font-medium text-surface-400 uppercase tracking-wide mb-1">
-            {{ field.label }}
-          </dt>
-          <dd class="text-sm text-surface-800">
+          <dt class="vd-field-label">{{ field.label }}</dt>
+          <dd class="vd-field-value">
             {{ formatValue(field.value, field.type) }}
           </dd>
         </div>
-      </div>
+      </dl>
 
       <!-- Empty fields state -->
-      <Message
+      <div
         v-if="displayFields.length === 0"
-        severity="info"
-        :closable="false"
-        class="mt-4"
+        class="vd-no-fields"
+        role="status"
       >
-        No fields configured for this detail view.
-      </Message>
+        <i class="pi pi-info-circle vd-no-fields-icon" aria-hidden="true" />
+        <p class="vd-no-fields-text">No fields configured for this detail view.</p>
+      </div>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import Skeleton from 'primevue/skeleton'
-import Message from 'primevue/message'
 
 import type { ViewConfig } from '@/types/views'
 
@@ -151,3 +147,148 @@ function formatValue(value: unknown, type?: string): string {
   }
 }
 </script>
+
+<style scoped>
+.vd-root {
+  font-family: var(--font-body);
+}
+
+/* Skeleton */
+.vd-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.vd-skeleton-title {
+  width: 60%;
+  height: 2rem;
+}
+
+.vd-skeleton-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .vd-skeleton-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.vd-skeleton-field {
+  width: 100%;
+  height: 2.5rem;
+}
+
+/* Empty state */
+.vd-empty {
+  text-align: center;
+  padding: var(--space-16) var(--space-8);
+  border: var(--border-medium) dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--surface-50);
+}
+
+.vd-empty-icon {
+  font-size: var(--text-4xl);
+  color: var(--text-muted);
+  opacity: 0.35;
+  display: block;
+  margin-bottom: var(--space-4);
+}
+
+.vd-empty-heading {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-2);
+}
+
+.vd-empty-text {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin: 0;
+  line-height: var(--leading-relaxed);
+}
+
+/* Header */
+.vd-header {
+  margin-bottom: var(--space-8);
+  padding-bottom: var(--space-4);
+  border-bottom: var(--border-medium) solid var(--primary-200);
+}
+
+.vd-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  letter-spacing: var(--tracking-display);
+  margin: 0;
+}
+
+/* Fields grid */
+.vd-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-5) var(--space-8);
+  margin: 0;
+}
+
+@media (min-width: 768px) {
+  .vd-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.vd-field {
+  padding: var(--space-3) 0;
+  border-bottom: var(--border-thin) solid var(--surface-100);
+}
+
+.vd-field-label {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  margin-bottom: var(--space-1);
+}
+
+.vd-field-value {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  line-height: var(--leading-normal);
+  margin: 0;
+}
+
+/* No fields state */
+.vd-no-fields {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface-50);
+  border: var(--border-thin) solid var(--border-color);
+  border-radius: var(--radius-lg);
+  margin-top: var(--space-6);
+}
+
+.vd-no-fields-icon {
+  color: var(--color-info);
+  font-size: var(--text-lg);
+  flex-shrink: 0;
+}
+
+.vd-no-fields-text {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+</style>

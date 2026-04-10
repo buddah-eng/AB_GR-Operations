@@ -1,15 +1,15 @@
 <template>
   <div
     :class="[
-      'condition-node rounded-lg border p-3',
-      isGroup ? 'border-surface-200 bg-surface-50' : 'border-surface-100 bg-white',
-      depth > 0 ? 'ml-6' : '',
+      'cn-root',
+      isGroup ? 'cn-root--group' : 'cn-root--leaf',
+      depth > 0 ? 'cn-root--nested' : '',
     ]"
     :role="isGroup ? 'group' : undefined"
     :aria-label="nodeAriaLabel"
   >
     <!-- Comparison node -->
-    <div v-if="condition.type === 'comparison'" class="flex flex-wrap items-center gap-2">
+    <div v-if="condition.type === 'comparison'" class="cn-comparison">
       <!-- Field picker -->
       <Select
         :modelValue="condition.field"
@@ -17,7 +17,7 @@
         optionLabel="label"
         optionValue="value"
         placeholder="Select field"
-        class="w-40"
+        class="cn-select cn-select--field"
         aria-label="Condition field"
         @update:modelValue="updateField"
       />
@@ -29,7 +29,7 @@
         optionLabel="label"
         optionValue="value"
         placeholder="Operator"
-        class="w-36"
+        class="cn-select cn-select--op"
         aria-label="Condition operator"
         @update:modelValue="updateOperator"
       />
@@ -39,38 +39,40 @@
         v-if="!isUnaryOperator"
         :modelValue="String(condition.value ?? '')"
         placeholder="Value"
-        class="w-40"
+        class="cn-input"
         aria-label="Condition value"
         @update:modelValue="updateValue"
       />
 
-      <!-- NOT toggle -->
-      <Button
-        :icon="isNegated ? 'pi pi-times-circle' : 'pi pi-circle'"
-        :severity="isNegated ? 'danger' : 'secondary'"
-        text
-        rounded
-        size="small"
-        :aria-label="isNegated ? 'Remove NOT' : 'Add NOT'"
-        :title="isNegated ? 'Remove NOT' : 'Negate this condition'"
-        @click="toggleNot"
-      />
+      <div class="cn-comparison-actions">
+        <!-- NOT toggle -->
+        <Button
+          :icon="isNegated ? 'pi pi-times-circle' : 'pi pi-circle'"
+          :severity="isNegated ? 'danger' : 'secondary'"
+          text
+          rounded
+          size="small"
+          :aria-label="isNegated ? 'Remove NOT' : 'Add NOT'"
+          :title="isNegated ? 'Remove NOT' : 'Negate this condition'"
+          @click="toggleNot"
+        />
 
-      <!-- Remove button -->
-      <Button
-        icon="pi pi-trash"
-        severity="danger"
-        text
-        rounded
-        size="small"
-        aria-label="Remove condition"
-        @click="$emit('remove')"
-      />
+        <!-- Remove button -->
+        <Button
+          icon="pi pi-trash"
+          severity="danger"
+          text
+          rounded
+          size="small"
+          aria-label="Remove condition"
+          @click="$emit('remove')"
+        />
+      </div>
     </div>
 
     <!-- Group node (AND / OR) -->
-    <div v-else-if="condition.type === 'and' || condition.type === 'or'" class="space-y-3">
-      <div class="flex items-center gap-2">
+    <div v-else-if="condition.type === 'and' || condition.type === 'or'" class="cn-group">
+      <div class="cn-group-header">
         <SelectButton
           :modelValue="condition.type"
           :options="groupTypeOptions"
@@ -78,64 +80,68 @@
           optionValue="value"
           :allowEmpty="false"
           aria-label="Group logic type"
+          class="cn-group-toggle"
           @update:modelValue="updateGroupType"
         />
 
-        <div class="flex-1" />
+        <div class="cn-group-spacer" />
 
-        <Button
-          label="Add condition"
-          icon="pi pi-plus"
-          size="small"
-          text
-          @click="addChild"
-        />
+        <div class="cn-group-actions">
+          <Button
+            label="Add condition"
+            icon="pi pi-plus"
+            size="small"
+            text
+            @click="addChild"
+          />
 
-        <Button
-          label="Add group"
-          icon="pi pi-sitemap"
-          size="small"
-          text
-          severity="secondary"
-          @click="addChildGroup"
-        />
+          <Button
+            label="Add group"
+            icon="pi pi-sitemap"
+            size="small"
+            text
+            severity="secondary"
+            @click="addChildGroup"
+          />
 
-        <!-- Remove group button -->
-        <Button
-          v-if="depth > 0"
-          icon="pi pi-trash"
-          severity="danger"
-          text
-          rounded
-          size="small"
-          aria-label="Remove group"
-          @click="$emit('remove')"
-        />
+          <!-- Remove group button -->
+          <Button
+            v-if="depth > 0"
+            icon="pi pi-trash"
+            severity="danger"
+            text
+            rounded
+            size="small"
+            aria-label="Remove group"
+            @click="$emit('remove')"
+          />
+        </div>
       </div>
 
       <!-- Children -->
-      <div v-if="children.length === 0" class="text-center py-4 text-xs text-surface-400">
+      <div v-if="children.length === 0" class="cn-group-empty">
+        <i class="pi pi-info-circle cn-group-empty-icon" aria-hidden="true" />
         No conditions in this group. Add a condition to get started.
       </div>
 
-      <ConditionNode
-        v-for="(child, index) in children"
-        :key="index"
-        :condition="child"
-        :properties="properties"
-        :depth="depth + 1"
-        @update="(updated: ConditionExpression) => updateChild(index, updated)"
-        @remove="removeChild(index)"
-      />
+      <div class="cn-group-children">
+        <ConditionNode
+          v-for="(child, index) in children"
+          :key="index"
+          :condition="child"
+          :properties="properties"
+          :depth="depth + 1"
+          @update="(updated: ConditionExpression) => updateChild(index, updated)"
+          @remove="removeChild(index)"
+        />
+      </div>
     </div>
 
     <!-- NOT node -->
-    <div v-else-if="condition.type === 'not'" class="space-y-3">
-      <div class="flex items-center gap-2">
-        <span class="text-xs font-semibold uppercase text-red-600 bg-red-50 px-2 py-1 rounded">
-          NOT
-        </span>
-        <div class="flex-1" />
+    <div v-else-if="condition.type === 'not'" class="cn-not">
+      <div class="cn-not-header">
+        <span class="cn-not-badge">NOT</span>
+        <div class="cn-group-spacer" />
         <Button
           icon="pi pi-trash"
           severity="danger"
@@ -381,3 +387,148 @@ function updateNotChild(updated: ConditionExpression): void {
   })
 }
 </script>
+
+<style scoped>
+/* Root node */
+.cn-root {
+  border-radius: var(--radius-lg);
+  border: var(--border-thin) solid var(--surface-100);
+  padding: var(--space-3);
+  transition: border-color var(--duration-normal) var(--ease-default);
+  font-family: var(--font-body);
+}
+
+.cn-root--leaf {
+  background: var(--bg-card);
+}
+
+.cn-root--group {
+  background: var(--surface-50);
+  border-color: var(--surface-200);
+}
+
+.cn-root--nested {
+  margin-left: var(--space-6);
+}
+
+.cn-root:hover {
+  border-color: var(--primary-200);
+}
+
+/* Comparison node */
+.cn-comparison {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.cn-select {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+}
+
+.cn-select--field {
+  width: 10rem;
+}
+
+.cn-select--op {
+  width: 9rem;
+}
+
+.cn-input {
+  width: 10rem;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+}
+
+.cn-comparison-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
+/* Group node */
+.cn-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.cn-group-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.cn-group-spacer {
+  flex: 1;
+}
+
+.cn-group-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.cn-group-toggle :deep(.p-selectbutton) {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wider);
+}
+
+/* Group empty */
+.cn-group-empty {
+  text-align: center;
+  padding: var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  background: var(--surface-100);
+  border-radius: var(--radius-md);
+}
+
+.cn-group-empty-icon {
+  font-size: var(--text-sm);
+  opacity: 0.5;
+}
+
+/* Group children */
+.cn-group-children {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* NOT node */
+.cn-not {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.cn-not-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.cn-not-badge {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--color-error);
+  background: #fef2f2;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  border: var(--border-thin) solid #fecaca;
+}
+</style>

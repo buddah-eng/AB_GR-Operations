@@ -1,12 +1,10 @@
 <template>
-  <div class="space-y-4">
+  <div class="view-page">
     <!-- Header row -->
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <i class="pi pi-sitemap text-xl text-primary-500" />
-        <h1 class="font-display text-2xl font-bold tracking-tight text-surface-900">
-          {{ workflowName || 'Workflow Canvas' }}
-        </h1>
+    <div class="view-header">
+      <div class="view-header__left">
+        <i class="pi pi-sitemap view-header__icon" />
+        <h1 class="page-title">{{ workflowName || 'Workflow Canvas' }}</h1>
         <Tag
           v-if="workflowEnabled === false"
           value="Disabled"
@@ -14,7 +12,7 @@
           rounded
         />
       </div>
-      <div class="flex items-center gap-2">
+      <div class="view-header__right">
         <Button
           label="Dry Run"
           icon="pi pi-play"
@@ -53,43 +51,36 @@
     </div>
 
     <!-- Error state -->
-    <div
-      v-if="errorMessage"
-      class="rounded-lg border-l-4 border-red-400 bg-red-50 px-5 py-4"
-    >
-      <div class="flex items-center gap-2">
-        <i class="pi pi-exclamation-circle text-red-500" />
-        <span class="text-sm font-medium text-red-700">{{ errorMessage }}</span>
+    <div v-if="errorMessage" class="view-error">
+      <div class="view-error__content">
+        <i class="pi pi-exclamation-circle view-error__icon" />
+        <span class="view-error__text">{{ errorMessage }}</span>
       </div>
-      <button
-        class="mt-2 text-xs text-red-600 underline hover:text-red-800"
-        @click="loadWorkflow"
-      >
+      <button class="view-error__retry" @click="loadWorkflow">
         Try again
       </button>
     </div>
 
     <!-- Loading state -->
-    <div
-      v-if="loading && flowNodes.length === 0"
-      class="flex flex-col items-center justify-center py-20"
-    >
+    <div v-if="loading && flowNodes.length === 0" class="view-loading">
       <ProgressSpinner
         style="width: 40px; height: 40px"
         stroke-width="4"
         aria-label="Loading workflow"
       />
-      <span class="mt-3 text-sm text-surface-500">Loading workflow...</span>
+      <span class="view-loading__text">Loading workflow...</span>
     </div>
 
     <!-- Empty state -->
     <div
       v-else-if="flowNodes.length === 0 && !loading && !errorMessage"
-      class="flex flex-col items-center justify-center py-20"
+      class="empty-state"
     >
-      <i class="pi pi-sitemap text-4xl text-surface-300 mb-3" />
-      <h2 class="text-lg font-semibold text-surface-600">No Workflow Data</h2>
-      <p class="text-sm text-surface-400 mt-1 max-w-md text-center">
+      <div class="icon">
+        <i class="pi pi-sitemap" />
+      </div>
+      <h2>No Workflow Data</h2>
+      <p>
         This workflow has no configuration yet. Use the workflow builder to define
         triggers, conditions, and actions.
       </p>
@@ -98,26 +89,20 @@
         icon="pi pi-external-link"
         severity="secondary"
         size="small"
-        class="mt-4"
+        style="margin-top: var(--space-4)"
         @click="navigateToBuilder"
       />
     </div>
 
     <!-- Canvas -->
-    <div
-      v-else
-      :class="[
-        'rounded-xl border border-surface-200 overflow-hidden bg-surface-50',
-        'h-[calc(100vh-200px)]',
-      ]"
-    >
+    <div v-else class="view-canvas-container">
       <VueFlow
         :nodes="flowNodes"
         :edges="flowEdges"
         :node-types="nodeTypes"
         :default-viewport="{ zoom: 0.9, x: 50, y: 100 }"
         fit-view-on-init
-        class="w-full h-full"
+        class="view-canvas-flow"
         @node-click="handleNodeClick"
       >
         <Background />
@@ -131,28 +116,24 @@
       v-model:visible="configPanelVisible"
       position="right"
       :header="configPanelTitle"
-      class="w-96"
+      class="view-sidebar-panel"
     >
-      <div v-if="selectedNodeData" class="space-y-4">
-        <div>
-          <div class="text-xs font-medium uppercase tracking-widest text-surface-500 mb-1">
-            Type
-          </div>
+      <div v-if="selectedNodeData" class="view-detail-list">
+        <div class="view-detail-item">
+          <div class="view-detail-item__label">Type</div>
           <Tag :value="selectedNodeData.nodeType" rounded />
         </div>
 
-        <div v-if="selectedNodeData.details">
-          <div class="text-xs font-medium uppercase tracking-widest text-surface-500 mb-2">
-            Details
-          </div>
-          <div class="space-y-2">
+        <div v-if="selectedNodeData.details" class="view-detail-item">
+          <div class="view-detail-item__label">Details</div>
+          <div class="view-properties-grid">
             <div
               v-for="(value, key) in selectedNodeData.details"
               :key="String(key)"
-              class="flex justify-between items-start gap-2 py-1.5 border-b border-surface-50 last:border-0"
+              class="view-property-row"
             >
-              <span class="text-xs font-medium text-surface-500">{{ formatKey(String(key)) }}</span>
-              <span class="text-xs text-surface-800 text-right">{{ String(value) }}</span>
+              <span class="view-property-row__key">{{ formatKey(String(key)) }}</span>
+              <span class="view-property-row__value">{{ String(value) }}</span>
             </div>
           </div>
         </div>
@@ -452,3 +433,156 @@ onMounted(() => {
   loadWorkflow()
 })
 </script>
+
+<style scoped>
+.view-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+}
+
+.view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.view-header__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.view-header__icon {
+  font-size: var(--text-xl);
+  color: var(--primary-500);
+}
+
+.view-header__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.view-error {
+  border-radius: var(--radius-lg);
+  border-left: 4px solid var(--color-error);
+  background: #fef2f2;
+  padding: var(--space-4) var(--space-5);
+}
+
+.view-error__content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.view-error__icon {
+  color: var(--color-error);
+}
+
+.view-error__text {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: #b91c1c;
+}
+
+.view-error__retry {
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  color: #dc2626;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-default);
+}
+
+.view-error__retry:hover {
+  color: #991b1b;
+}
+
+.view-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-20) 0;
+}
+
+.view-loading__text {
+  margin-top: var(--space-3);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.view-canvas-container {
+  border-radius: var(--radius-xl);
+  border: var(--border-thin) solid var(--border-color);
+  overflow: hidden;
+  background: var(--surface-50);
+  height: calc(100vh - 200px);
+}
+
+.view-canvas-flow {
+  width: 100%;
+  height: 100%;
+}
+
+.view-sidebar-panel {
+  width: 24rem;
+}
+
+.view-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.view-detail-item__label {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--text-muted);
+  margin-bottom: var(--space-1);
+}
+
+.view-properties-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.view-property-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: 6px 0;
+  border-bottom: var(--border-thin) solid var(--surface-100);
+}
+
+.view-property-row:last-child {
+  border-bottom: none;
+}
+
+.view-property-row__key {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.view-property-row__value {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--text-primary);
+  text-align: right;
+}
+</style>

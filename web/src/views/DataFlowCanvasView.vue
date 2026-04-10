@@ -1,18 +1,15 @@
 <template>
-  <div class="space-y-4">
+  <div class="view-page">
     <!-- Header row -->
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <i class="pi pi-arrows-h text-xl text-primary-500" />
-        <h1 class="font-display text-2xl font-bold tracking-tight text-surface-900">
-          Data Flow Canvas
-        </h1>
-        <span class="text-sm text-surface-400">
+    <div class="view-header">
+      <div class="view-header__left">
+        <i class="pi pi-arrows-h view-header__icon" />
+        <h1 class="page-title">Data Flow Canvas</h1>
+        <span class="view-header__subtitle">
           Visualize how data routes from source concepts to destinations
         </span>
       </div>
-      <div class="flex items-center gap-2">
-        <!-- Filters -->
+      <div class="view-header__right">
         <Select
           v-model="sourceFilter"
           :options="sourceConceptOptions"
@@ -20,7 +17,7 @@
           option-value="value"
           placeholder="Source concept"
           show-clear
-          class="w-48"
+          class="view-filter-select"
           @change="loadRoutes"
         />
         <ToggleButton
@@ -54,63 +51,50 @@
     </div>
 
     <!-- Error state -->
-    <div
-      v-if="errorMessage"
-      class="rounded-lg border-l-4 border-red-400 bg-red-50 px-5 py-4"
-    >
-      <div class="flex items-center gap-2">
-        <i class="pi pi-exclamation-circle text-red-500" />
-        <span class="text-sm font-medium text-red-700">{{ errorMessage }}</span>
+    <div v-if="errorMessage" class="view-error">
+      <div class="view-error__content">
+        <i class="pi pi-exclamation-circle view-error__icon" />
+        <span class="view-error__text">{{ errorMessage }}</span>
       </div>
-      <button
-        class="mt-2 text-xs text-red-600 underline hover:text-red-800"
-        @click="loadRoutes"
-      >
+      <button class="view-error__retry" @click="loadRoutes">
         Try again
       </button>
     </div>
 
     <!-- Loading state -->
-    <div
-      v-if="loading && flowNodes.length === 0"
-      class="flex flex-col items-center justify-center py-20"
-    >
+    <div v-if="loading && flowNodes.length === 0" class="view-loading">
       <ProgressSpinner
         style="width: 40px; height: 40px"
         stroke-width="4"
         aria-label="Loading data flows"
       />
-      <span class="mt-3 text-sm text-surface-500">Loading data flows...</span>
+      <span class="view-loading__text">Loading data flows...</span>
     </div>
 
     <!-- Empty state -->
     <div
       v-else-if="flowNodes.length === 0 && !loading && !errorMessage"
-      class="flex flex-col items-center justify-center py-20"
+      class="empty-state"
     >
-      <i class="pi pi-arrows-h text-4xl text-surface-300 mb-3" />
-      <h2 class="text-lg font-semibold text-surface-600">No Data Routes</h2>
-      <p class="text-sm text-surface-400 mt-1 max-w-md text-center">
+      <div class="icon">
+        <i class="pi pi-arrows-h" />
+      </div>
+      <h2>No Data Routes</h2>
+      <p>
         No data routes configured. Create a route by dragging from a source
         concept to a destination, or use the builder to define routes.
       </p>
     </div>
 
     <!-- Canvas -->
-    <div
-      v-else
-      :class="[
-        'rounded-xl border border-surface-200 overflow-hidden bg-surface-50',
-        'h-[calc(100vh-200px)]',
-      ]"
-    >
+    <div v-else class="view-canvas-container">
       <VueFlow
         :nodes="flowNodes"
         :edges="flowEdges"
         :node-types="nodeTypes"
         :default-viewport="{ zoom: 0.85, x: 50, y: 80 }"
         fit-view-on-init
-        class="w-full h-full"
+        class="view-canvas-flow"
         @node-click="handleNodeClick"
       >
         <Background />
@@ -124,41 +108,35 @@
       v-model:visible="detailPanelVisible"
       position="right"
       :header="detailPanelTitle"
-      class="w-96"
+      class="view-sidebar-panel"
     >
-      <div v-if="selectedDetail" class="space-y-4">
-        <div>
-          <div class="text-xs font-medium uppercase tracking-widest text-surface-500 mb-1">
-            Type
-          </div>
+      <div v-if="selectedDetail" class="view-detail-list">
+        <div class="view-detail-item">
+          <div class="view-detail-item__label">Type</div>
           <Tag :value="selectedDetail.type" rounded />
         </div>
 
         <!-- Route info -->
         <template v-if="selectedDetail.route">
-          <div>
-            <div class="text-xs font-medium uppercase tracking-widest text-surface-500 mb-1">
-              PII Filter Mode
-            </div>
+          <div class="view-detail-item">
+            <div class="view-detail-item__label">PII Filter Mode</div>
             <Tag
               :value="selectedDetail.route.piiFilterMode"
               :severity="piiSeverity(selectedDetail.route.piiFilterMode)"
               rounded
             />
           </div>
-          <div>
-            <div class="text-xs font-medium uppercase tracking-widest text-surface-500 mb-2">
-              Field Mappings
-            </div>
-            <div class="space-y-1">
+          <div class="view-detail-item">
+            <div class="view-detail-item__label">Field Mappings</div>
+            <div class="view-field-mappings">
               <div
                 v-for="mapping in selectedDetail.route.fieldMappings"
                 :key="`${mapping.sourceField}-${mapping.destField}`"
-                class="flex items-center gap-2 text-xs text-surface-600"
+                class="view-field-mapping"
               >
-                <span class="font-medium">{{ mapping.sourceField }}</span>
-                <i class="pi pi-arrow-right text-surface-300" />
-                <span>{{ mapping.destField }}</span>
+                <span class="view-field-mapping__source">{{ mapping.sourceField }}</span>
+                <i class="pi pi-arrow-right view-field-mapping__arrow" />
+                <span class="view-field-mapping__dest">{{ mapping.destField }}</span>
               </div>
             </div>
           </div>
@@ -166,22 +144,20 @@
 
         <!-- Concept fields -->
         <template v-if="selectedDetail.fields">
-          <div>
-            <div class="text-xs font-medium uppercase tracking-widest text-surface-500 mb-2">
-              Fields
-            </div>
-            <div class="space-y-1">
+          <div class="view-detail-item">
+            <div class="view-detail-item__label">Fields</div>
+            <div class="view-concept-fields">
               <div
                 v-for="field in selectedDetail.fields"
                 :key="field.key"
-                class="flex items-center gap-2 text-xs"
+                class="view-concept-field"
               >
                 <i
                   v-if="field.isPii"
-                  class="pi pi-lock text-red-400"
+                  class="pi pi-lock view-concept-field__pii-icon"
                   title="PII field"
                 />
-                <span :class="field.isPii ? 'text-red-600 font-medium' : 'text-surface-600'">
+                <span :class="field.isPii ? 'view-concept-field__name--pii' : 'view-concept-field__name'">
                   {{ field.label }}
                 </span>
                 <Tag :value="field.type" rounded class="!text-[9px] ml-auto" severity="secondary" />
@@ -445,3 +421,184 @@ onMounted(() => {
   loadRoutes()
 })
 </script>
+
+<style scoped>
+.view-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+}
+
+.view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.view-header__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.view-header__icon {
+  font-size: var(--text-xl);
+  color: var(--primary-500);
+}
+
+.view-header__subtitle {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.view-header__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.view-filter-select {
+  width: 12rem;
+}
+
+.view-error {
+  border-radius: var(--radius-lg);
+  border-left: 4px solid var(--color-error);
+  background: #fef2f2;
+  padding: var(--space-4) var(--space-5);
+}
+
+.view-error__content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.view-error__icon {
+  color: var(--color-error);
+}
+
+.view-error__text {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: #b91c1c;
+}
+
+.view-error__retry {
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  color: #dc2626;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-default);
+}
+
+.view-error__retry:hover {
+  color: #991b1b;
+}
+
+.view-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-20) 0;
+}
+
+.view-loading__text {
+  margin-top: var(--space-3);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.view-canvas-container {
+  border-radius: var(--radius-xl);
+  border: var(--border-thin) solid var(--border-color);
+  overflow: hidden;
+  background: var(--surface-50);
+  height: calc(100vh - 200px);
+}
+
+.view-canvas-flow {
+  width: 100%;
+  height: 100%;
+}
+
+.view-sidebar-panel {
+  width: 24rem;
+}
+
+.view-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.view-detail-item__label {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--text-muted);
+  margin-bottom: var(--space-1);
+}
+
+.view-field-mappings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.view-field-mapping {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.view-field-mapping__source {
+  font-weight: var(--weight-medium);
+}
+
+.view-field-mapping__arrow {
+  color: var(--surface-300);
+  font-size: 10px;
+}
+
+.view-concept-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.view-concept-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+}
+
+.view-concept-field__pii-icon {
+  color: var(--color-error);
+  font-size: 10px;
+}
+
+.view-concept-field__name {
+  color: var(--text-secondary);
+}
+
+.view-concept-field__name--pii {
+  color: var(--color-error);
+  font-weight: var(--weight-medium);
+}
+</style>

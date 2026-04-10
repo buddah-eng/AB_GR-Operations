@@ -13,7 +13,7 @@
         transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
         pointerEvents: 'all',
       }"
-      class="edge-label bg-purple-50 border border-purple-200 rounded px-1.5 py-0.5 text-[10px] font-medium text-purple-700 shadow-sm"
+      class="workflow-edge-label"
     >
       {{ labelText }}
     </div>
@@ -72,5 +72,28 @@ const edgeStyle = computed(() => ({
 @keyframes pulse-edge {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
+}
+</style>
+
+<style scoped>
+.workflow-edge-label {
+  background: #faf5ff;
+  border: var(--border-thin) solid #e9d5ff;
+  border-radius: var(--radius-md);
+  padding: 2px var(--space-2);
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: var(--weight-semibold);
+  color: #7e22ce;
+  box-shadow: var(--shadow-xs);
+  transition: all var(--duration-fast) var(--ease-default);
+  cursor: default;
+  white-space: nowrap;
+}
+
+.workflow-edge-label:hover {
+  box-shadow: var(--shadow-sm);
+  border-color: #c084fc;
+  transform: scale(1.05);
 }
 </style>

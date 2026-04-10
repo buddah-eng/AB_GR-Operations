@@ -1,18 +1,18 @@
 <template>
-  <div class="workflow-builder flex flex-col h-full" role="region" aria-label="Workflow Builder">
+  <div class="builder-shell" role="region" aria-label="Workflow Builder">
     <!-- Toolbar -->
-    <div class="shrink-0 flex items-center justify-between px-4 py-3 border-b border-surface-200 bg-white">
-      <div class="flex items-center gap-3">
-        <i class="pi pi-sitemap text-primary-500" />
+    <div class="builder-toolbar">
+      <div class="builder-toolbar__left">
+        <i class="pi pi-sitemap builder-toolbar__icon" />
         <InputText
           v-model="workflowName"
           placeholder="Workflow name"
-          class="text-lg font-semibold w-64"
+          class="builder-toolbar__name-input"
           aria-label="Workflow name"
         />
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="builder-toolbar__right">
         <Button
           label="Test"
           icon="pi pi-play"
@@ -40,17 +40,11 @@
     </div>
 
     <!-- Validation bar -->
-    <div
-      v-if="validationItems.length > 0"
-      class="shrink-0 flex items-center gap-4 px-4 py-2 border-b border-surface-200 bg-surface-50 text-sm"
-    >
+    <div v-if="validationItems.length > 0" class="wf-validation-bar">
       <div
         v-for="item in validationItems"
         :key="item.label"
-        :class="[
-          'flex items-center gap-1.5',
-          item.ok ? 'text-green-600' : 'text-red-500',
-        ]"
+        :class="['wf-validation-item', item.ok ? 'wf-validation-item--ok' : 'wf-validation-item--error']"
       >
         <i :class="item.ok ? 'pi pi-check-circle' : 'pi pi-times-circle'" />
         <span>{{ item.label }}</span>
@@ -62,19 +56,16 @@
       v-if="errorMessage"
       severity="error"
       :closable="true"
-      class="mx-4 mt-2"
+      class="builder-message"
       @close="errorMessage = null"
     >
       {{ errorMessage }}
     </Message>
 
     <!-- Dry run results -->
-    <div
-      v-if="dryRunResults.length > 0"
-      class="shrink-0 mx-4 mt-2 p-4 bg-blue-50 border border-blue-200 rounded-lg"
-    >
-      <div class="flex items-center justify-between mb-2">
-        <h3 class="text-sm font-semibold text-blue-700">Dry Run Results</h3>
+    <div v-if="dryRunResults.length > 0" class="wf-dry-run-panel">
+      <div class="wf-dry-run-panel__header">
+        <h3 class="wf-dry-run-panel__title">Dry Run Results</h3>
         <Button
           icon="pi pi-times"
           severity="secondary"
@@ -84,61 +75,50 @@
           @click="dryRunResults = []"
         />
       </div>
-      <div class="space-y-1">
+      <div class="wf-dry-run-panel__results">
         <div
           v-for="(result, idx) in dryRunResults"
           :key="idx"
-          :class="[
-            'flex items-center gap-2 text-sm',
-            result.wouldExecute ? 'text-green-700' : 'text-surface-400',
-          ]"
+          :class="['wf-dry-run-result', result.wouldExecute ? 'wf-dry-run-result--active' : 'wf-dry-run-result--skip']"
         >
-          <i :class="result.wouldExecute ? 'pi pi-check text-green-500' : 'pi pi-minus text-surface-300'" />
+          <i :class="result.wouldExecute ? 'pi pi-check' : 'pi pi-minus'" />
           <span>Step {{ result.actionIndex + 1 }}: {{ result.reason }}</span>
         </div>
       </div>
     </div>
 
     <!-- 3-panel layout -->
-    <div class="flex-1 flex overflow-hidden">
+    <div class="builder-panels">
       <!-- Left: Trigger picker + Condition -->
-      <div class="w-72 shrink-0 border-r border-surface-200 bg-surface-50 overflow-y-auto p-4 space-y-6">
+      <div class="builder-sidebar builder-sidebar--left wf-trigger-panel">
         <!-- Trigger type -->
-        <div>
-          <h3 class="text-xs font-semibold uppercase tracking-widest text-surface-500 mb-3">
-            Trigger
-          </h3>
-          <div class="space-y-2">
+        <div class="wf-trigger-section">
+          <h3 class="wf-section-label">Trigger</h3>
+          <div class="wf-trigger-list">
             <div
               v-for="triggerInfo in triggerTypeInfoList"
               :key="triggerInfo.type"
-              :class="[
-                'flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors border',
-                selectedTriggerType === triggerInfo.type
-                  ? 'border-primary-500 bg-primary-50'
-                  : 'border-surface-200 bg-white hover:border-surface-300',
-              ]"
+              :class="['wf-trigger-option', selectedTriggerType === triggerInfo.type ? 'wf-trigger-option--active' : '']"
               :aria-label="`Select trigger: ${triggerInfo.label}`"
               role="radio"
               :aria-checked="selectedTriggerType === triggerInfo.type"
               @click="selectedTriggerType = triggerInfo.type"
             >
-              <i :class="[triggerInfo.icon, 'text-sm']" />
+              <i :class="[triggerInfo.icon, 'wf-trigger-option__icon']" />
               <div>
-                <div class="text-sm font-medium text-surface-700">{{ triggerInfo.label }}</div>
-                <div class="text-[11px] text-surface-400">{{ triggerInfo.description }}</div>
+                <div class="wf-trigger-option__label">{{ triggerInfo.label }}</div>
+                <div class="wf-trigger-option__desc">{{ triggerInfo.description }}</div>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Trigger config -->
-        <div>
-          <!-- Domain event -->
+        <div class="wf-trigger-config">
           <template v-if="selectedTriggerType === 'domain_event'">
-            <div class="space-y-3">
-              <div>
-                <label class="text-xs font-medium text-surface-500 block mb-1">Concept</label>
+            <div class="wf-config-fields">
+              <div class="form-field">
+                <label>Concept</label>
                 <Select
                   v-model="triggerConceptKey"
                   :options="ontologyStore.concepts"
@@ -148,8 +128,8 @@
                   class="w-full"
                 />
               </div>
-              <div>
-                <label class="text-xs font-medium text-surface-500 block mb-1">Event</label>
+              <div class="form-field">
+                <label>Event</label>
                 <Select
                   v-model="triggerEventName"
                   :options="domainEventOptions"
@@ -162,11 +142,10 @@
             </div>
           </template>
 
-          <!-- Field changed -->
           <template v-if="selectedTriggerType === 'field_changed'">
-            <div class="space-y-3">
-              <div>
-                <label class="text-xs font-medium text-surface-500 block mb-1">Concept</label>
+            <div class="wf-config-fields">
+              <div class="form-field">
+                <label>Concept</label>
                 <Select
                   v-model="triggerConceptKey"
                   :options="ontologyStore.concepts"
@@ -176,8 +155,8 @@
                   class="w-full"
                 />
               </div>
-              <div>
-                <label class="text-xs font-medium text-surface-500 block mb-1">Field</label>
+              <div class="form-field">
+                <label>Field</label>
                 <Select
                   v-model="triggerFieldName"
                   :options="triggerConceptProperties"
@@ -190,45 +169,45 @@
             </div>
           </template>
 
-          <!-- Scheduled -->
           <template v-if="selectedTriggerType === 'scheduled'">
-            <div class="space-y-3">
-              <label class="text-xs font-medium text-surface-500 block mb-1">Schedule</label>
-              <Select
-                v-model="schedulePreset"
-                :options="schedulePresets"
-                option-label="label"
-                option-value="value"
-                placeholder="Select schedule"
-                class="w-full"
-              />
-              <div>
-                <label class="text-xs font-medium text-surface-500 block mb-1">Custom Cron</label>
+            <div class="wf-config-fields">
+              <div class="form-field">
+                <label>Schedule</label>
+                <Select
+                  v-model="schedulePreset"
+                  :options="schedulePresets"
+                  option-label="label"
+                  option-value="value"
+                  placeholder="Select schedule"
+                  class="w-full"
+                />
+              </div>
+              <div class="form-field">
+                <label>Custom Cron</label>
                 <InputText
                   v-model="triggerSchedule"
                   placeholder="*/15 * * * *"
                   class="w-full"
                 />
               </div>
-              <div v-if="triggerSchedule" class="text-xs text-surface-500 bg-surface-100 rounded px-2 py-1">
+              <div v-if="triggerSchedule" class="wf-cron-preview">
                 {{ humanReadableCron }}
               </div>
             </div>
           </template>
 
-          <!-- Manual -->
           <template v-if="selectedTriggerType === 'manual'">
-            <div class="space-y-3">
-              <div>
-                <label class="text-xs font-medium text-surface-500 block mb-1">Button Label</label>
+            <div class="wf-config-fields">
+              <div class="form-field">
+                <label>Button Label</label>
                 <InputText
                   v-model="triggerButtonLabel"
                   placeholder="Run workflow"
                   class="w-full"
                 />
               </div>
-              <div>
-                <label class="text-xs font-medium text-surface-500 block mb-1">Description</label>
+              <div class="form-field">
+                <label>Description</label>
                 <InputText
                   v-model="triggerDescription"
                   placeholder="What this workflow does"
@@ -240,10 +219,8 @@
         </div>
 
         <!-- Condition -->
-        <div>
-          <h3 class="text-xs font-semibold uppercase tracking-widest text-surface-500 mb-2">
-            Only run when...
-          </h3>
+        <div class="wf-condition-section">
+          <h3 class="wf-section-label">Only run when...</h3>
           <ConditionBuilder
             :model-value="workflowCondition"
             :properties="triggerConceptProperties"
@@ -253,56 +230,41 @@
       </div>
 
       <!-- Center: Action chain -->
-      <div class="flex-1 overflow-y-auto p-6 bg-surface-50">
-        <h3 class="text-xs font-semibold uppercase tracking-widest text-surface-500 mb-4">
+      <div class="builder-canvas wf-action-canvas">
+        <h3 class="wf-section-label" style="margin-bottom: var(--space-4)">
           Action Chain
         </h3>
 
-        <div class="space-y-3">
+        <div class="wf-action-list">
           <div
             v-for="(action, idx) in actions"
             :key="action.id"
-            :class="[
-              'flex items-center gap-3 px-4 py-3 rounded-lg border-2 cursor-pointer transition-all',
-              selectedActionIdx === idx
-                ? 'border-primary-500 bg-white ring-1 ring-primary-200'
-                : 'border-surface-200 bg-white hover:border-surface-300',
-            ]"
+            :class="['wf-action-card', selectedActionIdx === idx ? 'wf-action-card--selected' : '']"
             draggable="true"
             @click="selectedActionIdx = idx"
             @dragstart="(e) => { actionDragIdx = idx; e.dataTransfer?.setData('text/plain', String(idx)) }"
             @dragover.prevent
             @drop.prevent="handleActionReorder(idx)"
           >
-            <!-- Position badge -->
-            <span
-              class="shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-surface-100 text-xs font-semibold text-surface-600"
-            >
+            <span class="wf-action-card__position">
               {{ idx + 1 }}
             </span>
-
-            <!-- Icon -->
             <i
-              :class="[getActionTypeIcon(action.type), 'text-lg']"
+              :class="[getActionTypeIcon(action.type)]"
+              class="wf-action-card__type-icon"
               :style="{ color: `var(--${getActionTypeColor(action.type)}-500)` }"
             />
-
-            <!-- Label -->
-            <div class="flex-1 min-w-0">
-              <div class="text-sm font-medium text-surface-700 truncate">
+            <div class="wf-action-card__content">
+              <div class="wf-action-card__label">
                 {{ action.label || getActionTypeLabel(action.type) }}
               </div>
-              <div class="text-[11px] text-surface-400 truncate">
+              <div class="wf-action-card__summary">
                 {{ getActionSummary(action) }}
               </div>
             </div>
-
-            <!-- Chain connector -->
-            <div v-if="idx < actions.length - 1" class="shrink-0">
-              <i class="pi pi-arrow-down text-surface-300" />
+            <div v-if="idx < actions.length - 1" class="wf-action-card__connector">
+              <i class="pi pi-arrow-down" />
             </div>
-
-            <!-- Remove -->
             <Button
               icon="pi pi-trash"
               severity="danger"
@@ -316,8 +278,8 @@
           </div>
         </div>
 
-        <!-- Add action dropdown -->
-        <div class="mt-4">
+        <!-- Add action -->
+        <div class="wf-add-action">
           <Select
             :options="actionTypeInfoList"
             option-label="label"
@@ -329,19 +291,16 @@
         </div>
 
         <!-- Empty state -->
-        <div
-          v-if="actions.length === 0"
-          class="text-center py-12 text-surface-400"
-        >
-          <i class="pi pi-sitemap text-3xl mb-3" />
-          <p class="text-sm">
-            No actions defined. Add an action to build your workflow.
-          </p>
+        <div v-if="actions.length === 0" class="empty-state">
+          <div class="icon">
+            <i class="pi pi-sitemap" />
+          </div>
+          <p>No actions defined. Add an action to build your workflow.</p>
         </div>
       </div>
 
       <!-- Right: Selected action config -->
-      <div class="w-80 shrink-0 border-l border-surface-200 bg-white overflow-y-auto">
+      <div class="builder-sidebar builder-sidebar--right">
         <ActionConfigPanel
           :action="selectedAction"
           :concepts="ontologyStore.concepts"
@@ -708,3 +667,348 @@ onMounted(async () => {
   await loadExistingWorkflow()
 })
 </script>
+
+<style scoped>
+.builder-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-page);
+}
+
+.builder-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-5);
+  border-bottom: var(--border-thin) solid var(--border-color);
+  background: var(--bg-card);
+}
+
+.builder-toolbar__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.builder-toolbar__icon {
+  color: var(--primary-500);
+  font-size: var(--text-lg);
+}
+
+.builder-toolbar__name-input {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  width: 16rem;
+  letter-spacing: var(--tracking-tight);
+}
+
+.builder-toolbar__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.builder-message {
+  margin: var(--space-2) var(--space-5) 0;
+}
+
+/* Validation bar */
+.wf-validation-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-5);
+  border-bottom: var(--border-thin) solid var(--border-color);
+  background: var(--surface-50);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+}
+
+.wf-validation-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wf-validation-item--ok {
+  color: var(--color-success);
+}
+
+.wf-validation-item--error {
+  color: var(--color-error);
+}
+
+/* Dry run panel */
+.wf-dry-run-panel {
+  flex-shrink: 0;
+  margin: var(--space-2) var(--space-5) 0;
+  padding: var(--space-4);
+  background: #eff6ff;
+  border: var(--border-thin) solid #bfdbfe;
+  border-radius: var(--radius-lg);
+}
+
+.wf-dry-run-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.wf-dry-run-panel__title {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: #1d4ed8;
+}
+
+.wf-dry-run-panel__results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.wf-dry-run-result {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+}
+
+.wf-dry-run-result--active {
+  color: #15803d;
+}
+
+.wf-dry-run-result--active i {
+  color: var(--color-success);
+}
+
+.wf-dry-run-result--skip {
+  color: var(--text-muted);
+}
+
+.wf-dry-run-result--skip i {
+  color: var(--surface-300);
+}
+
+/* Panels */
+.builder-panels {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.builder-sidebar {
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.builder-sidebar--left {
+  width: 18rem;
+  border-right: var(--border-thin) solid var(--border-color);
+  background: var(--surface-50);
+  padding: var(--space-5);
+}
+
+.builder-sidebar--right {
+  width: 20rem;
+  border-left: var(--border-thin) solid var(--border-color);
+  background: var(--bg-card);
+}
+
+.builder-canvas {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6);
+  background: var(--surface-50);
+}
+
+/* Section labels */
+.wf-section-label {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-extrabold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--text-muted);
+}
+
+/* Trigger panel */
+.wf-trigger-section {
+  margin-bottom: var(--space-6);
+}
+
+.wf-trigger-section .wf-section-label {
+  margin-bottom: var(--space-3);
+}
+
+.wf-trigger-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.wf-trigger-option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-default);
+  border: var(--border-thin) solid var(--border-color);
+  background: var(--bg-card);
+}
+
+.wf-trigger-option:hover {
+  border-color: var(--surface-300);
+  box-shadow: var(--shadow-xs);
+}
+
+.wf-trigger-option--active {
+  border-color: var(--primary-500);
+  background: var(--primary-50);
+  box-shadow: 0 0 0 3px var(--primary-100);
+}
+
+.wf-trigger-option__icon {
+  font-size: var(--text-sm);
+  margin-top: 2px;
+  color: var(--text-secondary);
+}
+
+.wf-trigger-option--active .wf-trigger-option__icon {
+  color: var(--primary-600);
+}
+
+.wf-trigger-option__label {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+}
+
+.wf-trigger-option__desc {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: var(--leading-snug);
+}
+
+/* Trigger config */
+.wf-trigger-config {
+  margin-bottom: var(--space-6);
+}
+
+.wf-config-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.wf-cron-preview {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  background: var(--surface-100);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-2);
+}
+
+/* Condition section */
+.wf-condition-section .wf-section-label {
+  margin-bottom: var(--space-2);
+}
+
+/* Action chain */
+.wf-action-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.wf-action-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  border: var(--border-medium) solid var(--border-color);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-default);
+}
+
+.wf-action-card:hover {
+  border-color: var(--surface-300);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.wf-action-card--selected {
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px var(--primary-100);
+}
+
+.wf-action-card__position {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--surface-100);
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+}
+
+.wf-action-card--selected .wf-action-card__position {
+  background: var(--primary-100);
+  color: var(--primary-700);
+}
+
+.wf-action-card__type-icon {
+  font-size: var(--text-lg);
+}
+
+.wf-action-card__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.wf-action-card__label {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wf-action-card__summary {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wf-action-card__connector {
+  flex-shrink: 0;
+  color: var(--surface-300);
+}
+
+.wf-add-action {
+  margin-top: var(--space-4);
+}
+</style>

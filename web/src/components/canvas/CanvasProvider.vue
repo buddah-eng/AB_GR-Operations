@@ -2,12 +2,12 @@
   <div
     ref="containerRef"
     :class="[
-      'canvas-provider flex flex-col bg-surface-50 rounded-xl border border-surface-200 overflow-hidden',
-      canvasStore.isFullscreen ? 'fixed inset-0 z-50 rounded-none' : 'h-[calc(100vh-160px)]',
+      'canvas-provider',
+      canvasStore.isFullscreen ? 'canvas-provider--fullscreen' : '',
     ]"
   >
     <!-- Toolbar -->
-    <div class="shrink-0 p-2 border-b border-surface-200 bg-white">
+    <div class="canvas-provider__toolbar">
       <CanvasToolbar
         @zoom-in="handleZoomIn"
         @zoom-out="handleZoomOut"
@@ -17,7 +17,7 @@
     </div>
 
     <!-- Viewport -->
-    <div class="flex-1 relative overflow-hidden">
+    <div class="canvas-provider__viewport">
       <slot>
         <CanvasViewport
           @node-click="handleNodeClick"
@@ -98,3 +98,38 @@ function handlePaneClick(): void {
   emit('pane-click')
 }
 </script>
+
+<style scoped>
+.canvas-provider {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-50);
+  border-radius: var(--radius-xl);
+  border: var(--border-thin) solid var(--border-color);
+  overflow: hidden;
+  height: calc(100vh - 160px);
+  transition: all var(--duration-normal) var(--ease-default);
+}
+
+.canvas-provider--fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  border-radius: 0;
+  height: 100vh;
+}
+
+.canvas-provider__toolbar {
+  flex-shrink: 0;
+  padding: var(--space-3);
+  border-bottom: var(--border-thin) solid var(--border-color);
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+}
+
+.canvas-provider__viewport {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+</style>

@@ -1,34 +1,31 @@
 <template>
-  <div class="flex min-h-screen bg-primary-50">
+  <div class="al-root">
     <!-- Sidebar -->
     <aside
       :class="[
-        'fixed left-0 top-0 h-full flex flex-col z-40',
-        'transition-all duration-200 overflow-hidden',
-        'bg-gradient-to-b from-primary-600 to-primary-800 text-white',
-        sidebarVisible ? 'w-60' : 'w-0',
-        'lg:translate-x-0 lg:w-60',
+        'al-sidebar',
+        sidebarVisible ? 'al-sidebar--open' : '',
       ]"
+      role="navigation"
+      aria-label="Main navigation"
     >
       <!-- Brand header with logo -->
-      <div class="px-4 py-3 border-b border-white/15 flex items-center gap-3">
+      <div class="al-brand">
         <img
           :src="appStore.conventionLogoUrl"
           :alt="appStore.conventionName"
-          class="w-10 h-10 rounded-lg object-cover shadow-md shrink-0"
+          class="al-brand-logo"
         />
-        <div>
-          <div class="text-sm font-bold tracking-wide font-display text-white">GR-Ops</div>
-          <div class="text-[10px] text-accent-300 uppercase tracking-widest font-semibold">{{ appStore.conventionName }}</div>
+        <div class="al-brand-text">
+          <div class="al-brand-name">GR-Ops</div>
+          <div class="al-brand-convention">{{ appStore.conventionName }}</div>
         </div>
       </div>
 
       <!-- Navigation -->
-      <nav class="flex-1 overflow-y-auto py-3 px-2 space-y-5">
-        <div v-for="group in navGroups" :key="group.label">
-          <div class="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-white/50">
-            {{ group.label }}
-          </div>
+      <nav class="al-nav">
+        <div v-for="group in navGroups" :key="group.label" class="al-nav-group">
+          <div class="al-nav-group-label">{{ group.label }}</div>
           <router-link
             v-for="item in group.items"
             :key="item.to"
@@ -39,24 +36,17 @@
             <a
               href="#"
               :class="[
-                'flex items-center px-3 py-2 rounded-lg text-[13px] transition-all duration-150 mb-0.5',
-                isActive
-                  ? 'bg-accent-400/20 text-white font-semibold border-l-2 border-accent-400'
-                  : 'text-white/80 hover:bg-white/10 hover:text-white',
+                'al-nav-link',
+                isActive ? 'al-nav-link--active' : '',
               ]"
               @click.prevent="handleNavClick(go)"
             >
-              <i
-                :class="[
-                  item.icon,
-                  'mr-2.5 text-sm w-4 text-center',
-                  isActive ? 'text-accent-300' : '',
-                ]"
-              />
-              {{ item.label }}
+              <i :class="[item.icon, 'al-nav-icon']" aria-hidden="true" />
+              <span class="al-nav-label">{{ item.label }}</span>
               <span
                 v-if="isActive"
-                class="ml-auto w-1.5 h-1.5 rounded-full bg-accent-400"
+                class="al-nav-indicator"
+                aria-hidden="true"
               />
             </a>
           </router-link>
@@ -64,21 +54,20 @@
       </nav>
 
       <!-- User footer -->
-      <div class="px-4 py-3 border-t border-white/15 text-xs">
-        <div class="flex items-center gap-2">
-          <div class="w-7 h-7 rounded-full bg-accent-400/25 flex items-center justify-center text-[11px] font-semibold shrink-0 text-accent-300">
-            {{ avatarLabel }}
-          </div>
-          <div class="min-w-0 flex-1">
-            <div class="truncate text-white/90 text-[11px]">{{ authStore.displayName || authStore.userEmail }}</div>
-            <div class="text-white/50 text-[10px] capitalize">{{ authStore.role ?? 'viewer' }}</div>
+      <div class="al-user">
+        <div class="al-user-inner">
+          <div class="al-avatar" aria-hidden="true">{{ avatarLabel }}</div>
+          <div class="al-user-info">
+            <div class="al-user-name">{{ authStore.displayName || authStore.userEmail }}</div>
+            <div class="al-user-role">{{ authStore.role ?? 'viewer' }}</div>
           </div>
           <button
-            class="text-white/50 hover:text-accent-300 transition-colors p-1"
+            class="al-signout"
             title="Sign out"
+            aria-label="Sign out"
             @click="handleSignOut"
           >
-            <i class="pi pi-sign-out text-xs" />
+            <i class="pi pi-sign-out" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -87,28 +76,28 @@
     <!-- Mobile overlay -->
     <div
       v-if="sidebarVisible"
-      class="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 lg:hidden"
+      class="al-overlay"
       @click="appStore.toggleSidebar()"
     />
 
     <!-- Main content -->
-    <div class="flex-1 flex flex-col min-h-screen transition-all duration-200 lg:ml-60">
+    <div class="al-main">
       <!-- Top bar -->
-      <header class="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-surface-200 px-4 py-2.5 flex items-center gap-3">
+      <header class="al-topbar">
         <Button
           icon="pi pi-bars"
           text
           rounded
           size="small"
-          class="lg:hidden"
+          class="al-menu-toggle"
           aria-label="Toggle menu"
           @click="appStore.toggleSidebar()"
         />
-        <div class="flex-1" />
+        <div class="al-topbar-spacer" />
       </header>
 
       <!-- Page content -->
-      <main class="flex-1 p-4 lg:p-6">
+      <main class="al-content">
         <slot />
       </main>
     </div>
@@ -202,3 +191,289 @@ async function handleSignOut(): Promise<void> {
   }
 }
 </script>
+
+<style scoped>
+/* Layout root */
+.al-root {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg-page);
+}
+
+/* ---- Sidebar ---- */
+.al-sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  z-index: var(--z-overlay);
+  background: linear-gradient(180deg, var(--primary-700), var(--primary-900));
+  color: var(--text-inverse);
+  transition: width var(--duration-normal) var(--ease-default);
+}
+
+.al-sidebar--open {
+  width: 15rem;
+}
+
+@media (min-width: 1024px) {
+  .al-sidebar {
+    width: 15rem;
+    translate: 0;
+  }
+}
+
+/* Brand */
+.al-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+}
+
+.al-brand-logo {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-lg);
+  object-fit: cover;
+  box-shadow: var(--shadow-md);
+  flex-shrink: 0;
+}
+
+.al-brand-name {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wide);
+  color: var(--surface-0);
+}
+
+.al-brand-convention {
+  font-family: var(--font-display);
+  font-size: 0.625rem;
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent-300);
+}
+
+/* Navigation */
+.al-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3) var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.al-nav-group-label {
+  padding: 0 var(--space-3);
+  margin-bottom: var(--space-1);
+  font-family: var(--font-display);
+  font-size: 0.625rem;
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.al-nav-link {
+  display: flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.75);
+  text-decoration: none;
+  transition: all var(--duration-fast) var(--ease-default);
+  margin-bottom: 2px;
+  border-left: 2px solid transparent;
+}
+
+.al-nav-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--surface-0);
+}
+
+.al-nav-link--active {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--surface-0);
+  font-weight: var(--weight-semibold);
+  border-left-color: var(--accent-400);
+}
+
+.al-nav-icon {
+  width: 1rem;
+  text-align: center;
+  margin-right: var(--space-3);
+  font-size: var(--text-sm);
+  flex-shrink: 0;
+}
+
+.al-nav-link--active .al-nav-icon {
+  color: var(--accent-300);
+}
+
+.al-nav-indicator {
+  margin-left: auto;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: var(--radius-full);
+  background: var(--accent-400);
+  flex-shrink: 0;
+}
+
+/* User footer */
+.al-user {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+}
+
+.al-user-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.al-avatar {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-full);
+  background: rgba(var(--accent-400), 0.2);
+  background-color: rgba(251, 191, 36, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 0.6875rem;
+  font-weight: var(--weight-semibold);
+  color: var(--accent-300);
+  flex-shrink: 0;
+}
+
+.al-user-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.al-user-name {
+  font-size: 0.6875rem;
+  color: rgba(255, 255, 255, 0.85);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.al-user-role {
+  font-size: 0.625rem;
+  color: rgba(255, 255, 255, 0.45);
+  text-transform: capitalize;
+}
+
+.al-signout {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-md);
+  transition: color var(--duration-normal) var(--ease-default);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.al-signout:hover {
+  color: var(--accent-300);
+}
+
+.al-signout:focus-visible {
+  outline: 2px solid var(--accent-400);
+  outline-offset: 2px;
+}
+
+.al-signout .pi {
+  font-size: var(--text-xs);
+}
+
+/* Mobile overlay */
+.al-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  z-index: var(--z-overlay);
+}
+
+@media (min-width: 1024px) {
+  .al-overlay {
+    display: none;
+  }
+}
+
+/* Main content area */
+.al-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  transition: margin-left var(--duration-normal) var(--ease-default);
+}
+
+@media (min-width: 1024px) {
+  .al-main {
+    margin-left: 15rem;
+  }
+}
+
+/* Top bar */
+.al-topbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: var(--border-thin) solid var(--border-color);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.al-menu-toggle {
+  display: flex;
+}
+
+@media (min-width: 1024px) {
+  .al-menu-toggle {
+    display: none;
+  }
+}
+
+.al-topbar-spacer {
+  flex: 1;
+}
+
+/* Content */
+.al-content {
+  flex: 1;
+  padding: var(--space-4);
+}
+
+@media (min-width: 1024px) {
+  .al-content {
+    padding: var(--space-6);
+  }
+}
+</style>

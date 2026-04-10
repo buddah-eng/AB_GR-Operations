@@ -1,25 +1,18 @@
 <template>
-  <div class="space-y-4">
+  <div class="view-page">
     <!-- Header row -->
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <i class="pi pi-share-alt text-xl text-primary-500" />
-        <h1 class="font-display text-2xl font-bold tracking-tight text-surface-900">
-          System Graph
-        </h1>
+    <div class="view-header">
+      <div class="view-header__left">
+        <i class="pi pi-share-alt view-header__icon" />
+        <h1 class="page-title">System Graph</h1>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="view-header__right">
         <!-- Zoom level selector -->
-        <div class="flex items-center border border-surface-200 rounded-md overflow-hidden">
+        <div class="view-segment-control">
           <button
             v-for="level in zoomLevels"
             :key="level.value"
-            :class="[
-              'px-3 py-1.5 text-xs font-medium transition-colors',
-              canvasStore.zoomLevel === level.value
-                ? 'bg-primary-500 text-white'
-                : 'bg-white text-surface-600 hover:bg-surface-50',
-            ]"
+            :class="['view-segment-btn', canvasStore.zoomLevel === level.value ? 'view-segment-btn--active' : '']"
             :title="level.label"
             @click="canvasStore.setZoomLevel(level.value)"
           >
@@ -47,10 +40,7 @@
 
         <!-- SSE connection indicator -->
         <span
-          :class="[
-            'inline-block w-2 h-2 rounded-full',
-            sseConnected ? 'bg-green-400' : 'bg-red-400',
-          ]"
+          :class="['view-sse-dot', sseConnected ? 'view-sse-dot--connected' : 'view-sse-dot--disconnected']"
           :title="sseConnected ? 'Live connection active' : 'Disconnected'"
         />
 
@@ -66,47 +56,36 @@
     </div>
 
     <!-- Error state -->
-    <div
-      v-if="canvasStore.error"
-      class="rounded-lg border-l-4 border-red-400 bg-red-50 px-5 py-4"
-    >
-      <div class="flex items-center gap-2">
-        <i class="pi pi-exclamation-circle text-red-500" />
-        <span class="text-sm font-medium text-red-700">
-          {{ canvasStore.error }}
-        </span>
+    <div v-if="canvasStore.error" class="view-error">
+      <div class="view-error__content">
+        <i class="pi pi-exclamation-circle view-error__icon" />
+        <span class="view-error__text">{{ canvasStore.error }}</span>
       </div>
-      <button
-        class="mt-2 text-xs text-red-600 underline hover:text-red-800"
-        @click="canvasStore.loadGraph()"
-      >
+      <button class="view-error__retry" @click="canvasStore.loadGraph()">
         Try again
       </button>
     </div>
 
     <!-- Loading state -->
-    <div
-      v-if="canvasStore.loading && !canvasStore.hasData"
-      class="flex flex-col items-center justify-center py-20"
-    >
+    <div v-if="canvasStore.loading && !canvasStore.hasData" class="view-loading">
       <ProgressSpinner
         style="width: 40px; height: 40px"
         strokeWidth="4"
         aria-label="Loading graph data"
       />
-      <span class="mt-3 text-sm text-surface-500">
-        Loading system graph...
-      </span>
+      <span class="view-loading__text">Loading system graph...</span>
     </div>
 
     <!-- Empty state -->
     <div
       v-else-if="!canvasStore.hasData && !canvasStore.loading && !canvasStore.error"
-      class="flex flex-col items-center justify-center py-20"
+      class="empty-state"
     >
-      <i class="pi pi-share-alt text-4xl text-surface-300 mb-3" />
-      <h2 class="text-lg font-semibold text-surface-600">No Graph Data</h2>
-      <p class="text-sm text-surface-400 mt-1 max-w-md text-center">
+      <div class="icon">
+        <i class="pi pi-share-alt" />
+      </div>
+      <h2>No Graph Data</h2>
+      <p>
         The system graph has not been generated yet. Once ontology data is
         available, the visualization will appear here automatically.
       </p>
@@ -115,7 +94,7 @@
         icon="pi pi-refresh"
         severity="secondary"
         size="small"
-        class="mt-4"
+        style="margin-top: var(--space-4)"
         @click="canvasStore.loadGraph()"
       />
     </div>
@@ -134,52 +113,44 @@
       v-model:visible="propertyPanelVisible"
       position="right"
       :header="selectedNodeLabel"
-      class="w-80"
+      class="view-sidebar-panel"
     >
-      <div v-if="canvasStore.selectedNode" class="space-y-4">
+      <div v-if="canvasStore.selectedNode" class="view-detail-list">
         <!-- Node type -->
-        <div>
-          <div class="text-xs font-medium uppercase tracking-widest text-surface-500 mb-1">
-            Type
-          </div>
+        <div class="view-detail-item">
+          <div class="view-detail-item__label">Type</div>
           <Tag :value="canvasStore.selectedNode.type" rounded />
         </div>
 
         <!-- Source -->
-        <div>
-          <div class="text-xs font-medium uppercase tracking-widest text-surface-500 mb-1">
-            Source
-          </div>
-          <div class="text-sm text-surface-700">
+        <div class="view-detail-item">
+          <div class="view-detail-item__label">Source</div>
+          <div class="view-detail-item__value">
             {{ canvasStore.selectedNode.sourceTable }} / {{ canvasStore.selectedNode.sourceId }}
           </div>
         </div>
 
         <!-- Region -->
-        <div v-if="canvasStore.selectedNode.region">
-          <div class="text-xs font-medium uppercase tracking-widest text-surface-500 mb-1">
-            Department
-          </div>
-          <div class="text-sm text-surface-700">
+        <div v-if="canvasStore.selectedNode.region" class="view-detail-item">
+          <div class="view-detail-item__label">Department</div>
+          <div class="view-detail-item__value">
             {{ canvasStore.selectedNode.region }}
           </div>
         </div>
 
         <!-- Properties -->
-        <div v-if="Object.keys(canvasStore.selectedNode.properties).length > 0">
-          <div class="text-xs font-medium uppercase tracking-widest text-surface-500 mb-2">
-            Properties
-          </div>
-          <div class="space-y-2">
+        <div v-if="Object.keys(canvasStore.selectedNode.properties).length > 0" class="view-detail-item">
+          <div class="view-detail-item__label">Properties</div>
+          <div class="view-properties-grid">
             <div
               v-for="(value, key) in canvasStore.selectedNode.properties"
               :key="String(key)"
-              class="flex justify-between items-start gap-2 py-1.5 border-b border-surface-50 last:border-0"
+              class="view-property-row"
             >
-              <span class="text-xs font-medium text-surface-500 shrink-0">
+              <span class="view-property-row__key">
                 {{ formatPropertyKey(String(key)) }}
               </span>
-              <span class="text-xs text-surface-800 text-right break-words">
+              <span class="view-property-row__value">
                 {{ formatPropertyValue(value) }}
               </span>
             </div>
@@ -399,3 +370,208 @@ onUnmounted(() => {
   canvasStore.reset()
 })
 </script>
+
+<style scoped>
+.view-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+}
+
+.view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.view-header__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.view-header__icon {
+  font-size: var(--text-xl);
+  color: var(--primary-500);
+}
+
+.view-header__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Segment control */
+.view-segment-control {
+  display: flex;
+  align-items: center;
+  border: var(--border-thin) solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.view-segment-btn {
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  border: none;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-default);
+  letter-spacing: var(--tracking-wide);
+}
+
+.view-segment-btn:hover {
+  background: var(--surface-50);
+}
+
+.view-segment-btn--active {
+  background: var(--primary-600);
+  color: var(--text-inverse);
+}
+
+.view-segment-btn:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: -2px;
+}
+
+/* SSE indicator */
+.view-sse-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.view-sse-dot--connected {
+  background: var(--color-success);
+  box-shadow: 0 0 4px rgba(34, 197, 94, 0.4);
+}
+
+.view-sse-dot--disconnected {
+  background: var(--color-error);
+  box-shadow: 0 0 4px rgba(239, 68, 68, 0.4);
+}
+
+/* Error */
+.view-error {
+  border-radius: var(--radius-lg);
+  border-left: 4px solid var(--color-error);
+  background: #fef2f2;
+  padding: var(--space-4) var(--space-5);
+}
+
+.view-error__content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.view-error__icon {
+  color: var(--color-error);
+}
+
+.view-error__text {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: #b91c1c;
+}
+
+.view-error__retry {
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  color: #dc2626;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-default);
+}
+
+.view-error__retry:hover {
+  color: #991b1b;
+}
+
+/* Loading */
+.view-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-20) 0;
+}
+
+.view-loading__text {
+  margin-top: var(--space-3);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+/* Sidebar panel */
+.view-sidebar-panel {
+  width: 20rem;
+}
+
+.view-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.view-detail-item__label {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--text-muted);
+  margin-bottom: var(--space-1);
+}
+
+.view-detail-item__value {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.view-properties-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.view-property-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: 6px 0;
+  border-bottom: var(--border-thin) solid var(--surface-100);
+}
+
+.view-property-row:last-child {
+  border-bottom: none;
+}
+
+.view-property-row__key {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.view-property-row__value {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--text-primary);
+  text-align: right;
+  word-break: break-word;
+}
+</style>
