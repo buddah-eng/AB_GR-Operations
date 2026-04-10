@@ -22,6 +22,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useDemoState, type DemoTimeState } from './demo-state'
 
 interface DemoTab {
@@ -37,6 +38,7 @@ const tabs: readonly DemoTab[] = [
   { value: 'how-built', label: 'How It\'s Built', icon: 'pi pi-cog' },
 ]
 
+const router = useRouter()
 const currentTab = ref<DemoTimeState | 'how-built'>('pre-event')
 const demoState = useDemoState()
 
@@ -44,14 +46,15 @@ function selectTab(tab: DemoTimeState | 'how-built'): void {
   currentTab.value = tab
 
   if (tab === 'how-built') {
-    window.open('https://github.com/curiousmarkingsco/AB_GR-Operations', '_blank')
+    router.push({ name: 'canvas' })
     return
   }
 
   demoState.setTimeState(tab)
 
-  // Force-refresh all store data by reloading the page state
-  window.dispatchEvent(new CustomEvent('demo-time-change', { detail: tab }))
+  // Force-refresh by navigating to dashboard with a query param change
+  // This triggers route change → component remount → data reload
+  router.push({ name: 'dashboard', query: { t: tab } })
 }
 </script>
 

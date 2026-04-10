@@ -12,6 +12,7 @@
     "build:demo:check": "vue-tsc --noEmit && vite build --mode demo --base=/AB_GR-Operations/"
   },
   "dependencies": {
+    "@dagrejs/dagre": "^3.0.0",
     "@formkit/themes": "^1.6.0",
     "@formkit/vue": "^1.6.0",
     "@primevue/themes": "^4.3.0",
