@@ -3,7 +3,7 @@
     <!-- Header row -->
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <img src="/ab-logo.jpg" alt="AB" class="w-8 h-8 rounded-lg object-cover shadow-sm" />
+        <img :src="appStore.conventionLogoUrl" :alt="appStore.conventionName" class="w-8 h-8 rounded-lg object-cover shadow-sm" />
         <h1 class="font-display text-2xl font-bold tracking-tight text-surface-900">
           Dashboard
         </h1>
@@ -53,7 +53,7 @@
     <!-- ============================================================= -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <!-- Total Guests -->
-      <Card class="border-l-4 border-l-ab-500">
+      <Card class="border-l-4 border-l-primary-500">
         <template #content>
           <div class="text-xs font-medium uppercase tracking-widest text-surface-500">
             Total Guests
@@ -75,7 +75,7 @@
       </Card>
 
       <!-- Liaison Coverage -->
-      <Card class="border-l-4 border-l-ab-600">
+      <Card class="border-l-4 border-l-primary-600">
         <template #content>
           <div class="text-xs font-medium uppercase tracking-widest text-surface-500">
             Liaison Coverage
@@ -330,6 +330,7 @@ import Button from 'primevue/button'
 import ProgressBar from 'primevue/progressbar'
 import Tag from 'primevue/tag'
 import { api } from '@/api/client'
+import { useAppStore } from '@/stores/app'
 import type { DashboardData } from '@/types'
 
 /* ---- Types ---- */
@@ -368,6 +369,7 @@ interface LegendItem {
 
 const router = useRouter()
 const toast = useToast()
+const appStore = useAppStore()
 const data = ref<DashboardData | null>(null)
 const loading = ref(false)
 const now = ref(new Date())

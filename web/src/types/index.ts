@@ -49,9 +49,12 @@ export interface AuthUser {
 export interface OntologyProperty {
   key: string
   label: string
-  type: 'string' | 'number' | 'boolean' | 'date' | 'enum' | 'text'
+  type: string
   required: boolean
-  enumValues?: string[]
+  options?: Array<{ value: string; label: string; color?: string }>
+  placeholder?: string
+  hidden?: boolean
+  readOnly?: boolean
   description?: string
 }
 
@@ -59,7 +62,7 @@ export interface OntologyRelationship {
   key: string
   label: string
   targetConcept: string
-  cardinality: 'one-to-one' | 'one-to-many' | 'many-to-many'
+  cardinality: 'has-one' | 'has-many' | 'many-to-many'
 }
 
 export interface OntologyConcept {
@@ -237,3 +240,26 @@ export interface NavItem {
   to: string
   badge?: string | number
 }
+
+// ---- Canvas (re-exported from canvas.ts) ----
+
+export type {
+  VisualizationNode,
+  VisualizationEdge,
+  VisualizationRegion,
+  VisualizationGraph,
+  VisualizationGraphMetadata,
+  VisualizationNodeType,
+  VisualizationEdgeType,
+  CanvasMode,
+  CanvasLayoutAlgorithm,
+  ZoomLevel,
+  OverlayType,
+  CanvasState,
+  ConceptNodeData,
+  WorkflowNodeData,
+  IntegrationNodeData,
+  DepartmentRegionData,
+  ContextMenuAction,
+  ContextMenuState,
+} from './canvas'

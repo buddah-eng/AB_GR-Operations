@@ -1,0 +1,238 @@
+{
+  "version": "1.4.0",
+  "concepts": [
+    {
+      "key": "guest",
+      "label": "Guest",
+      "pluralLabel": "Guests",
+      "icon": "pi pi-users",
+      "properties": [
+        { "key": "name", "label": "Name", "type": "text", "required": true, "placeholder": "Full name" },
+        { "key": "type", "label": "Type", "type": "select", "required": true, "options": [
+          { "value": "JP", "label": "Japanese", "color": "#ef4444" },
+          { "value": "NA", "label": "North American", "color": "#3b82f6" },
+          { "value": "Industry", "label": "Industry", "color": "#8b5cf6" }
+        ]},
+        { "key": "department", "label": "Department", "type": "select", "required": true, "options": [
+          { "value": "Anime", "label": "Anime", "color": "#ef4444" },
+          { "value": "Music", "label": "Music", "color": "#8b5cf6" },
+          { "value": "Cosplay", "label": "Cosplay", "color": "#ec4899" },
+          { "value": "Panels", "label": "Panels", "color": "#f59e0b" },
+          { "value": "Gaming", "label": "Gaming", "color": "#22c55e" },
+          { "value": "Artists", "label": "Artists", "color": "#06b6d4" },
+          { "value": "Industry", "label": "Industry", "color": "#6366f1" }
+        ]},
+        { "key": "status", "label": "Status", "type": "select", "required": true, "options": [
+          { "value": "draft", "label": "Draft", "color": "#94a3b8" },
+          { "value": "invited", "label": "Invited", "color": "#f59e0b" },
+          { "value": "confirmed", "label": "Confirmed", "color": "#3b82f6" },
+          { "value": "travel_arranged", "label": "Travel Arranged", "color": "#8b5cf6" },
+          { "value": "arrived", "label": "Arrived", "color": "#22c55e" },
+          { "value": "attending", "label": "Attending", "color": "#10b981" },
+          { "value": "departed", "label": "Departed", "color": "#64748b" },
+          { "value": "archived", "label": "Archived", "color": "#475569" }
+        ]},
+        { "key": "company", "label": "Company", "type": "text", "required": false, "placeholder": "Company or studio" },
+        { "key": "interpreterRequired", "label": "Interpreter Required", "type": "boolean", "required": false },
+        { "key": "bio", "label": "Bio", "type": "textarea", "required": false, "placeholder": "Guest biography" },
+        { "key": "dietary", "label": "Dietary Requirements", "type": "text", "required": false },
+        { "key": "travel_prefs", "label": "Travel Preferences", "type": "text", "required": false },
+        { "key": "pronouns", "label": "Pronouns", "type": "text", "required": false }
+      ],
+      "relationships": [
+        { "key": "assigned_staff", "label": "Assigned Staff", "targetConcept": "staff", "cardinality": "has-many" },
+        { "key": "schedule_events", "label": "Schedule Events", "targetConcept": "schedule", "cardinality": "has-many" },
+        { "key": "prep_items", "label": "Prep Items", "targetConcept": "prep", "cardinality": "has-many" },
+        { "key": "transport_bookings", "label": "Transport Bookings", "targetConcept": "transport", "cardinality": "has-many" },
+        { "key": "contracts", "label": "Contracts", "targetConcept": "contract", "cardinality": "has-many" }
+      ]
+    },
+    {
+      "key": "staff",
+      "label": "Staff",
+      "pluralLabel": "Staff",
+      "icon": "pi pi-id-card",
+      "properties": [
+        { "key": "name", "label": "Name", "type": "text", "required": true },
+        { "key": "email", "label": "Email", "type": "text", "required": true },
+        { "key": "role", "label": "Role", "type": "select", "required": true, "options": [
+          { "value": "Department Head", "label": "Department Head", "color": "#dc2626" },
+          { "value": "Main Liaison", "label": "Main Liaison", "color": "#2563eb" },
+          { "value": "Backup Liaison", "label": "Backup Liaison", "color": "#7c3aed" },
+          { "value": "Interpreter", "label": "Interpreter", "color": "#059669" },
+          { "value": "Security Escort", "label": "Security Escort", "color": "#d97706" },
+          { "value": "Volunteer", "label": "Volunteer", "color": "#64748b" }
+        ]},
+        { "key": "department", "label": "Department", "type": "select", "required": true, "options": [
+          { "value": "Anime", "label": "Anime" },
+          { "value": "Music", "label": "Music" },
+          { "value": "Cosplay", "label": "Cosplay" },
+          { "value": "Panels", "label": "Panels" },
+          { "value": "Gaming", "label": "Gaming" },
+          { "value": "Artists", "label": "Artists" },
+          { "value": "Industry", "label": "Industry" }
+        ]},
+        { "key": "phone", "label": "Phone", "type": "text", "required": false },
+        { "key": "availability", "label": "Availability", "type": "select", "required": false, "options": [
+          { "value": "full", "label": "Full" },
+          { "value": "partial", "label": "Partial" },
+          { "value": "unavailable", "label": "Unavailable" }
+        ]}
+      ],
+      "relationships": [
+        { "key": "assigned_guests", "label": "Assigned Guests", "targetConcept": "guest", "cardinality": "has-many" },
+        { "key": "reports_to", "label": "Reports To", "targetConcept": "staff", "cardinality": "has-one" }
+      ]
+    },
+    {
+      "key": "schedule",
+      "label": "Event",
+      "pluralLabel": "Schedule",
+      "icon": "pi pi-calendar",
+      "properties": [
+        { "key": "activity", "label": "Activity", "type": "text", "required": true },
+        { "key": "eventType", "label": "Event Type", "type": "select", "required": true, "options": [
+          { "value": "Panel", "label": "Panel" },
+          { "value": "Autograph Session", "label": "Autograph Session" },
+          { "value": "Photo Op", "label": "Photo Op" },
+          { "value": "Meal", "label": "Meal" },
+          { "value": "Meet & Greet", "label": "Meet & Greet" },
+          { "value": "Interview", "label": "Interview" },
+          { "value": "Rehearsal", "label": "Rehearsal" },
+          { "value": "Photoshoot", "label": "Photoshoot" },
+          { "value": "Other", "label": "Other" }
+        ]},
+        { "key": "date", "label": "Date", "type": "date", "required": true },
+        { "key": "startTime", "label": "Start Time", "type": "time", "required": true },
+        { "key": "endTime", "label": "End Time", "type": "time", "required": true },
+        { "key": "venue", "label": "Venue", "type": "text", "required": true },
+        { "key": "status", "label": "Status", "type": "select", "required": true, "options": [
+          { "value": "tentative", "label": "Tentative" },
+          { "value": "confirmed", "label": "Confirmed" },
+          { "value": "cancelled", "label": "Cancelled" }
+        ]}
+      ],
+      "relationships": [
+        { "key": "guest", "label": "Guest", "targetConcept": "guest", "cardinality": "has-one" },
+        { "key": "venue_ref", "label": "Venue", "targetConcept": "venue", "cardinality": "has-one" }
+      ]
+    },
+    {
+      "key": "prep",
+      "label": "Prep Item",
+      "pluralLabel": "Prep Tracker",
+      "icon": "pi pi-check-square",
+      "properties": [
+        { "key": "label", "label": "Task", "type": "text", "required": true },
+        { "key": "dueDate", "label": "Due Date", "type": "date", "required": true },
+        { "key": "status", "label": "Status", "type": "select", "required": true, "options": [
+          { "value": "not_started", "label": "Not Started", "color": "#94a3b8" },
+          { "value": "in_progress", "label": "In Progress", "color": "#f59e0b" },
+          { "value": "complete", "label": "Complete", "color": "#22c55e" },
+          { "value": "blocked", "label": "Blocked", "color": "#ef4444" }
+        ]},
+        { "key": "owner", "label": "Owner", "type": "text", "required": true }
+      ],
+      "relationships": [
+        { "key": "guest", "label": "Guest", "targetConcept": "guest", "cardinality": "has-one" }
+      ]
+    },
+    {
+      "key": "transport",
+      "label": "Transport",
+      "pluralLabel": "Transport",
+      "icon": "pi pi-car",
+      "properties": [
+        { "key": "type", "label": "Type", "type": "select", "required": true, "options": [
+          { "value": "airport_pickup", "label": "Airport Pickup" },
+          { "value": "airport_dropoff", "label": "Airport Dropoff" },
+          { "value": "venue_shuttle", "label": "Venue Shuttle" }
+        ]},
+        { "key": "date", "label": "Date", "type": "date", "required": true },
+        { "key": "time", "label": "Time", "type": "time", "required": true },
+        { "key": "origin", "label": "Origin", "type": "text", "required": true },
+        { "key": "destination", "label": "Destination", "type": "text", "required": true },
+        { "key": "vehicle", "label": "Vehicle", "type": "text", "required": false },
+        { "key": "status", "label": "Status", "type": "select", "required": true, "options": [
+          { "value": "pending", "label": "Pending" },
+          { "value": "confirmed", "label": "Confirmed" },
+          { "value": "completed", "label": "Completed" },
+          { "value": "cancelled", "label": "Cancelled" }
+        ]}
+      ],
+      "relationships": [
+        { "key": "guest", "label": "Guest", "targetConcept": "guest", "cardinality": "has-one" }
+      ]
+    },
+    {
+      "key": "contract",
+      "label": "Contract",
+      "pluralLabel": "Contracts",
+      "icon": "pi pi-file",
+      "properties": [
+        { "key": "type", "label": "Type", "type": "select", "required": true, "options": [
+          { "value": "appearance_agreement", "label": "Appearance Agreement" },
+          { "value": "performance_agreement", "label": "Performance Agreement" },
+          { "value": "artist_alley_agreement", "label": "Artist Alley Agreement" }
+        ]},
+        { "key": "status", "label": "Status", "type": "select", "required": true, "options": [
+          { "value": "draft", "label": "Draft", "color": "#94a3b8" },
+          { "value": "sent", "label": "Sent", "color": "#f59e0b" },
+          { "value": "signed", "label": "Signed", "color": "#22c55e" },
+          { "value": "expired", "label": "Expired", "color": "#ef4444" }
+        ]},
+        { "key": "sentDate", "label": "Sent Date", "type": "date", "required": false },
+        { "key": "signedDate", "label": "Signed Date", "type": "date", "required": false }
+      ],
+      "relationships": [
+        { "key": "guest", "label": "Guest", "targetConcept": "guest", "cardinality": "has-one" }
+      ]
+    },
+    {
+      "key": "venue",
+      "label": "Venue",
+      "pluralLabel": "Venues",
+      "icon": "pi pi-building",
+      "properties": [
+        { "key": "name", "label": "Name", "type": "text", "required": true },
+        { "key": "capacity", "label": "Capacity", "type": "number", "required": true },
+        { "key": "type", "label": "Type", "type": "select", "required": true, "options": [
+          { "value": "main_hall", "label": "Main Hall" },
+          { "value": "panel_room", "label": "Panel Room" },
+          { "value": "autograph_area", "label": "Autograph Area" },
+          { "value": "backstage", "label": "Backstage" },
+          { "value": "press", "label": "Press" },
+          { "value": "dining", "label": "Dining" }
+        ]},
+        { "key": "building", "label": "Building", "type": "text", "required": true },
+        { "key": "accessible", "label": "Accessible", "type": "boolean", "required": false }
+      ],
+      "relationships": [
+        { "key": "events", "label": "Events", "targetConcept": "schedule", "cardinality": "has-many" }
+      ]
+    },
+    {
+      "key": "pairing",
+      "label": "Pairing",
+      "pluralLabel": "Pairings",
+      "icon": "pi pi-link",
+      "properties": [
+        { "key": "role", "label": "Role", "type": "select", "required": true, "options": [
+          { "value": "Main Liaison", "label": "Main Liaison" },
+          { "value": "Backup Liaison", "label": "Backup Liaison" },
+          { "value": "Interpreter", "label": "Interpreter" },
+          { "value": "Security Escort", "label": "Security Escort" }
+        ]},
+        { "key": "status", "label": "Status", "type": "select", "required": true, "options": [
+          { "value": "active", "label": "Active" },
+          { "value": "pending", "label": "Pending" },
+          { "value": "inactive", "label": "Inactive" }
+        ]}
+      ],
+      "relationships": [
+        { "key": "guest", "label": "Guest", "targetConcept": "guest", "cardinality": "has-one" },
+        { "key": "staff", "label": "Staff", "targetConcept": "staff", "cardinality": "has-one" }
+      ]
+    }
+  ]
+}

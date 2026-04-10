@@ -1,0 +1,131 @@
+[
+  {
+    "contractId": "c-001",
+    "guestId": "g-001-tanaka",
+    "guestName": "Tanaka Ichiro",
+    "type": "appearance_agreement",
+    "status": "signed",
+    "sentDate": "2026-01-15",
+    "signedDate": "2026-01-28",
+    "expiryDate": "2026-04-30",
+    "terms": {
+      "compensation": "Appearance fee + travel + accommodation",
+      "panels": 3,
+      "autographSessions": 2,
+      "photoOps": 1,
+      "exclusivity": "No competing conventions within 30 days"
+    },
+    "notes": "Fully executed. Agency handled negotiations."
+  },
+  {
+    "contractId": "c-002",
+    "guestId": "g-002-suzuki",
+    "guestName": "Suzuki Yui",
+    "type": "appearance_agreement",
+    "status": "signed",
+    "sentDate": "2026-01-20",
+    "signedDate": "2026-02-10",
+    "expiryDate": "2026-04-30",
+    "terms": {
+      "compensation": "Appearance fee + travel + accommodation",
+      "panels": 2,
+      "autographSessions": 1,
+      "photoOps": 1,
+      "exclusivity": "No competing conventions within 14 days"
+    },
+    "notes": "Publisher (Shueisha) co-signed. Art supplies provided by convention."
+  },
+  {
+    "contractId": "c-003",
+    "guestId": "g-003-yamamoto",
+    "guestName": "Yamamoto Ken",
+    "type": "appearance_agreement",
+    "status": "signed",
+    "sentDate": "2025-12-01",
+    "signedDate": "2025-12-20",
+    "expiryDate": "2026-04-30",
+    "terms": {
+      "compensation": "Appearance fee + first class travel + suite",
+      "panels": 1,
+      "autographSessions": 0,
+      "photoOps": 0,
+      "exclusivity": "East Coast exclusivity for 60 days"
+    },
+    "notes": "Toei Animation legal team reviewed. High-profile guest, early contract."
+  },
+  {
+    "contractId": "c-004",
+    "guestId": "g-006-mitchell",
+    "guestName": "Sarah Mitchell",
+    "type": "appearance_agreement",
+    "status": "sent",
+    "sentDate": "2026-03-01",
+    "signedDate": null,
+    "expiryDate": "2026-04-30",
+    "terms": {
+      "compensation": "Travel + accommodation",
+      "panels": 2,
+      "autographSessions": 0,
+      "photoOps": 0,
+      "exclusivity": "None"
+    },
+    "notes": "Awaiting response. Follow up sent March 15."
+  },
+  {
+    "contractId": "c-005",
+    "guestId": "g-008-garcia",
+    "guestName": "Maria Garcia",
+    "type": "artist_alley_agreement",
+    "status": "draft",
+    "sentDate": null,
+    "signedDate": null,
+    "expiryDate": "2026-04-30",
+    "terms": {
+      "compensation": "Table provided, no appearance fee",
+      "panels": 0,
+      "autographSessions": 0,
+      "photoOps": 0,
+      "exclusivity": "None",
+      "tableFee": "Waived (guest artist)"
+    },
+    "notes": "Draft pending department head approval before sending."
+  },
+  {
+    "contractId": "c-007",
+    "guestId": "g-011-kim",
+    "guestName": "David Kim",
+    "type": "industry_agreement",
+    "status": "sent",
+    "sentDate": "2026-03-20",
+    "signedDate": null,
+    "expiryDate": "2026-04-30",
+    "terms": {
+      "compensation": "Travel + accommodation",
+      "panels": 1,
+      "autographSessions": 0,
+      "photoOps": 0,
+      "exclusivity": "None"
+    },
+    "notes": "Aniplex of America legal reviewing. Sent to David Kim for signature."
+  },
+  {
+    "contractId": "c-006",
+    "guestId": "g-004-nakamura",
+    "guestName": "Nakamura Rin",
+    "type": "performance_agreement",
+    "status": "signed",
+    "sentDate": "2025-11-15",
+    "signedDate": "2025-12-05",
+    "expiryDate": "2026-04-30",
+    "terms": {
+      "compensation": "Performance fee + business class travel + accommodation",
+      "panels": 0,
+      "autographSessions": 0,
+      "photoOps": 0,
+      "exclusivity": "North American exclusivity for 90 days",
+      "technicalRider": "Included as Appendix A",
+      "merchandiseSplit": "70/30 artist/convention"
+    },
+    "notes": "Sony Music Japan legal approved. Technical rider attached."
+  }
+]

@@ -1,9 +1,12 @@
 import {
   createRouter,
   createWebHistory,
+  createWebHashHistory,
   type RouteRecordRaw,
 } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+
+const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 
 /* ------------------------------------------------------------------ */
 /*  Route definitions                                                  */
@@ -103,6 +106,40 @@ const routes: RouteRecordRaw[] = [
     props: { domain: 'pairings' },
   },
   {
+    path: '/canvas',
+    name: 'canvas',
+    component: () => import('@/views/SystemGraphView.vue'),
+  },
+  {
+    path: '/builder/form/:conceptKey',
+    name: 'form-builder',
+    component: () => import('@/components/builders/FormBuilder.vue'),
+    props: true,
+  },
+  {
+    path: '/builder/view/:conceptKey',
+    name: 'view-builder',
+    component: () => import('@/components/builders/ViewBuilder.vue'),
+    props: true,
+  },
+  {
+    path: '/builder/workflow/:id?',
+    name: 'workflow-builder',
+    component: () => import('@/components/builders/WorkflowBuilder.vue'),
+    props: true,
+  },
+  {
+    path: '/canvas/workflow/:id',
+    name: 'workflow-canvas',
+    component: () => import('@/views/WorkflowCanvasView.vue'),
+    props: true,
+  },
+  {
+    path: '/canvas/data-flows',
+    name: 'data-flow-canvas',
+    component: () => import('@/views/DataFlowCanvasView.vue'),
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: '/dashboard',
   },
@@ -113,7 +150,9 @@ const routes: RouteRecordRaw[] = [
 /* ------------------------------------------------------------------ */
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: isDemoMode
+    ? createWebHashHistory(import.meta.env.BASE_URL)
+    : createWebHistory(),
   routes,
 })
 

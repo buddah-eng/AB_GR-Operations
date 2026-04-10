@@ -1,15 +1,10 @@
 /**
  * Domain Ontology Type System
  *
- * These types define the structure of the ontology that lives in Notion.
+ * These types define the structure of the ontology stored in Postgres.
  * The platform reads these at runtime to understand its own domain model.
- * Adding a new domain = adding rows in Notion, not writing code.
+ * Adding a new domain = adding rows in Postgres, not writing code.
  */
-
-// --- Notion record identifiers ---
-
-export type NotionPageId = string
-export type NotionDatabaseId = string
 
 // --- Property types supported by the ontology ---
 
@@ -39,43 +34,43 @@ export type TriggerType = 'on_create' | 'on_update' | 'on_delete' | 'on_field_ch
 // --- Ontology Concept ---
 
 export interface Concept {
-  readonly id: NotionPageId
-  readonly key: string             // e.g. "guest", "staff", "schedule"
-  readonly name: string            // e.g. "Guest", "Staff", "Schedule Event"
-  readonly pluralName: string      // e.g. "Guests", "Staff", "Schedule Events"
-  readonly extends?: string        // parent concept key (inheritance)
-  readonly notionDatabaseId: NotionDatabaseId
-  readonly icon?: string           // PrimeIcons name
+  readonly id: string
+  readonly key: string
+  readonly name: string
+  readonly pluralName: string
+  readonly extends?: string
+  readonly icon?: string
   readonly description?: string
-  readonly isRegistry?: boolean    // YoY persistent data
-  readonly isConfig?: boolean      // Platform config (not domain data)
+  readonly isRegistry?: boolean
+  readonly isConfig?: boolean
 }
 
 // --- Ontology Property (field definition per concept) ---
 
 export interface Property {
-  readonly id: NotionPageId
-  readonly conceptKey: string      // which concept this belongs to
-  readonly key: string             // field key, e.g. "name", "status"
-  readonly label: string           // display label
+  readonly id: string
+  readonly conceptKey: string
+  readonly key: string
+  readonly label: string
   readonly type: PropertyType
   readonly required: boolean
   readonly defaultValue?: unknown
   readonly placeholder?: string
   readonly description?: string
-  readonly notionPropertyName: string  // actual Notion property name
-  // Select/multi-select options
+  readonly postgresColumn?: string
   readonly options?: ReadonlyArray<SelectOption>
-  // Validation
+  readonly validationRules?: ValidationRules
+  readonly sortOrder: number
+  readonly hidden?: boolean
+  readonly readOnly?: boolean
+}
+
+export interface ValidationRules {
   readonly minLength?: number
   readonly maxLength?: number
   readonly min?: number
   readonly max?: number
-  readonly pattern?: string        // regex pattern
-  // Display
-  readonly sortOrder: number       // default display order
-  readonly hidden?: boolean        // hidden from default views
-  readonly readOnly?: boolean      // computed/formula fields
+  readonly pattern?: string
 }
 
 export interface SelectOption {
@@ -87,37 +82,36 @@ export interface SelectOption {
 // --- Ontology Relationship ---
 
 export interface Relationship {
-  readonly id: NotionPageId
+  readonly id: string
   readonly sourceConceptKey: string
   readonly targetConceptKey: string
-  readonly key: string             // e.g. "pairings", "travel"
-  readonly label: string           // e.g. "Staff Pairings", "Travel Records"
+  readonly key: string
+  readonly label: string
   readonly cardinality: Cardinality
-  readonly notionRelationName: string  // Notion relation property name
-  readonly inverseKey?: string     // key on the target side
+  readonly inverseKey?: string
   readonly description?: string
 }
 
 // --- Ontology Domain Event Definition ---
 
 export interface DomainEventDef {
-  readonly id: NotionPageId
+  readonly id: string
   readonly conceptKey: string
-  readonly eventKey: string        // e.g. "created", "updated", "deleted"
-  readonly fullEventName: string   // e.g. "guest.created"
+  readonly eventKey: string
+  readonly fullEventName: string
   readonly triggerType: TriggerType
   readonly description?: string
-  readonly changedFields?: ReadonlyArray<string>  // for on_field_change
-  readonly schedule?: string       // cron expression for scheduled
+  readonly changedFields?: ReadonlyArray<string>
+  readonly schedule?: string
 }
 
 // --- Ontology Constraint (inheritance / conditional defaults) ---
 
 export interface Constraint {
-  readonly id: NotionPageId
-  readonly conceptKey: string      // which concept this constrains
-  readonly name: string            // e.g. "JP Guest"
-  readonly extends?: string        // parent concept key
+  readonly id: string
+  readonly conceptKey: string
+  readonly name: string
+  readonly extends?: string
   readonly condition: ConditionExpression
   readonly defaults?: Readonly<Record<string, unknown>>
   readonly requiredFields?: ReadonlyArray<string>
@@ -158,22 +152,22 @@ export interface NotCondition {
 
 export interface OntologyCache {
   readonly concepts: ReadonlyMap<string, Concept>
-  readonly properties: ReadonlyMap<string, ReadonlyArray<Property>>  // conceptKey → properties
-  readonly relationships: ReadonlyMap<string, ReadonlyArray<Relationship>>  // conceptKey → relationships
-  readonly events: ReadonlyMap<string, ReadonlyArray<DomainEventDef>>  // conceptKey → events
-  readonly constraints: ReadonlyMap<string, ReadonlyArray<Constraint>>  // conceptKey → constraints
-  readonly loadedAt: number  // timestamp
+  readonly properties: ReadonlyMap<string, ReadonlyArray<Property>>
+  readonly relationships: ReadonlyMap<string, ReadonlyArray<Relationship>>
+  readonly events: ReadonlyMap<string, ReadonlyArray<DomainEventDef>>
+  readonly constraints: ReadonlyMap<string, ReadonlyArray<Constraint>>
+  readonly loadedAt: number
 }
 
-// --- Config types (Form, View, Page, Workflow configs from Notion) ---
+// --- Config types (Form, View, Page, Workflow configs from Postgres) ---
 
 export interface FormConfig {
-  readonly id: NotionPageId
+  readonly id: string
   readonly conceptKey: string
   readonly name: string
   readonly fields: ReadonlyArray<FormFieldConfig>
   readonly layout?: 'single' | 'two-column' | 'wizard'
-  readonly steps?: ReadonlyArray<FormStep>  // for wizard layout
+  readonly steps?: ReadonlyArray<FormStep>
 }
 
 export interface FormFieldConfig {
@@ -181,7 +175,7 @@ export interface FormFieldConfig {
   readonly groupName?: string
   readonly colSpan?: 1 | 2
   readonly showIf?: ConditionExpression
-  readonly autocompleteSource?: string  // concept key for autocomplete
+  readonly autocompleteSource?: string
   readonly overrideLabel?: string
   readonly overridePlaceholder?: string
 }
@@ -189,19 +183,19 @@ export interface FormFieldConfig {
 export interface FormStep {
   readonly name: string
   readonly label: string
-  readonly fields: ReadonlyArray<string>  // property keys
+  readonly fields: ReadonlyArray<string>
 }
 
 export interface ViewConfig {
-  readonly id: NotionPageId
+  readonly id: string
   readonly conceptKey: string
   readonly name: string
   readonly viewType: 'table' | 'kanban' | 'timeline' | 'detail' | 'dashboard'
   readonly columns?: ReadonlyArray<ViewColumn>
   readonly filters?: ReadonlyArray<ViewFilter>
   readonly sort?: ViewSort
-  readonly groupBy?: string  // property key (for kanban)
-  readonly timelineStart?: string  // property key (for timeline)
+  readonly groupBy?: string
+  readonly timelineStart?: string
   readonly timelineEnd?: string
   readonly rowAction?: 'navigate_to_detail' | 'inline_edit' | 'none'
   readonly presets?: ReadonlyArray<ViewPreset>
@@ -232,9 +226,9 @@ export interface ViewPreset {
 }
 
 export interface PageConfig {
-  readonly id: NotionPageId
+  readonly id: string
   readonly name: string
-  readonly slug: string  // URL path
+  readonly slug: string
   readonly widgets: ReadonlyArray<WidgetConfig>
   readonly breakpoints?: {
     readonly desktop: ReadonlyArray<WidgetLayout>
@@ -276,7 +270,7 @@ export type WorkflowActionType =
   | 'lookup_registry'
 
 export interface WorkflowConfig {
-  readonly id: NotionPageId
+  readonly id: string
   readonly name: string
   readonly description?: string
   readonly trigger: WorkflowTrigger
@@ -287,68 +281,68 @@ export interface WorkflowConfig {
 
 export interface WorkflowTrigger {
   readonly type: WorkflowTriggerType
-  readonly event?: string          // e.g. "guest.created" (for domain_event)
-  readonly schedule?: string       // cron expression (for scheduled)
-  readonly field?: string          // property key (for field_changed)
+  readonly event?: string
+  readonly schedule?: string
+  readonly field?: string
 }
 
 export interface WorkflowAction {
   readonly type: WorkflowActionType
-  readonly target?: string         // concept key
-  readonly template?: string       // template name (for create_records)
+  readonly target?: string
+  readonly template?: string
   readonly defaults?: Readonly<Record<string, unknown>>
-  readonly link?: string           // relation field to link back
-  readonly source?: string         // concept key (for lookup_registry)
-  readonly match?: string          // property key to match on
+  readonly link?: string
+  readonly source?: string
+  readonly match?: string
   readonly copyFields?: ReadonlyArray<string>
   readonly recipients?: ReadonlyArray<string>
-  readonly templateName?: string   // for notify, generate_doc
+  readonly templateName?: string
 }
 
 // --- Role & Permission types ---
 
 export interface Role {
-  readonly id: NotionPageId
-  readonly key: string             // e.g. "director", "liaison"
-  readonly name: string            // e.g. "Director", "Liaison"
+  readonly id: string
+  readonly key: string
+  readonly name: string
   readonly description?: string
-  readonly priority: number        // hierarchy (lower = more access)
-  readonly isOperational?: boolean // staffing role vs app role
+  readonly priority: number
+  readonly isOperational?: boolean
 }
 
 export interface Permission {
-  readonly id: NotionPageId
+  readonly id: string
   readonly roleKey: string
   readonly conceptKey: string
   readonly canView: boolean
   readonly canEdit: boolean
   readonly canCreate: boolean
   readonly canDelete: boolean
-  readonly visibleProperties: ReadonlyArray<string>  // property keys
+  readonly visibleProperties: ReadonlyArray<string>
   readonly editableProperties?: ReadonlyArray<string>
 }
 
 export interface DataScope {
-  readonly id: NotionPageId
+  readonly id: string
   readonly roleKey: string
   readonly conceptKey: string
   readonly scopeType: 'relation' | 'field' | 'department' | 'all'
-  readonly relationPath?: string   // e.g. "pairings.staff" = current user
+  readonly relationPath?: string
   readonly field?: string
   readonly value?: string
 }
 
 export interface ScreenAccess {
-  readonly id: NotionPageId
+  readonly id: string
   readonly roleKey: string
   readonly pageSlug: string
   readonly visible: boolean
 }
 
 export interface StaffingTemplate {
-  readonly id: NotionPageId
-  readonly condition: ConditionExpression  // guest constraint
-  readonly requiredRole: string    // role key
+  readonly id: string
+  readonly condition: ConditionExpression
+  readonly requiredRole: string
   readonly designation: 'primary' | 'backup'
   readonly count: number
 }
@@ -368,10 +362,10 @@ export interface ApiResponse<T> {
 }
 
 export interface DomainRecord {
-  readonly id: NotionPageId
+  readonly id: string
   readonly conceptKey: string
   readonly properties: Readonly<Record<string, unknown>>
-  readonly relations: Readonly<Record<string, ReadonlyArray<string>>>  // relation key → page IDs
+  readonly relations: Readonly<Record<string, ReadonlyArray<string>>>
   readonly createdAt: string
   readonly updatedAt: string
 }

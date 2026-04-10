@@ -1,0 +1,222 @@
+[
+  {
+    "pairingId": "p-001",
+    "guestId": "g-001-tanaka",
+    "guestName": "Tanaka Ichiro",
+    "staffId": "s-002",
+    "staffName": "Kevin Nakamura",
+    "role": "Main Liaison",
+    "department": "Anime",
+    "status": "active",
+    "notes": "Kevin is bilingual JP/EN, primary point of contact"
+  },
+  {
+    "pairingId": "p-002",
+    "guestId": "g-001-tanaka",
+    "guestName": "Tanaka Ichiro",
+    "staffId": "s-003",
+    "staffName": "Yuki Sato",
+    "role": "Interpreter",
+    "department": "Anime",
+    "status": "active",
+    "notes": "Professional interpreter for all panel and press events"
+  },
+  {
+    "pairingId": "p-003",
+    "guestId": "g-001-tanaka",
+    "guestName": "Tanaka Ichiro",
+    "staffId": "s-017",
+    "staffName": "Ana Costa",
+    "role": "Security Escort",
+    "department": "Anime",
+    "status": "active",
+    "notes": "Security escort for high-traffic areas"
+  },
+  {
+    "pairingId": "p-004",
+    "guestId": "g-002-suzuki",
+    "guestName": "Suzuki Yui",
+    "staffId": "s-004",
+    "staffName": "Marcus Johnson",
+    "role": "Main Liaison",
+    "department": "Anime",
+    "status": "active",
+    "notes": "Marcus handles artist logistics"
+  },
+  {
+    "pairingId": "p-005",
+    "guestId": "g-002-suzuki",
+    "guestName": "Suzuki Yui",
+    "staffId": "s-003",
+    "staffName": "Yuki Sato",
+    "role": "Interpreter",
+    "department": "Anime",
+    "status": "active",
+    "notes": "Shared interpreter with Tanaka - schedule carefully"
+  },
+  {
+    "pairingId": "p-006",
+    "guestId": "g-003-yamamoto",
+    "guestName": "Yamamoto Ken",
+    "staffId": "s-011",
+    "staffName": "Lisa Park",
+    "role": "Main Liaison",
+    "department": "Industry",
+    "status": "active",
+    "notes": "Lisa coordinates all industry guest logistics"
+  },
+  {
+    "pairingId": "p-007",
+    "guestId": "g-003-yamamoto",
+    "guestName": "Yamamoto Ken",
+    "staffId": "s-019",
+    "staffName": "Kenji Watanabe",
+    "role": "Interpreter",
+    "department": "Industry",
+    "status": "active",
+    "notes": "Industry-specialized interpreter"
+  },
+  {
+    "pairingId": "p-008",
+    "guestId": "g-004-nakamura",
+    "guestName": "Nakamura Rin",
+    "staffId": "s-006",
+    "staffName": "Tomoko Hayashi",
+    "role": "Main Liaison",
+    "department": "Music",
+    "status": "active",
+    "notes": "Tomoko manages concert logistics and green room"
+  },
+  {
+    "pairingId": "p-009",
+    "guestId": "g-004-nakamura",
+    "guestName": "Nakamura Rin",
+    "staffId": "s-007",
+    "staffName": "Chris Williams",
+    "role": "Interpreter",
+    "department": "Music",
+    "status": "active",
+    "notes": "Music terminology specialist"
+  },
+  {
+    "pairingId": "p-010",
+    "guestId": "g-004-nakamura",
+    "guestName": "Nakamura Rin",
+    "staffId": "s-020",
+    "staffName": "Priya Sharma",
+    "role": "Backup Liaison",
+    "department": "Music",
+    "status": "active",
+    "notes": "Backup for Tomoko during concert"
+  },
+  {
+    "pairingId": "p-011",
+    "guestId": "g-005-chen",
+    "guestName": "Alex Chen",
+    "staffId": "s-009",
+    "staffName": "Sam Chen",
+    "role": "Main Liaison",
+    "department": "Cosplay",
+    "status": "active",
+    "notes": "Sam assists with prop transport and workshop setup"
+  },
+  {
+    "pairingId": "p-012",
+    "guestId": "g-006-mitchell",
+    "guestName": "Sarah Mitchell",
+    "staffId": "s-013",
+    "staffName": "Mei Lin",
+    "role": "Main Liaison",
+    "department": "Panels",
+    "status": "pending",
+    "notes": "Pending guest confirmation"
+  },
+  {
+    "pairingId": "p-013",
+    "guestId": "g-007-lee",
+    "guestName": "Jordan Lee",
+    "staffId": "s-002",
+    "staffName": "Kevin Nakamura",
+    "role": "Main Liaison",
+    "department": "Anime",
+    "status": "active",
+    "notes": "Kevin also liaises for Jordan - shared schedule with Tanaka"
+  },
+  {
+    "pairingId": "p-014",
+    "guestId": "g-007-lee",
+    "guestName": "Jordan Lee",
+    "staffId": "s-004",
+    "staffName": "Marcus Johnson",
+    "role": "Backup Liaison",
+    "department": "Anime",
+    "status": "active",
+    "notes": "Backup when Kevin is with Tanaka"
+  },
+  {
+    "pairingId": "p-015",
+    "guestId": "g-009-mori",
+    "guestName": "Takeshi Mori",
+    "staffId": "s-015",
+    "staffName": "Nina Volkov",
+    "role": "Main Liaison",
+    "department": "Gaming",
+    "status": "active",
+    "notes": "Nina coordinates gaming room setup and demo equipment"
+  },
+  {
+    "pairingId": "p-016",
+    "guestId": "g-009-mori",
+    "guestName": "Takeshi Mori",
+    "staffId": "s-019",
+    "staffName": "Kenji Watanabe",
+    "role": "Interpreter",
+    "department": "Gaming",
+    "status": "active",
+    "notes": "Shared interpreter with Yamamoto - non-overlapping schedule"
+  },
+  {
+    "pairingId": "p-017",
+    "guestId": "g-010-park",
+    "guestName": "Emily Park",
+    "staffId": "s-018",
+    "staffName": "Ben Foster",
+    "role": "Main Liaison",
+    "department": "Music",
+    "status": "active",
+    "notes": "Ben helps with rehearsal space logistics"
+  },
+  {
+    "pairingId": "p-018",
+    "guestId": "g-011-kim",
+    "guestName": "David Kim",
+    "staffId": "s-011",
+    "staffName": "Lisa Park",
+    "role": "Main Liaison",
+    "department": "Industry",
+    "status": "active",
+    "notes": "Lisa manages all industry guest logistics"
+  },
+  {
+    "pairingId": "p-019",
+    "guestId": "g-012-martinez",
+    "guestName": "Luna Martinez",
+    "staffId": "s-006",
+    "staffName": "Tomoko Hayashi",
+    "role": "Main Liaison",
+    "department": "Music",
+    "status": "active",
+    "notes": "Tomoko coordinates both music guest schedules"
+  },
+  {
+    "pairingId": "p-020",
+    "guestId": "g-012-martinez",
+    "guestName": "Luna Martinez",
+    "staffId": "s-018",
+    "staffName": "Ben Foster",
+    "role": "Backup Liaison",
+    "department": "Music",
+    "status": "active",
+    "notes": "Backup support for Luna's equipment needs"
+  }
+]

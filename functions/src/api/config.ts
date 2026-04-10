@@ -60,10 +60,10 @@ const DEFAULT_CONFIG: Readonly<Record<string, unknown>> = Object.freeze({
   prepTemplates: [],
   constraints: [],
   convention: {
-    name: "Anime Boston 2026",
-    startDate: "2026-04-03",
-    endDate: "2026-04-05",
-    venue: "Hynes Convention Center",
+    name: process.env.CONVENTION_NAME ?? "Convention",
+    startDate: process.env.CONVENTION_START_DATE ?? "",
+    endDate: process.env.CONVENTION_END_DATE ?? "",
+    venue: process.env.CONVENTION_VENUE ?? "",
   },
 });
 

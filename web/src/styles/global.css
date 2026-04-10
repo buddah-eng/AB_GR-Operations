@@ -1,124 +1,314 @@
-@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+@import './design-tokens.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ------------------------------------------------------------------ */
-/*  GR-Ops "Koinobori" Design System                                   */
-/*  Anime Boston 2026 — steel blue chrome, clean workspace             */
-/* ------------------------------------------------------------------ */
+/* ============================================================
+   GR-Ops Design System — Global Styles
+
+   Two themes: neutral OSS (default) / convention-specific (.theme-ab)
+   Typography: M PLUS 1 (display) + Lato (body)
+   All colors reference CSS custom properties from design-tokens.css
+   ============================================================ */
 
 /* --- Base layer --- */
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
-    @apply font-sans text-surface-900 antialiased bg-ab-50;
+    font-family: var(--font-body);
+    color: var(--text-primary);
+    background: var(--bg-page);
+    line-height: var(--leading-normal);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  h1, h2, h3 {
-    @apply font-display;
+  /* Display headings — M PLUS 1, tight tracking for that Japanese geometric precision */
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: var(--tracking-display);
+    line-height: var(--leading-tight);
   }
 
   h1 {
-    @apply text-2xl font-bold tracking-tight;
+    font-size: var(--text-3xl);
+    font-weight: var(--weight-black);
   }
 
   h2 {
-    @apply text-xl font-semibold tracking-tight;
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-bold);
   }
 
   h3 {
-    @apply text-lg font-semibold;
+    font-size: var(--text-xl);
+    font-weight: var(--weight-semibold);
+  }
+
+  h4 {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+  }
+
+  /* Links */
+  a {
+    color: var(--primary-600);
+    text-decoration: none;
+    transition: color var(--duration-fast) var(--ease-default);
+  }
+
+  a:hover {
+    color: var(--primary-800);
+  }
+
+  /* Focus visible — primary ring */
+  :focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Selection */
+  ::selection {
+    background: var(--primary-200);
+    color: var(--primary-900);
   }
 }
 
-/* --- PrimeVue overrides --- */
+/* ============================================================
+   PrimeVue Component Overrides
+   ============================================================ */
 
-/* Cards: orange left-border accent on hover */
+/* Cards — subtle left accent on hover */
 .p-card {
-  @apply shadow-sm border border-surface-200 transition-all duration-200;
+  background: var(--bg-card);
+  border: var(--border-thin) solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+  transition: all var(--duration-normal) var(--ease-default);
 }
 
 .p-card:hover {
-  @apply shadow-md;
-  border-left: 3px solid theme('colors.accent.400');
+  box-shadow: var(--shadow-md);
+  border-left: var(--border-thick) solid var(--accent-400);
 }
 
-/* DataTable: clean black/white workspace — headers use display font */
+/* DataTable — clean workspace, display font headers */
 .p-datatable .p-datatable-thead > tr > th {
-  @apply font-display font-semibold text-xs uppercase tracking-wider
-         bg-surface-100 text-surface-700 border-b border-surface-200;
+  font-family: var(--font-display);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  background: var(--surface-100);
+  color: var(--text-secondary);
+  border-bottom: var(--border-medium) solid var(--border-color);
+  padding: var(--space-3) var(--space-4);
+}
+
+.p-datatable .p-datatable-tbody > tr {
+  transition: background var(--duration-fast) var(--ease-default);
 }
 
 .p-datatable .p-datatable-tbody > tr:hover {
-  @apply bg-surface-50;
+  background: var(--surface-50);
 }
 
-/* Tags / Badges: rounder, bolder */
+/* Tags / Badges — rounded, bold, compact */
 .p-tag {
-  @apply rounded-full font-semibold text-xs tracking-wide;
-  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-family: var(--font-display);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+  padding: var(--space-1) var(--space-3);
 }
 
-/* Tabs: orange underline on active tab */
+/* Tabs — accent underline on active */
 .p-tablist .p-tab.p-tab-active {
-  border-color: theme('colors.accent.400');
-  color: theme('colors.accent.500');
+  border-color: var(--accent-400);
+  color: var(--accent-600);
 }
 
-/* Toolbar: subtle AB blue top border */
+/* Toolbar — primary top border */
 .p-toolbar {
-  border-top: 2px solid theme('colors.ab.200');
+  border-top: var(--border-medium) solid var(--primary-200);
 }
 
-/* ProgressBar: AB blue gradient fill */
+/* ProgressBar — primary gradient */
 .p-progressbar .p-progressbar-value {
-  background: linear-gradient(
-    90deg,
-    theme('colors.ab.600'),
-    theme('colors.ab.400')
-  );
+  background: linear-gradient(90deg, var(--primary-600), var(--primary-400));
 }
 
-/* Buttons: primary uses AB blue */
-.p-button.p-button-primary,
+/* Buttons — primary uses theme primary color */
+.p-button-primary,
 .p-button:not(.p-button-secondary):not(.p-button-success):not(.p-button-info):not(.p-button-warn):not(.p-button-danger):not(.p-button-help):not(.p-button-plain):not(.p-button-text):not(.p-button-outlined):not(.p-button-link) {
-  @apply bg-ab-600 border-ab-600 text-white;
+  background: var(--primary-600);
+  border-color: var(--primary-600);
+  color: var(--text-inverse);
+  font-family: var(--font-display);
+  font-weight: var(--weight-semibold);
+  border-radius: var(--radius-md);
+  transition: all var(--duration-fast) var(--ease-default);
 }
 
-.p-button.p-button-primary:hover,
+.p-button-primary:hover,
 .p-button:not(.p-button-secondary):not(.p-button-success):not(.p-button-info):not(.p-button-warn):not(.p-button-danger):not(.p-button-help):not(.p-button-plain):not(.p-button-text):not(.p-button-outlined):not(.p-button-link):hover {
-  @apply bg-ab-800 border-ab-800;
+  background: var(--primary-800);
+  border-color: var(--primary-800);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
 .p-button:focus-visible {
-  @apply ring-2 ring-ab-300 ring-offset-2;
+  outline: 2px solid var(--primary-300);
+  outline-offset: 2px;
 }
 
-/* --- Utility classes --- */
+/* ============================================================
+   Design System Utility Classes
+   ============================================================ */
+
 @layer components {
+  /* Page title — M PLUS 1 Black weight */
   .page-title {
-    @apply font-display text-2xl font-bold tracking-tight text-surface-900;
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-black);
+    letter-spacing: var(--tracking-display);
+    color: var(--text-primary);
   }
 
+  /* Stat display — large bold numbers */
   .stat-value {
-    @apply font-display text-3xl font-extrabold leading-tight text-surface-900;
+    font-family: var(--font-display);
+    font-size: var(--text-4xl);
+    font-weight: var(--weight-black);
+    line-height: var(--leading-tight);
+    color: var(--text-primary);
   }
 
-  /* Action banner: orange accent gradient for urgency */
-  .action-banner {
-    @apply rounded-lg px-4 py-3 text-white font-medium;
-    background: linear-gradient(
-      135deg,
-      theme('colors.accent.400'),
-      theme('colors.red.500')
-    );
-  }
-
-  /* AB branded section header: blue underline */
+  /* Section header — primary underline */
   .section-header {
-    @apply font-display text-lg font-semibold text-ab-950 pb-2 border-b-2 border-ab-200;
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-bold);
+    color: var(--primary-900);
+    padding-bottom: var(--space-2);
+    border-bottom: var(--border-medium) solid var(--primary-200);
+  }
+
+  /* Action banner — accent gradient for urgency */
+  .action-banner {
+    border-radius: var(--radius-lg);
+    padding: var(--space-3) var(--space-4);
+    color: var(--text-inverse);
+    font-weight: var(--weight-semibold);
+    background: linear-gradient(135deg, var(--accent-400), var(--color-error));
+  }
+
+  /* Canvas node — shared base for all canvas nodes */
+  .canvas-node {
+    border-radius: var(--radius-lg);
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-card);
+    border: var(--border-medium) solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    font-family: var(--font-display);
+    transition: all var(--duration-normal) var(--ease-default);
+  }
+
+  .canvas-node:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+
+  .canvas-node.selected {
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px var(--primary-100);
+  }
+
+  /* Sidebar navigation */
+  .nav-sidebar {
+    background: var(--bg-sidebar);
+    color: var(--text-inverse);
+    font-family: var(--font-display);
+  }
+
+  .nav-sidebar a {
+    color: var(--primary-200);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-md);
+    transition: all var(--duration-fast) var(--ease-default);
+  }
+
+  .nav-sidebar a:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--surface-0);
+  }
+
+  .nav-sidebar a.active {
+    background: var(--primary-700);
+    color: var(--surface-0);
+    font-weight: var(--weight-semibold);
+  }
+
+  /* Form fields */
+  .form-field label {
+    font-family: var(--font-display);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--text-secondary);
+    letter-spacing: var(--tracking-wide);
+  }
+
+  .form-field input,
+  .form-field select,
+  .form-field textarea {
+    background: var(--bg-input);
+    border: var(--border-thin) solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-3);
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    transition: border-color var(--duration-fast) var(--ease-default);
+  }
+
+  .form-field input:focus,
+  .form-field select:focus,
+  .form-field textarea:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px var(--primary-100);
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: var(--space-12) var(--space-8);
+    color: var(--text-muted);
+    font-family: var(--font-display);
+  }
+
+  .empty-state .icon {
+    font-size: var(--text-4xl);
+    margin-bottom: var(--space-4);
+    opacity: 0.4;
+  }
+
+  /* Loading skeleton */
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface-100) 25%, var(--surface-200) 50%, var(--surface-100) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+    border-radius: var(--radius-md);
+  }
+
+  @keyframes skeleton-pulse {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
   }
 }

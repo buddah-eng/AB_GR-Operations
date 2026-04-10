@@ -6,16 +6,13 @@ import {
   subscriptionCount,
   createDomainEvent,
   generateEventId,
+  matchesPattern,
 } from "./bus";
 import type { DomainEvent } from "./types";
 
-// Mock Notion client (event logging) and logger
-vi.mock("../notion/client", () => ({
-  createPage: vi.fn().mockResolvedValue({}),
-}));
-
-vi.mock("../notion/databases", () => ({
-  getOntologyDatabaseId: vi.fn().mockReturnValue("fake-events-log-db-id"),
+// Mock Postgres client (event logging) and logger
+vi.mock("../db/client", () => ({
+  query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
 }));
 
 vi.mock("firebase-functions/logger", () => ({
@@ -347,6 +344,64 @@ describe("Domain Event Bus", () => {
         "schedule.created",
         "prep.created",
       ]);
+    });
+  });
+
+  // --- Double unsubscribe (PRD 7e) ---
+
+  describe("double unsubscribe", () => {
+    it("calling unsubscribe twice does not throw and has no side effects", () => {
+      subscribe("other.*", vi.fn());
+      const unsub = subscribe("guest.created", vi.fn());
+      expect(subscriptionCount()).toBe(2);
+
+      unsub();
+      expect(subscriptionCount()).toBe(1);
+
+      // Second unsubscribe: no error, count unchanged
+      unsub();
+      expect(subscriptionCount()).toBe(1);
+    });
+  });
+
+  // --- Multi-segment wildcard (PRD 7a) ---
+
+  describe("multi-segment wildcard matching", () => {
+    it("*.*.created matches org.guest.created", () => {
+      expect(matchesPattern("*.*.created", "org.guest.created")).toBe(true);
+    });
+
+    it("guest.* does NOT match org.guest.created (different segment count)", () => {
+      expect(matchesPattern("guest.*", "org.guest.created")).toBe(false);
+    });
+  });
+
+  // --- Postgres log failure tolerance (PRD 7d) ---
+
+  describe("Postgres log failure tolerance", () => {
+    it("returns a valid EventLogEntry even when Postgres query throws", async () => {
+      // Override the mock to throw for this test
+      const { query } = await import("../db/client");
+      const mockQuery = vi.mocked(query);
+      mockQuery.mockRejectedValueOnce(new Error("connection refused"));
+
+      const handler = vi.fn().mockResolvedValue(undefined);
+      subscribe("guest.created", handler);
+
+      const event = makeEvent({ eventName: "guest.created" });
+      const logEntry = await emit(event);
+
+      // Handler should still have run
+      expect(handler).toHaveBeenCalledOnce();
+
+      // Log entry should be valid and complete
+      expect(logEntry.eventId).toBe(event.eventId);
+      expect(logEntry.eventName).toBe("guest.created");
+      expect(logEntry.recordId).toBe(event.recordId);
+      expect(logEntry.triggeredBy).toBe(event.triggeredBy);
+      expect(logEntry.workflowsTriggered).toEqual(["guest.created"]);
+      expect(logEntry.actionsExecuted).toHaveLength(1);
+      expect(logEntry.actionsExecuted[0].success).toBe(true);
     });
   });
 });

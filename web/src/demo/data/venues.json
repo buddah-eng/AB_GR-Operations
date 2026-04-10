@@ -1,0 +1,82 @@
+[
+  {
+    "venueId": "v-001",
+    "name": "Main Events Hall A",
+    "capacity": 2500,
+    "type": "main_hall",
+    "building": "Hynes Convention Center",
+    "floor": "2nd Floor",
+    "equipment": ["Stage", "Sound system", "Projector", "Wireless mics", "Lighting rig"],
+    "accessible": true
+  },
+  {
+    "venueId": "v-002",
+    "name": "Main Events Hall B",
+    "capacity": 1800,
+    "type": "main_hall",
+    "building": "Hynes Convention Center",
+    "floor": "2nd Floor",
+    "equipment": ["Stage", "Sound system", "Projector", "Wireless mics"],
+    "accessible": true
+  },
+  {
+    "venueId": "v-003",
+    "name": "Panel Room 1",
+    "capacity": 200,
+    "type": "panel_room",
+    "building": "Hynes Convention Center",
+    "floor": "3rd Floor",
+    "equipment": ["Projector", "Podium", "Table mics"],
+    "accessible": true
+  },
+  {
+    "venueId": "v-004",
+    "name": "Panel Room 2",
+    "capacity": 150,
+    "type": "panel_room",
+    "building": "Hynes Convention Center",
+    "floor": "3rd Floor",
+    "equipment": ["Projector", "Podium", "Table mics"],
+    "accessible": true
+  },
+  {
+    "venueId": "v-005",
+    "name": "Autograph Hall",
+    "capacity": 500,
+    "type": "autograph_area",
+    "building": "Hynes Convention Center",
+    "floor": "1st Floor",
+    "equipment": ["Signing tables", "Queue stanchions", "Ticket scanners"],
+    "accessible": true
+  },
+  {
+    "venueId": "v-006",
+    "name": "Green Room",
+    "capacity": 30,
+    "type": "backstage",
+    "building": "Hynes Convention Center",
+    "floor": "2nd Floor",
+    "equipment": ["Lounge seating", "Refreshments", "Wi-Fi", "Mirror stations"],
+    "accessible": true
+  },
+  {
+    "venueId": "v-007",
+    "name": "Press Room",
+    "capacity": 50,
+    "type": "press",
+    "building": "Hynes Convention Center",
+    "floor": "3rd Floor",
+    "equipment": ["Backdrop", "Lighting", "Recording equipment", "Table mics"],
+    "accessible": true
+  },
+  {
+    "venueId": "v-008",
+    "name": "Restaurant (Sheraton Hotel)",
+    "capacity": 40,
+    "type": "dining",
+    "building": "Sheraton Boston Hotel",
+    "floor": "Lobby Level",
+    "equipment": ["Private dining area", "A/V for presentations"],
+    "accessible": true
+  }
+]

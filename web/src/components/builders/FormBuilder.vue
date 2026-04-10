@@ -1,0 +1,650 @@
+<template>
+  <div class="builder-shell" role="region" aria-label="Form Builder">
+    <!-- Toolbar -->
+    <div class="builder-toolbar">
+      <div class="builder-toolbar__left">
+        <i class="pi pi-pencil builder-toolbar__icon" />
+        <InputText
+          v-model="formName"
+          placeholder="Form name"
+          class="builder-toolbar__name-input"
+          aria-label="Form name"
+        />
+      </div>
+
+      <div class="builder-toolbar__right">
+        <FormLayoutPicker v-model="selectedLayout" />
+        <ToggleButton
+          v-model="previewMode"
+          on-label="Preview"
+          off-label="Edit"
+          on-icon="pi pi-eye"
+          off-icon="pi pi-pencil"
+          aria-label="Toggle preview mode"
+        />
+        <Button
+          label="Save"
+          icon="pi pi-save"
+          :loading="saving"
+          :disabled="saving"
+          @click="handleSave"
+        />
+      </div>
+    </div>
+
+    <!-- Validation warnings -->
+    <div v-if="validationWarnings.length > 0" class="builder-warnings">
+      <div
+        v-for="(warning, idx) in validationWarnings"
+        :key="idx"
+        class="builder-warnings__item"
+      >
+        <i class="pi pi-exclamation-triangle builder-warnings__icon" />
+        <span>{{ warning }}</span>
+      </div>
+    </div>
+
+    <!-- Validation errors -->
+    <Message
+      v-if="validationError"
+      severity="error"
+      :closable="true"
+      class="builder-message"
+      @close="validationError = null"
+    >
+      {{ validationError }}
+    </Message>
+
+    <!-- Preview mode -->
+    <div v-if="previewMode" class="builder-preview">
+      <div class="builder-preview__container">
+        <DynamicForm
+          :config="previewConfig"
+          :properties="conceptProperties"
+          :initial-values="{}"
+          @submit="() => {}"
+        />
+      </div>
+    </div>
+
+    <!-- Edit mode: 3-panel layout -->
+    <div v-else class="builder-panels">
+      <!-- Left: Property list -->
+      <div class="builder-sidebar builder-sidebar--left">
+        <div class="builder-sidebar__search">
+          <InputText
+            v-model="propertySearch"
+            placeholder="Search properties..."
+            class="w-full"
+            aria-label="Search properties"
+          />
+          <div class="builder-sidebar__count">
+            {{ unplacedCount }} unplaced
+          </div>
+        </div>
+
+        <div class="builder-sidebar__list">
+          <div
+            v-for="prop in filteredProperties"
+            :key="prop.key"
+            :class="[
+              'builder-prop-item',
+              isPropertyPlaced(prop.key) ? 'builder-prop-item--placed' : 'builder-prop-item--available',
+            ]"
+            draggable="true"
+            :aria-label="`Drag ${prop.label} to canvas`"
+            @dragstart="(e) => handlePropertyDragStart(e, prop)"
+          >
+            <i
+              v-if="isPropertyPlaced(prop.key)"
+              class="pi pi-check builder-prop-item__check"
+            />
+            <i v-else class="pi pi-grip-vertical builder-prop-item__grip" />
+            <span class="builder-prop-item__label">{{ prop.label }}</span>
+            <Tag
+              :value="prop.type"
+              rounded
+              class="!text-[10px] ml-auto shrink-0"
+              severity="secondary"
+            />
+          </div>
+
+          <!-- Empty property list -->
+          <div v-if="filteredProperties.length === 0" class="empty-state">
+            <div class="icon">
+              <i class="pi pi-search" />
+            </div>
+            <p>No properties found.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center: Form canvas -->
+      <div class="builder-canvas">
+        <!-- Wizard step navigator -->
+        <div v-if="selectedLayout === 'wizard'" class="builder-wizard-nav">
+          <div
+            v-for="(section, sIdx) in sections"
+            :key="sIdx"
+            :class="['builder-wizard-step', activeSection === sIdx ? 'builder-wizard-step--active' : '']"
+            @click="activeSection = sIdx"
+          >
+            <span class="builder-wizard-step__number">{{ sIdx + 1 }}</span>
+            <span class="builder-wizard-step__title">{{ section.title }}</span>
+          </div>
+          <Button
+            icon="pi pi-plus"
+            severity="secondary"
+            text
+            rounded
+            size="small"
+            aria-label="Add step"
+            @click="addSection"
+          />
+        </div>
+
+        <!-- Sections -->
+        <div
+          v-for="(section, sIdx) in visibleSections"
+          :key="sIdx"
+          class="builder-section"
+        >
+          <!-- Section header -->
+          <div
+            v-if="sections.length > 1 || selectedLayout === 'wizard'"
+            class="builder-section__header"
+          >
+            <InputText
+              v-model="section.title"
+              class="builder-section__title-input"
+              :placeholder="`Section ${sIdx + 1}`"
+            />
+            <Button
+              v-if="sections.length > 1"
+              icon="pi pi-trash"
+              severity="danger"
+              text
+              rounded
+              size="small"
+              aria-label="Remove section"
+              @click="removeSection(sIdx)"
+            />
+          </div>
+
+          <!-- Drop zone -->
+          <div
+            :class="[
+              'builder-dropzone',
+              dragOverSection === sIdx ? 'builder-dropzone--active' : '',
+              selectedLayout === 'two-column' ? 'builder-dropzone--two-col' : '',
+            ]"
+            @dragover.prevent="dragOverSection = sIdx"
+            @dragleave="dragOverSection = null"
+            @drop="(e) => handleDrop(e, sIdx)"
+          >
+            <!-- Placed fields -->
+            <div
+              v-for="(field, fIdx) in section.fields"
+              :key="field.key"
+              :class="[
+                'builder-field-card',
+                selectedFieldKey === field.key ? 'builder-field-card--selected' : '',
+                selectedLayout === 'two-column' && field.colSpan === 2 ? 'builder-field-card--full' : '',
+              ]"
+              draggable="true"
+              @click="selectedFieldKey = field.key"
+              @dragstart="(e) => handleFieldDragStart(e, sIdx, fIdx)"
+              @dragover.prevent
+              @drop.stop="(e) => handleFieldReorder(e, sIdx, fIdx)"
+            >
+              <i class="pi pi-grip-vertical builder-field-card__grip" />
+              <span class="builder-field-card__label">
+                {{ field.label || getPropertyLabel(field.key) }}
+              </span>
+              <div class="builder-field-card__actions">
+                <i
+                  v-if="field.showIf"
+                  class="pi pi-eye builder-field-card__condition-icon"
+                  title="Has visibility condition"
+                />
+                <Tag
+                  v-if="field.colSpan === 2"
+                  value="full"
+                  rounded
+                  class="!text-[10px]"
+                  severity="secondary"
+                />
+                <Button
+                  icon="pi pi-times"
+                  severity="danger"
+                  text
+                  rounded
+                  size="small"
+                  class="!p-1"
+                  aria-label="Remove field"
+                  @click.stop="removeField(sIdx, fIdx)"
+                />
+              </div>
+            </div>
+
+            <!-- Empty drop zone hint -->
+            <div
+              v-if="section.fields.length === 0"
+              :class="['builder-dropzone__empty', selectedLayout === 'two-column' ? 'builder-dropzone__empty--full' : '']"
+            >
+              <i class="pi pi-inbox builder-dropzone__empty-icon" />
+              <p>Drop properties here to add fields</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add section button (non-wizard) -->
+        <Button
+          v-if="selectedLayout !== 'wizard'"
+          label="Add Section"
+          icon="pi pi-plus"
+          severity="secondary"
+          outlined
+          size="small"
+          class="builder-add-section-btn"
+          @click="addSection"
+        />
+      </div>
+
+      <!-- Right: Field config panel -->
+      <div class="builder-sidebar builder-sidebar--right">
+        <FormFieldEditor
+          :field="selectedField"
+          :property-label="selectedField ? getPropertyLabel(selectedField.key) : ''"
+          :show-col-span="selectedLayout === 'two-column'"
+          :properties="conceptProperties"
+        />
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import InputText from 'primevue/inputtext'
+import Button from 'primevue/button'
+import Tag from 'primevue/tag'
+import Message from 'primevue/message'
+import ToggleButton from 'primevue/togglebutton'
+
+import type { OntologyProperty } from '@/types'
+import type { FormConfig, FormFieldConfig, FormLayout } from '@/types/forms'
+import { useOntologyStore } from '@/stores/ontology'
+import { api } from '@/api/client'
+import DynamicForm from '@/components/forms/DynamicForm.vue'
+import FormFieldEditor from '@/components/builders/FormFieldEditor.vue'
+import type { BuilderField } from '@/components/builders/FormFieldEditor.vue'
+import FormLayoutPicker from '@/components/builders/FormLayoutPicker.vue'
+
+/* ---- Route & Store ---- */
+
+const route = useRoute()
+const ontologyStore = useOntologyStore()
+
+const conceptKey = computed(() => String(route.params.conceptKey ?? ''))
+
+/* ---- Builder state ---- */
+
+interface BuilderSection {
+  title: string
+  fields: BuilderField[]
+}
+
+const formName = ref('New Form')
+const selectedLayout = ref<FormLayout>('single-column')
+const previewMode = ref(false)
+const saving = ref(false)
+const validationError = ref<string | null>(null)
+const propertySearch = ref('')
+const selectedFieldKey = ref<string | null>(null)
+const dragOverSection = ref<number | null>(null)
+const activeSection = ref(0)
+const formId = ref<string | null>(null)
+
+const sections = ref<BuilderSection[]>([
+  { title: 'Section 1', fields: [] },
+])
+
+/* ---- Properties ---- */
+
+const conceptProperties = computed<OntologyProperty[]>(() =>
+  ontologyStore.getPropertiesForConcept(conceptKey.value),
+)
+
+const filteredProperties = computed(() => {
+  const query = propertySearch.value.toLowerCase().trim()
+  const props = conceptProperties.value
+  if (!query) return props
+  return props.filter(
+    (p) =>
+      p.label.toLowerCase().includes(query) ||
+      p.key.toLowerCase().includes(query),
+  )
+})
+
+const placedKeys = computed<ReadonlySet<string>>(() => {
+  const keys = new Set<string>()
+  for (const section of sections.value) {
+    for (const field of section.fields) {
+      keys.add(field.key)
+    }
+  }
+  return keys
+})
+
+const unplacedCount = computed(
+  () => conceptProperties.value.filter((p) => !placedKeys.value.has(p.key)).length,
+)
+
+function isPropertyPlaced(key: string): boolean {
+  return placedKeys.value.has(key)
+}
+
+function getPropertyLabel(key: string): string {
+  const prop = conceptProperties.value.find((p) => p.key === key)
+  return prop?.label ?? key
+}
+
+/* ---- Selected field ---- */
+
+const selectedField = computed<BuilderField | null>(() => {
+  if (!selectedFieldKey.value) return null
+  for (const section of sections.value) {
+    const found = section.fields.find((f) => f.key === selectedFieldKey.value)
+    if (found) return found
+  }
+  return null
+})
+
+/* ---- Visible sections ---- */
+
+const visibleSections = computed(() => {
+  if (selectedLayout.value === 'wizard') {
+    return sections.value.slice(activeSection.value, activeSection.value + 1)
+  }
+  return sections.value
+})
+
+/* ---- Validation warnings ---- */
+
+const validationWarnings = computed<string[]>(() => {
+  const warnings: string[] = []
+  for (const section of sections.value) {
+    for (const field of section.fields) {
+      const prop = conceptProperties.value.find((p) => p.key === field.key)
+      if (prop?.hidden) {
+        warnings.push(
+          `Field '${field.label ?? prop.label}' references deprecated property '${field.key}'. Remove or replace it.`,
+        )
+      }
+    }
+  }
+  return warnings
+})
+
+/* ---- Drag & drop ---- */
+
+let dragPropertyKey: string | null = null
+let dragFieldSource: { sectionIdx: number; fieldIdx: number } | null = null
+
+function handlePropertyDragStart(event: DragEvent, prop: OntologyProperty): void {
+  dragPropertyKey = prop.key
+  dragFieldSource = null
+  event.dataTransfer?.setData('text/plain', prop.key)
+}
+
+function handleFieldDragStart(
+  event: DragEvent,
+  sectionIdx: number,
+  fieldIdx: number,
+): void {
+  dragPropertyKey = null
+  dragFieldSource = { sectionIdx, fieldIdx }
+  event.dataTransfer?.setData('text/plain', 'reorder')
+}
+
+function handleDrop(event: DragEvent, sectionIdx: number): void {
+  event.preventDefault()
+  dragOverSection.value = null
+
+  if (dragPropertyKey) {
+    // Adding a new property from the left panel
+    const alreadyInSection = sections.value[sectionIdx].fields.some(
+      (f) => f.key === dragPropertyKey,
+    )
+    if (!alreadyInSection) {
+      const newField: BuilderField = { key: dragPropertyKey }
+      sections.value = sections.value.map((s, idx) =>
+        idx === sectionIdx
+          ? { ...s, fields: [...s.fields, newField] }
+          : s,
+      )
+    }
+    dragPropertyKey = null
+  } else if (dragFieldSource) {
+    // Reordering: move field to this section
+    const { sectionIdx: fromSection, fieldIdx: fromField } = dragFieldSource
+    const field = sections.value[fromSection].fields[fromField]
+    if (field) {
+      // Remove from source
+      const updated = sections.value.map((s, idx) =>
+        idx === fromSection
+          ? { ...s, fields: s.fields.filter((_, i) => i !== fromField) }
+          : s,
+      )
+      // Add to target
+      sections.value = updated.map((s, idx) =>
+        idx === sectionIdx
+          ? { ...s, fields: [...s.fields, field] }
+          : s,
+      )
+    }
+    dragFieldSource = null
+  }
+}
+
+function handleFieldReorder(
+  event: DragEvent,
+  targetSection: number,
+  targetIdx: number,
+): void {
+  event.preventDefault()
+  if (!dragFieldSource) return
+
+  const { sectionIdx: fromSection, fieldIdx: fromField } = dragFieldSource
+  if (fromSection === targetSection && fromField === targetIdx) return
+
+  const field = sections.value[fromSection].fields[fromField]
+  if (!field) return
+
+  // Remove from source, insert at target
+  let updated = sections.value.map((s, idx) =>
+    idx === fromSection
+      ? { ...s, fields: s.fields.filter((_, i) => i !== fromField) }
+      : s,
+  )
+
+  updated = updated.map((s, idx) => {
+    if (idx === targetSection) {
+      const newFields = [...s.fields]
+      newFields.splice(targetIdx, 0, field)
+      return { ...s, fields: newFields }
+    }
+    return s
+  })
+
+  sections.value = updated
+  dragFieldSource = null
+}
+
+/* ---- Section management ---- */
+
+function addSection(): void {
+  sections.value = [
+    ...sections.value,
+    { title: `Section ${sections.value.length + 1}`, fields: [] },
+  ]
+}
+
+function removeSection(idx: number): void {
+  if (sections.value.length <= 1) return
+  sections.value = sections.value.filter((_, i) => i !== idx)
+  if (activeSection.value >= sections.value.length) {
+    activeSection.value = sections.value.length - 1
+  }
+}
+
+function removeField(sectionIdx: number, fieldIdx: number): void {
+  const removedKey = sections.value[sectionIdx].fields[fieldIdx]?.key
+  sections.value = sections.value.map((s, idx) =>
+    idx === sectionIdx
+      ? { ...s, fields: s.fields.filter((_, i) => i !== fieldIdx) }
+      : s,
+  )
+  if (selectedFieldKey.value === removedKey) {
+    selectedFieldKey.value = null
+  }
+}
+
+/* ---- Preview config ---- */
+
+const previewConfig = computed<FormConfig>(() => {
+  const allFields: FormFieldConfig[] = []
+  for (const section of sections.value) {
+    for (const [, field] of section.fields.entries()) {
+      allFields.push({
+        key: field.key,
+        label: field.label,
+        placeholder: field.placeholder,
+        helpText: field.helpText,
+        colSpan: field.colSpan,
+        showIf: field.showIf,
+        required: field.required,
+        readOnly: field.readOnly,
+        defaultValue: field.defaultValue,
+      })
+    }
+  }
+
+  return {
+    id: formId.value ?? 'preview',
+    title: formName.value,
+    layout: selectedLayout.value,
+    conceptKey: conceptKey.value,
+    fields:
+      selectedLayout.value !== 'wizard' ? allFields : undefined,
+    steps:
+      selectedLayout.value === 'wizard'
+        ? sections.value.map((s, idx) => ({
+            key: `step-${idx}`,
+            label: s.title,
+            fields: s.fields.map((f) => ({
+              key: f.key,
+              label: f.label,
+              placeholder: f.placeholder,
+              helpText: f.helpText,
+              colSpan: f.colSpan,
+              showIf: f.showIf,
+              required: f.required,
+              readOnly: f.readOnly,
+              defaultValue: f.defaultValue,
+            })),
+          }))
+        : undefined,
+  }
+})
+
+/* ---- Save ---- */
+
+async function handleSave(): Promise<void> {
+  // Validate
+  if (selectedLayout.value === 'wizard' && sections.value.length < 2) {
+    validationError.value = 'Wizard layout requires at least 2 steps'
+    return
+  }
+
+  // Check for duplicate keys
+  const allKeys = sections.value.flatMap((s) => s.fields.map((f) => f.key))
+  const duplicates = allKeys.filter((k, i) => allKeys.indexOf(k) !== i)
+  if (duplicates.length > 0) {
+    validationError.value = `Duplicate field: '${duplicates[0]}'`
+    return
+  }
+
+  saving.value = true
+  validationError.value = null
+
+  try {
+    const config = previewConfig.value
+    if (formId.value) {
+      await api.put(`/api/form-configs/${formId.value}`, config)
+    } else {
+      const result = await api.post<{ id: string }>('/api/form-configs', config)
+      formId.value = result.id
+    }
+  } catch (err) {
+    validationError.value =
+      err instanceof Error ? err.message : 'Failed to save form configuration'
+  } finally {
+    saving.value = false
+  }
+}
+
+/* ---- Load existing config ---- */
+
+async function loadExistingConfig(): Promise<void> {
+  if (!conceptKey.value) return
+
+  try {
+    const configs = await api.get<FormConfig[]>(
+      `/api/form-configs?conceptKey=${conceptKey.value}`,
+    )
+    if (configs.length > 0) {
+      const config = configs[0]
+      formId.value = config.id
+      formName.value = config.title
+      selectedLayout.value = config.layout
+
+      if (config.layout === 'wizard' && config.steps) {
+        sections.value = config.steps.map((step) => ({
+          title: step.label,
+          fields: step.fields.map((f) => ({ ...f })),
+        }))
+      } else if (config.fields) {
+        sections.value = [
+          {
+            title: 'Section 1',
+            fields: config.fields.map((f) => ({ ...f })),
+          },
+        ]
+      }
+    }
+  } catch {
+    // No existing config; start fresh
+  }
+}
+
+/* ---- Lifecycle ---- */
+
+onMounted(async () => {
+  await ontologyStore.loadOntology()
+  await loadExistingConfig()
+})
+
+// Reset when concept changes
+watch(conceptKey, async () => {
+  sections.value = [{ title: 'Section 1', fields: [] }]
+  formId.value = null
+  selectedFieldKey.value = null
+  formName.value = 'New Form'
+  await loadExistingConfig()
+})
+</script>
+
+<style scoped src="./FormBuilder.css"></style>

@@ -10,12 +10,13 @@ export interface DomainEvent {
   readonly eventName: string       // e.g. "guest.created", "schedule.updated"
   readonly domain: string          // concept key, e.g. "guest"
   readonly action: EventAction
-  readonly recordId: string        // Notion page ID of the affected record
+  readonly recordId: string        // Postgres row ID of the affected record
   readonly changedFields?: ReadonlyArray<string>
   readonly previousValues?: Readonly<Record<string, unknown>>
   readonly newValues?: Readonly<Record<string, unknown>>
   readonly triggeredBy: string     // user email or "system"
   readonly timestamp: string       // ISO 8601
+  readonly changeSet?: string      // audit change_set UUID
   readonly metadata?: Readonly<Record<string, unknown>>
 }
 
@@ -45,6 +46,7 @@ export interface EventLogEntry {
   readonly recordId: string
   readonly triggeredBy: string
   readonly timestamp: string
+  readonly changeSet?: string
   readonly workflowsTriggered: ReadonlyArray<string>
   readonly actionsExecuted: ReadonlyArray<{
     readonly workflowName: string
