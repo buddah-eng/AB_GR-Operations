@@ -150,7 +150,6 @@ function formatValue(value: unknown, type?: string): string {
 
 <style scoped>
 .vd-root {
-  font-family: var(--font-body);
 }
 
 /* Skeleton */
@@ -208,7 +207,6 @@ function formatValue(value: unknown, type?: string): string {
 }
 
 .vd-empty-text {
-  font-family: var(--font-body);
   font-size: var(--text-sm);
   color: var(--text-muted);
   margin: 0;
@@ -261,7 +259,6 @@ function formatValue(value: unknown, type?: string): string {
 }
 
 .vd-field-value {
-  font-family: var(--font-body);
   font-size: var(--text-sm);
   color: var(--text-primary);
   line-height: var(--leading-normal);

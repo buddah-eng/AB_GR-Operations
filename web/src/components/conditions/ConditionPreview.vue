@@ -135,7 +135,6 @@ function renderCondition(condition: ConditionExpression): string {
 .cp-empty {
   color: var(--text-muted);
   font-style: italic;
-  font-family: var(--font-body);
 }
 
 .cp-text {

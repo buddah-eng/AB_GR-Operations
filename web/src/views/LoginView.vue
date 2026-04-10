@@ -169,7 +169,6 @@ async function handleSignIn(): Promise<void> {
 }
 
 .lv-subtitle {
-  font-family: var(--font-body);
   font-size: var(--text-sm);
   color: var(--text-muted);
   margin: var(--space-1) 0 var(--space-8);
@@ -187,8 +186,8 @@ async function handleSignIn(): Promise<void> {
   gap: var(--space-2);
   margin-top: var(--space-4);
   padding: var(--space-3);
-  background: #fef2f2;
-  border: var(--border-thin) solid #fecaca;
+  background: var(--color-error-bg);
+  border: var(--border-thin) solid var(--color-error-bg-border);
   border-radius: var(--radius-lg);
   text-align: left;
 }
@@ -201,13 +200,12 @@ async function handleSignIn(): Promise<void> {
 
 .lv-error-text {
   font-size: var(--text-sm);
-  color: #991b1b;
+  color: var(--color-error-text);
 }
 
 /* Footer */
 .lv-footer {
   margin: var(--space-8) 0 0;
-  font-family: var(--font-body);
   font-size: var(--text-xs);
   color: var(--text-muted);
 }

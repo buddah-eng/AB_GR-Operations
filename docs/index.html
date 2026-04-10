@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GR-Ops Demo — Anime Boston 2026</title>
+  <title>GR-Ops Demo — Convention Operations Platform</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='32' fill='%234A90C4'/%3E%3Ccircle cx='32' cy='32' r='20' fill='none' stroke='white' stroke-width='8'/%3E%3Ccircle cx='32' cy='32' r='16' fill='%23E8962D'/%3E%3Ccircle cx='36' cy='28' r='6' fill='%232D6A9F'/%3E%3C/svg%3E">
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://unpkg.com/primeicons@7.0.0/primeicons.css" rel="stylesheet">
@@ -19,7 +19,7 @@
             display: ['"Nunito"', 'system-ui', 'sans-serif'],
           },
           colors: {
-            ab: {
+            primary: {
               950: '#1A3A5C', 900: '#234B72', 800: '#2D6A9F', 700: '#3A7DB5',
               600: '#4A90C4', 500: '#5BA8D9', 400: '#7ABDE3', 300: '#9BD0EC',
               200: '#B8DFF0', 100: '#D6EDF7', 50: '#F0F5FA',
@@ -316,7 +316,7 @@ const AUTOGRAPHS = [
 ]
 
 const CONFIG = {
-  convention: { name:'Anime Boston 2026', startDate:'2026-04-03', endDate:'2026-04-05', venue:'Hynes Convention Center' },
+  convention: { name:'Convention Operations', startDate:'2026-04-03', endDate:'2026-04-05', venue:'Hynes Convention Center' },
   departments: ['Anime','Gaming','Music','Cosplay','Panels','Artists','Industry'],
   roles: ['Main Liaison','Backup Liaison','Interpreter','Security Escort','Department Head','Volunteer'],
   eventTypes: ['Panel','Autograph Session','Photo Op','Meal','Photoshoot','Interview','Rehearsal','Meet & Greet','Other'],
@@ -409,14 +409,14 @@ const Badge = {
 // --- App Layout ---
 const AppLayout = {
   template: `
-    <div class="flex min-h-screen bg-ab-50">
+    <div class="flex min-h-screen bg-primary-50">
       <!-- Sidebar -->
-      <aside :class="['fixed left-0 top-0 h-full flex flex-col z-40 transition-all duration-200 overflow-hidden bg-gradient-to-b from-ab-600 to-ab-800 text-white', store.ui.sidebarOpen?'w-60':'w-0','lg:translate-x-0 lg:w-60']">
+      <aside :class="['fixed left-0 top-0 h-full flex flex-col z-40 transition-all duration-200 overflow-hidden bg-gradient-to-b from-primary-600 to-primary-800 text-white', store.ui.sidebarOpen?'w-60':'w-0','lg:translate-x-0 lg:w-60']">
         <div class="px-4 py-3 border-b border-white/15 flex items-center gap-3">
-          <img src="./ab-logo.jpg" alt="AB" class="w-10 h-10 rounded-lg object-cover shadow-md shrink-0" />
+          <img src="./placeholder-logo.svg" alt="GR-Ops" class="w-10 h-10 rounded-lg object-cover shadow-md shrink-0" />
           <div>
             <div class="text-sm font-bold tracking-wide font-display text-white">GR-Ops</div>
-            <div class="text-[10px] text-accent-300 uppercase tracking-widest font-semibold">Anime Boston 2026</div>
+            <div class="text-[10px] text-accent-300 uppercase tracking-widest font-semibold">Convention Operations</div>
           </div>
         </div>
         <nav class="flex-1 overflow-y-auto py-3 px-2 space-y-5">
@@ -475,7 +475,7 @@ const DashboardView = {
     <div class="space-y-6">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <img src="./ab-logo.jpg" alt="AB" class="w-8 h-8 rounded-lg object-cover shadow-sm" />
+          <img src="./placeholder-logo.svg" alt="GR-Ops" class="w-8 h-8 rounded-lg object-cover shadow-sm" />
           <h1 class="font-display text-2xl font-bold tracking-tight text-gray-900">Dashboard</h1>
         </div>
         <span class="text-xs text-gray-400">Convention: April 3–5, 2026</span>
@@ -501,7 +501,7 @@ const DashboardView = {
       <!-- Staffing -->
       <div>
         <h2 class="font-display text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-          <i class="pi pi-users text-ab-600 text-sm" /> Staffing Coverage
+          <i class="pi pi-users text-primary-600 text-sm" /> Staffing Coverage
         </h2>
         <div class="bg-white rounded-xl shadow-sm border divide-y">
           <div v-for="row in staffingRows" :key="row.guestId" class="flex items-center gap-4 px-5 py-3">
@@ -515,10 +515,10 @@ const DashboardView = {
       <!-- Today's schedule -->
       <div>
         <h2 class="font-display text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-          <i class="pi pi-calendar text-ab-600 text-sm" /> Schedule — {{ selectedDay }}
+          <i class="pi pi-calendar text-primary-600 text-sm" /> Schedule — {{ selectedDay }}
         </h2>
         <div class="flex gap-2 mb-3">
-          <button v-for="d in days" :key="d" :class="['px-3 py-1.5 rounded-lg text-xs font-semibold transition-all', selectedDay===d?'bg-ab-600 text-white shadow-sm':'bg-white text-gray-600 border hover:bg-ab-50']" @click="selectedDay=d">{{ formatDate(d) }}</button>
+          <button v-for="d in days" :key="d" :class="['px-3 py-1.5 rounded-lg text-xs font-semibold transition-all', selectedDay===d?'bg-primary-600 text-white shadow-sm':'bg-white text-gray-600 border hover:bg-primary-50']" @click="selectedDay=d">{{ formatDate(d) }}</button>
         </div>
         <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
           <div class="relative min-h-[160px] p-4">
@@ -581,9 +581,9 @@ const DashboardView = {
     const noLiaison = computed(() => store.guests.filter(g=>g.status!=='Cancelled'&&!guestHasLiaison(g.id)).length)
 
     const stats = computed(() => [
-      { label:'Total Guests', value:store.guests.length, sub:confirmed.value+' confirmed, '+invited.value+' invited', borderColor:'border-l-ab-500' },
+      { label:'Total Guests', value:store.guests.length, sub:confirmed.value+' confirmed, '+invited.value+' invited', borderColor:'border-l-primary-500' },
       { label:'Prep Complete', value:prepComplete.value+'%', sub:overdue.value+' overdue items', borderColor:'border-l-accent-400' },
-      { label:'Staff Assigned', value:store.pairings.length, sub:store.staff.length+' total staff', borderColor:'border-l-ab-600' },
+      { label:'Staff Assigned', value:store.pairings.length, sub:store.staff.length+' total staff', borderColor:'border-l-primary-600' },
       { label:'Schedule Events', value:store.schedule.length, sub:'Across 3 days', borderColor:'border-l-emerald-400' },
     ])
 
@@ -639,21 +639,21 @@ const GuestListView = {
     <div class="space-y-5">
       <div class="flex items-center justify-between">
         <h1 class="font-display text-2xl font-bold tracking-tight text-gray-900">Guests</h1>
-        <button class="px-4 py-2 bg-ab-600 text-white rounded-lg text-sm font-semibold hover:bg-ab-800 transition-colors flex items-center gap-2" @click="showAdd=true">
+        <button class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-primary-800 transition-colors flex items-center gap-2" @click="showAdd=true">
           <i class="pi pi-plus text-xs" /> New Guest
         </button>
       </div>
       <!-- Filters -->
-      <div class="flex flex-wrap items-center gap-2 bg-white rounded-xl shadow-sm border p-3 border-t-2 border-t-ab-200">
+      <div class="flex flex-wrap items-center gap-2 bg-white rounded-xl shadow-sm border p-3 border-t-2 border-t-primary-200">
         <div class="relative flex-1 min-w-[200px]">
           <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
-          <input v-model="search" type="text" placeholder="Search guests..." class="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-ab-300 focus:border-ab-400 outline-none" />
+          <input v-model="search" type="text" placeholder="Search guests..." class="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-300 focus:border-primary-400 outline-none" />
         </div>
-        <select v-model="filterStatus" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none">
+        <select v-model="filterStatus" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none">
           <option value="">All Statuses</option>
           <option v-for="s in ['Confirmed','Invited','Cancelled']" :key="s">{{ s }}</option>
         </select>
-        <select v-model="filterDept" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none">
+        <select v-model="filterDept" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none">
           <option value="">All Departments</option>
           <option v-for="d in store.config.departments" :key="d">{{ d }}</option>
         </select>
@@ -685,7 +685,7 @@ const GuestListView = {
               <td class="px-4 py-3 text-gray-600">{{ guestStaffCount(g.id) }}</td>
               <td class="px-4 py-3">
                 <div class="flex items-center gap-2">
-                  <div class="w-16 h-1.5 rounded-full bg-gray-200 overflow-hidden"><div :class="['h-full rounded-full', guestPrepPercent(g.id)>=80?'bg-emerald-500':guestPrepPercent(g.id)>=40?'bg-ab-500':'bg-accent-400']" :style="{width:guestPrepPercent(g.id)+'%'}" /></div>
+                  <div class="w-16 h-1.5 rounded-full bg-gray-200 overflow-hidden"><div :class="['h-full rounded-full', guestPrepPercent(g.id)>=80?'bg-emerald-500':guestPrepPercent(g.id)>=40?'bg-primary-500':'bg-accent-400']" :style="{width:guestPrepPercent(g.id)+'%'}" /></div>
                   <span class="text-xs text-gray-500">{{ guestPrepPercent(g.id) }}%</span>
                 </div>
               </td>
@@ -700,16 +700,16 @@ const GuestListView = {
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 mx-4">
           <h2 class="font-display text-xl font-bold mb-4">Add Guest</h2>
           <div class="space-y-3">
-            <div><label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Name *</label><input v-model="newGuest.name" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none" /></div>
+            <div><label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Name *</label><input v-model="newGuest.name" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none" /></div>
             <div class="grid grid-cols-2 gap-3">
               <div><label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</label><select v-model="newGuest.type" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm"><option>JP</option><option>NA</option></select></div>
               <div><label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Department</label><select v-model="newGuest.department" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm"><option v-for="d in store.config.departments" :key="d">{{ d }}</option></select></div>
             </div>
-            <div><label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Company</label><input v-model="newGuest.company" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none" /></div>
+            <div><label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Company</label><input v-model="newGuest.company" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none" /></div>
           </div>
           <div class="flex justify-end gap-2 mt-5">
             <button class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900" @click="showAdd=false">Cancel</button>
-            <button class="px-4 py-2 bg-ab-600 text-white rounded-lg text-sm font-semibold hover:bg-ab-800 disabled:opacity-40" :disabled="!newGuest.name" @click="addGuest">Add Guest</button>
+            <button class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-primary-800 disabled:opacity-40" :disabled="!newGuest.name" @click="addGuest">Add Guest</button>
           </div>
         </div>
       </div>
@@ -764,20 +764,20 @@ const GuestHubView = {
           </div>
           <div class="flex items-center gap-2">
             <button class="px-3 py-1.5 text-sm bg-accent-400 text-white rounded-lg hover:bg-accent-500 font-medium" @click="generateItinerary"><i class="pi pi-file mr-1" />Itinerary</button>
-            <button class="px-3 py-1.5 text-sm bg-ab-600 text-white rounded-lg hover:bg-ab-800 font-medium" @click="generateChecklist"><i class="pi pi-list mr-1" />Checklist</button>
+            <button class="px-3 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-800 font-medium" @click="generateChecklist"><i class="pi pi-list mr-1" />Checklist</button>
             <button class="px-3 py-1.5 text-sm text-gray-500 border rounded-lg hover:bg-gray-50" @click="$router.push('/guests')"><i class="pi pi-arrow-left mr-1" />Back</button>
           </div>
         </div>
       </div>
       <!-- Tabs -->
       <div class="flex gap-1 bg-white rounded-xl shadow-sm border p-1.5 overflow-x-auto">
-        <button v-for="t in tabs" :key="t.key" :class="['px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap', activeTab===t.key?'bg-ab-600 text-white shadow-sm':'text-gray-600 hover:bg-ab-50']" @click="activeTab=t.key">
+        <button v-for="t in tabs" :key="t.key" :class="['px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap', activeTab===t.key?'bg-primary-600 text-white shadow-sm':'text-gray-600 hover:bg-primary-50']" @click="activeTab=t.key">
           <i :class="[t.icon,'mr-1.5 text-xs']" />{{ t.label }} <span v-if="tabCount(t.key)" class="ml-1 text-[10px] opacity-70">({{ tabCount(t.key) }})</span>
         </button>
       </div>
       <!-- Tab: Info -->
       <div v-if="activeTab==='info'" class="bg-white rounded-xl shadow-sm border p-5 space-y-4">
-        <h2 class="font-display font-semibold text-gray-900 border-b border-ab-200 pb-2 mb-3">Guest Information</h2>
+        <h2 class="font-display font-semibold text-gray-900 border-b border-primary-200 pb-2 mb-3">Guest Information</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div><span class="text-gray-500 font-medium">Name</span><div class="mt-1 text-gray-900 font-medium">{{ guest.name }}</div></div>
           <div><span class="text-gray-500 font-medium">Type</span><div class="mt-1"><badge :label="guest.type" :color="typeColor[guest.type]" /></div></div>
@@ -807,7 +807,7 @@ const GuestHubView = {
       <!-- Tab: Travel -->
       <div v-if="activeTab==='travel'" class="space-y-3">
         <div v-for="t in guestTravelRec" :key="t.id" class="bg-white rounded-xl shadow-sm border p-5">
-          <div class="flex items-center gap-2 mb-3"><i class="pi pi-send text-ab-600" /><span class="font-display font-semibold text-gray-900">{{ t.type }} — {{ t.carrier }}</span><badge :label="t.status" :color="t.status==='Confirmed'?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700'" /></div>
+          <div class="flex items-center gap-2 mb-3"><i class="pi pi-send text-primary-600" /><span class="font-display font-semibold text-gray-900">{{ t.type }} — {{ t.carrier }}</span><badge :label="t.status" :color="t.status==='Confirmed'?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700'" /></div>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div><span class="text-gray-500">Route</span><div class="font-medium text-gray-900">{{ t.route }}</div></div>
             <div><span class="text-gray-500">Departure</span><div class="font-medium text-gray-900">{{ formatDate(t.departureDate) }} {{ formatTime(t.departureTime) }}</div></div>
@@ -820,7 +820,7 @@ const GuestHubView = {
       <!-- Tab: Hotel -->
       <div v-if="activeTab==='hotel'" class="space-y-3">
         <div v-for="a in guestAccomRec" :key="a.id" class="bg-white rounded-xl shadow-sm border p-5">
-          <div class="flex items-center gap-2 mb-3"><i class="pi pi-building text-ab-600" /><span class="font-display font-semibold text-gray-900">{{ a.hotel }}</span><badge :label="a.status" :color="'bg-emerald-100 text-emerald-700'" /></div>
+          <div class="flex items-center gap-2 mb-3"><i class="pi pi-building text-primary-600" /><span class="font-display font-semibold text-gray-900">{{ a.hotel }}</span><badge :label="a.status" :color="'bg-emerald-100 text-emerald-700'" /></div>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div><span class="text-gray-500">Room Type</span><div class="font-medium text-gray-900">{{ a.roomType }}</div></div>
             <div><span class="text-gray-500">Check-in</span><div class="font-medium text-gray-900">{{ formatDate(a.checkIn) }}</div></div>
@@ -849,13 +849,13 @@ const GuestHubView = {
         <div class="flex items-center justify-between mb-4">
           <h2 class="font-display font-semibold text-gray-900">Prep Items</h2>
           <div class="flex items-center gap-2">
-            <div class="w-24 h-2 rounded-full bg-gray-200 overflow-hidden"><div :class="['h-full rounded-full transition-all', pp>=80?'bg-emerald-500':'bg-ab-500']" :style="{width:pp+'%'}" /></div>
+            <div class="w-24 h-2 rounded-full bg-gray-200 overflow-hidden"><div :class="['h-full rounded-full transition-all', pp>=80?'bg-emerald-500':'bg-primary-500']" :style="{width:pp+'%'}" /></div>
             <span class="text-sm font-semibold text-gray-700">{{ pp }}%</span>
           </div>
         </div>
         <div class="space-y-2">
           <div v-for="p in guestPrepItems" :key="p.id" class="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-            <button :class="['w-5 h-5 rounded border-2 flex items-center justify-center transition-all shrink-0', p.status==='Complete'?'bg-emerald-500 border-emerald-500 text-white':'border-gray-300 hover:border-ab-400']" @click="togglePrep(p)">
+            <button :class="['w-5 h-5 rounded border-2 flex items-center justify-center transition-all shrink-0', p.status==='Complete'?'bg-emerald-500 border-emerald-500 text-white':'border-gray-300 hover:border-primary-400']" @click="togglePrep(p)">
               <i v-if="p.status==='Complete'" class="pi pi-check text-[10px]" />
             </button>
             <span :class="['flex-1 text-sm', p.status==='Complete'?'text-gray-400 line-through':'text-gray-900']">{{ p.item }}</span>
@@ -870,12 +870,12 @@ const GuestHubView = {
         <h2 class="font-display font-semibold text-gray-900 mb-4">Assigned Staff</h2>
         <div class="space-y-3">
           <div v-for="p in guestPairingsRec" :key="p.id" class="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
-            <div class="w-9 h-9 rounded-full bg-ab-500/20 flex items-center justify-center text-sm font-semibold text-ab-800">{{ p.staff?.name?.[0] || '?' }}</div>
+            <div class="w-9 h-9 rounded-full bg-primary-500/20 flex items-center justify-center text-sm font-semibold text-primary-800">{{ p.staff?.name?.[0] || '?' }}</div>
             <div class="flex-1">
               <div class="text-sm font-medium text-gray-900">{{ p.staff?.name || 'Unknown' }}</div>
               <div class="text-xs text-gray-500">{{ p.staff?.email }}</div>
             </div>
-            <badge :label="p.role" :color="p.role.includes('Liaison')?'bg-ab-100 text-ab-800':p.role==='Interpreter'?'bg-purple-100 text-purple-700':'bg-gray-100 text-gray-600'" />
+            <badge :label="p.role" :color="p.role.includes('Liaison')?'bg-primary-100 text-primary-800':p.role==='Interpreter'?'bg-purple-100 text-purple-700':'bg-gray-100 text-gray-600'" />
             <button class="text-red-400 hover:text-red-600 p-1" title="Remove" @click="removeStaff(p.id)"><i class="pi pi-times text-xs" /></button>
           </div>
         </div>
@@ -883,9 +883,9 @@ const GuestHubView = {
         <div class="mt-4 pt-4 border-t border-gray-100">
           <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Assign Staff</h3>
           <div class="flex gap-2">
-            <select v-model="assignStaffId" class="flex-1 border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none"><option value="">Select staff member...</option><option v-for="s in availableStaff" :key="s.id" :value="s.id">{{ s.name }} ({{ s.role }})</option></select>
+            <select v-model="assignStaffId" class="flex-1 border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none"><option value="">Select staff member...</option><option v-for="s in availableStaff" :key="s.id" :value="s.id">{{ s.name }} ({{ s.role }})</option></select>
             <select v-model="assignRole" class="border rounded-lg px-3 py-2 text-sm"><option v-for="r in ['Main Liaison','Backup Liaison','Interpreter','Security Escort']" :key="r">{{ r }}</option></select>
-            <button class="px-3 py-2 bg-ab-600 text-white rounded-lg text-sm font-semibold hover:bg-ab-800 disabled:opacity-40" :disabled="!assignStaffId" @click="doAssignStaff"><i class="pi pi-plus text-xs mr-1" />Assign</button>
+            <button class="px-3 py-2 bg-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-primary-800 disabled:opacity-40" :disabled="!assignStaffId" @click="doAssignStaff"><i class="pi pi-plus text-xs mr-1" />Assign</button>
           </div>
         </div>
       </div>
@@ -912,14 +912,14 @@ const GuestHubView = {
           <button class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500" @click="showItinerary=false"><i class="pi pi-times text-sm" /></button>
           <div>
             <h2 class="font-display text-xl font-bold text-gray-900">{{ guest.name }} — Convention Itinerary</h2>
-            <p class="text-sm text-gray-500 mt-1">Anime Boston 2026 · April 3–5 · Hynes Convention Center</p>
+            <p class="text-sm text-gray-500 mt-1">Convention Operations · April 3–5 · Hynes Convention Center</p>
             <span class="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700"><i class="pi pi-check-circle text-[10px]" />Synced with Google Calendar</span>
           </div>
           <!-- Travel -->
           <div v-if="guestTravelRec.length">
-            <h3 class="font-display font-semibold text-gray-900 text-sm uppercase tracking-wider mb-3"><i class="pi pi-send text-ab-600 mr-1.5" />Travel</h3>
+            <h3 class="font-display font-semibold text-gray-900 text-sm uppercase tracking-wider mb-3"><i class="pi pi-send text-primary-600 mr-1.5" />Travel</h3>
             <div class="space-y-2">
-              <div v-for="t in guestTravelRec" :key="t.id" class="bg-ab-50 rounded-lg p-3 text-sm">
+              <div v-for="t in guestTravelRec" :key="t.id" class="bg-primary-50 rounded-lg p-3 text-sm">
                 <div class="font-medium text-gray-900">{{ t.carrier }} · {{ t.route }}</div>
                 <div class="text-gray-600 mt-1">Depart {{ formatDate(t.departureDate) }} {{ formatTime(t.departureTime) }} — Arrive {{ formatDate(t.arrivalDate) }} {{ formatTime(t.arrivalTime) }}</div>
                 <div class="text-gray-500 mt-0.5">Confirmation: {{ t.confirmation }}</div>
@@ -928,9 +928,9 @@ const GuestHubView = {
           </div>
           <!-- Hotel -->
           <div v-if="guestAccomRec.length">
-            <h3 class="font-display font-semibold text-gray-900 text-sm uppercase tracking-wider mb-3"><i class="pi pi-building text-ab-600 mr-1.5" />Accommodation</h3>
+            <h3 class="font-display font-semibold text-gray-900 text-sm uppercase tracking-wider mb-3"><i class="pi pi-building text-primary-600 mr-1.5" />Accommodation</h3>
             <div class="space-y-2">
-              <div v-for="a in guestAccomRec" :key="a.id" class="bg-ab-50 rounded-lg p-3 text-sm">
+              <div v-for="a in guestAccomRec" :key="a.id" class="bg-primary-50 rounded-lg p-3 text-sm">
                 <div class="font-medium text-gray-900">{{ a.hotel }} · {{ a.roomType }}</div>
                 <div class="text-gray-600 mt-1">Check-in {{ formatDate(a.checkIn) }} — Check-out {{ formatDate(a.checkOut) }}</div>
                 <div class="text-gray-500 mt-0.5">Confirmation: {{ a.confirmation }}</div>
@@ -939,9 +939,9 @@ const GuestHubView = {
           </div>
           <!-- Schedule by Day -->
           <div v-if="guestEvents.length">
-            <h3 class="font-display font-semibold text-gray-900 text-sm uppercase tracking-wider mb-3"><i class="pi pi-calendar text-ab-600 mr-1.5" />Schedule</h3>
+            <h3 class="font-display font-semibold text-gray-900 text-sm uppercase tracking-wider mb-3"><i class="pi pi-calendar text-primary-600 mr-1.5" />Schedule</h3>
             <div v-for="day in groupedSchedule" :key="day.date" class="mb-4 last:mb-0">
-              <h4 class="font-display font-semibold text-ab-800 mb-2 pb-1 border-b border-ab-200">{{ day.label }}</h4>
+              <h4 class="font-display font-semibold text-primary-800 mb-2 pb-1 border-b border-primary-200">{{ day.label }}</h4>
               <div class="space-y-1.5">
                 <div v-for="ev in day.events" :key="ev.id" class="flex items-start gap-3 py-1.5 text-sm">
                   <span :class="['w-2 h-2 rounded-full mt-1.5 shrink-0', eventTypeColor[ev.eventType]||'bg-gray-400']"></span>
@@ -963,7 +963,7 @@ const GuestHubView = {
             </div>
           </div>
           <div class="pt-2 border-t border-gray-100 flex justify-end">
-            <button class="px-4 py-2 text-sm bg-ab-600 text-white rounded-lg hover:bg-ab-800 font-medium" @click="printItinerary"><i class="pi pi-print mr-1.5" />Print</button>
+            <button class="px-4 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-800 font-medium" @click="printItinerary"><i class="pi pi-print mr-1.5" />Print</button>
           </div>
         </div>
       </div>
@@ -979,9 +979,9 @@ const GuestHubView = {
           <!-- Progress bar -->
           <div class="flex items-center gap-3">
             <div class="flex-1 h-3 rounded-full bg-gray-200 overflow-hidden">
-              <div :class="['h-full rounded-full transition-all', pp>=80?'bg-emerald-500':pp>=40?'bg-ab-500':'bg-accent-400']" :style="{width:pp+'%'}"></div>
+              <div :class="['h-full rounded-full transition-all', pp>=80?'bg-emerald-500':pp>=40?'bg-primary-500':'bg-accent-400']" :style="{width:pp+'%'}"></div>
             </div>
-            <span class="text-sm font-bold" :class="pp>=80?'text-emerald-600':pp>=40?'text-ab-700':'text-accent-500'">{{ pp }}% complete</span>
+            <span class="text-sm font-bold" :class="pp>=80?'text-emerald-600':pp>=40?'text-primary-700':'text-accent-500'">{{ pp }}% complete</span>
           </div>
           <!-- Prep items -->
           <div class="space-y-2">
@@ -1078,7 +1078,7 @@ const StaffListView = {
     <div class="space-y-5">
       <div class="flex items-center justify-between">
         <h1 class="font-display text-2xl font-bold tracking-tight text-gray-900">Staff</h1>
-        <button class="px-4 py-2 bg-ab-600 text-white rounded-lg text-sm font-semibold hover:bg-ab-800 transition-colors flex items-center gap-2" @click="showAdd=true"><i class="pi pi-plus text-xs" /> Add Staff</button>
+        <button class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-primary-800 transition-colors flex items-center gap-2" @click="showAdd=true"><i class="pi pi-plus text-xs" /> Add Staff</button>
       </div>
       <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
         <table class="w-full text-sm">
@@ -1094,7 +1094,7 @@ const StaffListView = {
             <tr v-for="s in store.staff" :key="s.id" class="hover:bg-gray-50">
               <td class="px-4 py-3 font-medium text-gray-900">{{ s.name }}</td>
               <td class="px-4 py-3 text-gray-600">{{ s.email }}</td>
-              <td class="px-4 py-3"><badge :label="s.role" :color="s.role==='Director'?'bg-accent-100 text-accent-700':s.role==='Coordinator'?'bg-ab-100 text-ab-800':'bg-gray-100 text-gray-600'" /></td>
+              <td class="px-4 py-3"><badge :label="s.role" :color="s.role==='Director'?'bg-accent-100 text-accent-700':s.role==='Coordinator'?'bg-primary-100 text-primary-800':'bg-gray-100 text-gray-600'" /></td>
               <td class="px-4 py-3 text-gray-600">{{ s.department }}</td>
               <td class="px-4 py-3 text-gray-600">{{ s.languages.join(', ') }}</td>
               <td class="px-4 py-3"><badge :label="s.availability" :color="s.availability==='Full Convention'?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700'" /></td>
@@ -1107,8 +1107,8 @@ const StaffListView = {
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 mx-4">
           <h2 class="font-display text-xl font-bold mb-4">Add Staff Member</h2>
           <div class="space-y-3">
-            <div><label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Name *</label><input v-model="ns.name" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none" /></div>
-            <div><label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Email *</label><input v-model="ns.email" type="email" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none" /></div>
+            <div><label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Name *</label><input v-model="ns.name" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none" /></div>
+            <div><label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Email *</label><input v-model="ns.email" type="email" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none" /></div>
             <div class="grid grid-cols-2 gap-3">
               <div><label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Role</label><select v-model="ns.role" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm"><option v-for="r in store.config.roles" :key="r">{{ r }}</option></select></div>
               <div><label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Department</label><select v-model="ns.department" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm"><option v-for="d in store.config.departments" :key="d">{{ d }}</option></select></div>
@@ -1116,7 +1116,7 @@ const StaffListView = {
           </div>
           <div class="flex justify-end gap-2 mt-5">
             <button class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900" @click="showAdd=false">Cancel</button>
-            <button class="px-4 py-2 bg-ab-600 text-white rounded-lg text-sm font-semibold hover:bg-ab-800 disabled:opacity-40" :disabled="!ns.name||!ns.email" @click="addStaff">Add</button>
+            <button class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-primary-800 disabled:opacity-40" :disabled="!ns.name||!ns.email" @click="addStaff">Add</button>
           </div>
         </div>
       </div>
@@ -1143,18 +1143,18 @@ const ScheduleView = {
         <h1 class="font-display text-2xl font-bold tracking-tight text-gray-900">Schedule</h1>
         <div class="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1"><i class="pi pi-sync text-[10px]" /> Synced with Google Calendar <span class="text-emerald-400 font-mono">({{ store.schedule.length }} events)</span></div>
       </div>
-      <div class="flex flex-wrap items-center gap-3 bg-white rounded-xl shadow-sm border p-3 border-t-2 border-t-ab-200">
+      <div class="flex flex-wrap items-center gap-3 bg-white rounded-xl shadow-sm border p-3 border-t-2 border-t-primary-200">
         <div class="flex gap-0.5 bg-gray-100 rounded-lg p-0.5">
           <button :class="['px-3 py-1.5 rounded-md text-xs font-semibold transition-all', viewMode==='table'?'bg-white shadow-sm text-gray-900':'text-gray-500']" @click="viewMode='table'"><i class="pi pi-table mr-1" />Table</button>
           <button :class="['px-3 py-1.5 rounded-md text-xs font-semibold transition-all', viewMode==='timeline'?'bg-white shadow-sm text-gray-900':'text-gray-500']" @click="viewMode='timeline'"><i class="pi pi-sliders-h mr-1" />Timeline</button>
         </div>
-        <select v-model="filterGuest" class="border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-ab-300 outline-none"><option value="">All Guests</option><option v-for="g in store.guests" :key="g.id" :value="g.id">{{ g.name }}</option></select>
-        <select v-model="filterVenue" class="border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-ab-300 outline-none"><option value="">All Venues</option><option v-for="v in store.config.venues" :key="v" :value="v">{{ v }}</option></select>
-        <select v-model="filterType" class="border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-ab-300 outline-none"><option value="">All Types</option><option v-for="t in store.config.eventTypes" :key="t" :value="t">{{ t }}</option></select>
+        <select v-model="filterGuest" class="border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary-300 outline-none"><option value="">All Guests</option><option v-for="g in store.guests" :key="g.id" :value="g.id">{{ g.name }}</option></select>
+        <select v-model="filterVenue" class="border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary-300 outline-none"><option value="">All Venues</option><option v-for="v in store.config.venues" :key="v" :value="v">{{ v }}</option></select>
+        <select v-model="filterType" class="border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary-300 outline-none"><option value="">All Types</option><option v-for="t in store.config.eventTypes" :key="t" :value="t">{{ t }}</option></select>
         <span class="ml-auto text-xs text-gray-400">{{ filteredEvents.length }} event{{ filteredEvents.length!==1?'s':'' }}</span>
       </div>
       <div class="flex gap-2">
-        <button v-for="d in days" :key="d" :class="['px-4 py-2 rounded-lg text-sm font-semibold transition-all', selectedDay===d?'bg-ab-600 text-white shadow-sm':'bg-white text-gray-600 border hover:bg-ab-50']" @click="selectedDay=d">{{ formatDate(d) }}</button>
+        <button v-for="d in days" :key="d" :class="['px-4 py-2 rounded-lg text-sm font-semibold transition-all', selectedDay===d?'bg-primary-600 text-white shadow-sm':'bg-white text-gray-600 border hover:bg-primary-50']" @click="selectedDay=d">{{ formatDate(d) }}</button>
       </div>
       <div v-if="viewMode==='table'" class="bg-white rounded-xl shadow-sm border overflow-hidden">
         <table class="w-full text-sm">
@@ -1170,7 +1170,7 @@ const ScheduleView = {
             <tr v-for="e in filteredEvents" :key="e.id" class="hover:bg-gray-50 cursor-pointer" @click="$router.push('/guests/'+e.guestId)">
               <td class="px-4 py-3 text-gray-900 font-medium whitespace-nowrap">{{ formatTime(e.startTime) }} – {{ formatTime(e.endTime) }}</td>
               <td class="px-4 py-3 text-gray-900">{{ e.activity }}</td>
-              <td class="px-4 py-3 text-ab-700 font-medium">{{ (getGuestById(e.guestId)||{}).name }}</td>
+              <td class="px-4 py-3 text-primary-700 font-medium">{{ (getGuestById(e.guestId)||{}).name }}</td>
               <td class="px-4 py-3"><badge :label="e.eventType" /></td>
               <td class="px-4 py-3 text-gray-600">{{ e.venue }}</td>
               <td class="px-4 py-3"><badge :label="e.status" :color="statusColor[e.status]||'bg-gray-100 text-gray-600'" /></td>
@@ -1247,10 +1247,10 @@ const PrepTrackerView = {
       <div class="bg-white rounded-xl shadow-sm border p-4">
         <div class="flex items-center justify-between mb-2">
           <span class="text-sm font-semibold text-gray-700">Overall Progress</span>
-          <span class="font-display text-sm font-bold" :class="overallPercent>=80?'text-emerald-600':'text-ab-600'">{{ overallPercent }}%</span>
+          <span class="font-display text-sm font-bold" :class="overallPercent>=80?'text-emerald-600':'text-primary-600'">{{ overallPercent }}%</span>
         </div>
         <div class="w-full h-3 rounded-full bg-gray-200 overflow-hidden">
-          <div class="h-full rounded-full transition-all duration-500" :class="overallPercent>=80?'bg-emerald-500':'bg-ab-500'" :style="{width:overallPercent+'%'}" />
+          <div class="h-full rounded-full transition-all duration-500" :class="overallPercent>=80?'bg-emerald-500':'bg-primary-500'" :style="{width:overallPercent+'%'}" />
         </div>
       </div>
       <!-- Filters -->
@@ -1258,24 +1258,24 @@ const PrepTrackerView = {
         <div class="flex flex-col sm:flex-row gap-3">
           <div class="relative flex-1">
             <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
-            <input v-model="searchText" type="text" placeholder="Search prep items..." class="w-full border rounded-lg pl-9 pr-3 py-1.5 text-sm focus:ring-2 focus:ring-ab-300 outline-none" />
+            <input v-model="searchText" type="text" placeholder="Search prep items..." class="w-full border rounded-lg pl-9 pr-3 py-1.5 text-sm focus:ring-2 focus:ring-primary-300 outline-none" />
           </div>
-          <select v-model="filterGuest" class="border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-ab-300 outline-none">
+          <select v-model="filterGuest" class="border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary-300 outline-none">
             <option value="">All Guests</option>
             <option v-for="g in store.guests" :key="g.id" :value="g.id">{{ g.name }}</option>
           </select>
-          <select v-model="filterOwner" class="border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-ab-300 outline-none">
+          <select v-model="filterOwner" class="border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary-300 outline-none">
             <option value="">All Owners</option>
             <option v-for="o in uniqueOwners" :key="o" :value="o">{{ o }}</option>
           </select>
-          <select v-model="filterStatus" class="border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-ab-300 outline-none">
+          <select v-model="filterStatus" class="border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary-300 outline-none">
             <option value="">All Statuses</option>
             <option v-for="s in statusOptions" :key="s" :value="s">{{ s }}</option>
           </select>
         </div>
         <div class="flex items-center justify-between text-xs text-gray-500">
           <span>Showing <strong class="text-gray-700">{{ filteredCount }}</strong> of {{ store.prep.length }} items</span>
-          <button v-if="hasActiveFilters" class="text-ab-600 hover:text-ab-800 font-semibold" @click="clearFilters">Clear filters</button>
+          <button v-if="hasActiveFilters" class="text-primary-600 hover:text-primary-800 font-semibold" @click="clearFilters">Clear filters</button>
         </div>
       </div>
       <!-- Items grouped by guest -->
@@ -1286,13 +1286,13 @@ const PrepTrackerView = {
             <badge :label="group.guestType" :color="typeColor[group.guestType]" />
           </div>
           <div class="flex items-center gap-2">
-            <div class="w-20 h-1.5 rounded-full bg-gray-200 overflow-hidden"><div :class="['h-full rounded-full', group.percent>=80?'bg-emerald-500':'bg-ab-500']" :style="{width:group.percent+'%'}" /></div>
+            <div class="w-20 h-1.5 rounded-full bg-gray-200 overflow-hidden"><div :class="['h-full rounded-full', group.percent>=80?'bg-emerald-500':'bg-primary-500']" :style="{width:group.percent+'%'}" /></div>
             <span class="text-xs font-semibold text-gray-600">{{ group.percent }}%</span>
           </div>
         </div>
         <div class="divide-y divide-gray-50">
           <div v-for="p in group.items" :key="p.id" class="flex items-center gap-3 px-5 py-2.5">
-            <button :class="['w-5 h-5 rounded border-2 flex items-center justify-center transition-all shrink-0', p.status==='Complete'?'bg-emerald-500 border-emerald-500 text-white':'border-gray-300 hover:border-ab-400']" @click="togglePrep(p)">
+            <button :class="['w-5 h-5 rounded border-2 flex items-center justify-center transition-all shrink-0', p.status==='Complete'?'bg-emerald-500 border-emerald-500 text-white':'border-gray-300 hover:border-primary-400']" @click="togglePrep(p)">
               <i v-if="p.status==='Complete'" class="pi pi-check text-[10px]" />
             </button>
             <span :class="['flex-1 text-sm', p.status==='Complete'?'text-gray-400 line-through':'text-gray-900']">{{ p.item }}</span>
@@ -1326,7 +1326,7 @@ const PrepTrackerView = {
       const complete = all.filter(p=>p.status==='Complete').length
       const overdue = all.filter(p=>p.status==='Overdue').length
       return [
-        {label:'Total Items',value:all.length,border:'border-l-ab-500'},
+        {label:'Total Items',value:all.length,border:'border-l-primary-500'},
         {label:'Complete',value:complete,border:'border-l-emerald-400'},
         {label:'In Progress',value:all.filter(p=>p.status==='In Progress').length,border:'border-l-amber-400'},
         {label:'Overdue',value:overdue,border:'border-l-red-400'},
@@ -1390,19 +1390,19 @@ const SettingsView = {
       <!-- Countdown Banner -->
       <div class="rounded-xl overflow-hidden shadow-sm">
         <div class="bg-gradient-to-r from-accent-400 to-red-500 px-6 py-4 text-center text-white font-display font-bold text-lg tracking-wide">
-          <span v-if="daysUntil > 0">{{ daysUntil }} days until Anime Boston 2026</span>
-          <span v-else-if="daysUntil === 0">Anime Boston 2026 is TODAY!</span>
-          <span v-else>Anime Boston 2026 has started!</span>
+          <span v-if="daysUntil > 0">{{ daysUntil }} days until Convention Operations</span>
+          <span v-else-if="daysUntil === 0">Convention Operations is TODAY!</span>
+          <span v-else>Convention Operations has started!</span>
         </div>
       </div>
 
       <!-- Convention Info -->
       <div class="bg-white rounded-xl shadow-sm border p-5">
-        <div class="flex items-center justify-between border-b border-ab-200 pb-2 mb-4">
+        <div class="flex items-center justify-between border-b border-primary-200 pb-2 mb-4">
           <h2 class="font-display font-semibold text-gray-900">Convention Info</h2>
           <button @click="toggleEdit"
                   class="text-xs font-semibold px-3 py-1 rounded-lg transition-colors"
-                  :class="editing ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-ab-50 text-ab-700 hover:bg-ab-100'">
+                  :class="editing ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-primary-50 text-primary-700 hover:bg-primary-100'">
             {{ editing ? 'Cancel' : 'Edit' }}
           </button>
         </div>
@@ -1421,27 +1421,27 @@ const SettingsView = {
             <div>
               <label class="block text-gray-500 font-medium mb-1">Name</label>
               <input v-model="editForm.name" type="text"
-                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-ab-400 focus:ring-1 focus:ring-ab-400 outline-none" />
+                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-primary-400 focus:ring-1 focus:ring-primary-400 outline-none" />
             </div>
             <div>
               <label class="block text-gray-500 font-medium mb-1">Venue</label>
               <input v-model="editForm.venue" type="text"
-                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-ab-400 focus:ring-1 focus:ring-ab-400 outline-none" />
+                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-primary-400 focus:ring-1 focus:ring-primary-400 outline-none" />
             </div>
             <div>
               <label class="block text-gray-500 font-medium mb-1">Start Date</label>
               <input v-model="editForm.startDate" type="date"
-                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-ab-400 focus:ring-1 focus:ring-ab-400 outline-none" />
+                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-primary-400 focus:ring-1 focus:ring-primary-400 outline-none" />
             </div>
             <div>
               <label class="block text-gray-500 font-medium mb-1">End Date</label>
               <input v-model="editForm.endDate" type="date"
-                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-ab-400 focus:ring-1 focus:ring-ab-400 outline-none" />
+                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-primary-400 focus:ring-1 focus:ring-primary-400 outline-none" />
             </div>
           </div>
           <div class="flex gap-2 pt-2">
             <button @click="saveConventionInfo"
-                    class="px-4 py-2 text-xs font-semibold rounded-lg bg-ab-600 text-white hover:bg-ab-700 transition-colors">
+                    class="px-4 py-2 text-xs font-semibold rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors">
               Save
             </button>
             <button @click="cancelEdit"
@@ -1454,13 +1454,13 @@ const SettingsView = {
 
       <!-- Config list sections -->
       <div v-for="section in sections" :key="section.key" class="bg-white rounded-xl shadow-sm border p-5">
-        <h2 class="font-display font-semibold text-gray-900 border-b border-ab-200 pb-2 mb-4">{{ section.label }}</h2>
+        <h2 class="font-display font-semibold text-gray-900 border-b border-primary-200 pb-2 mb-4">{{ section.label }}</h2>
         <div class="flex flex-wrap gap-2 items-center">
           <span v-for="(item, idx) in section.items" :key="item"
-                class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-ab-50 text-ab-800 border border-ab-200">
+                class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary-50 text-primary-800 border border-primary-200">
             {{ item }}
             <button @click="removeConfigItem(section.key, idx)"
-                    class="ml-0.5 text-ab-400 hover:text-red-600 transition-colors" title="Remove">
+                    class="ml-0.5 text-primary-400 hover:text-red-600 transition-colors" title="Remove">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
           </span>
@@ -1468,7 +1468,7 @@ const SettingsView = {
           <!-- Add new item -->
           <span v-if="addingSection === section.key" class="inline-flex items-center gap-1">
             <input v-model="newItemText" @keyup.enter="confirmAddItem(section.key)"
-                   class="rounded-lg border border-gray-300 px-2 py-0.5 text-xs w-36 focus:border-ab-400 focus:ring-1 focus:ring-ab-400 outline-none"
+                   class="rounded-lg border border-gray-300 px-2 py-0.5 text-xs w-36 focus:border-primary-400 focus:ring-1 focus:ring-primary-400 outline-none"
                    :placeholder="'New ' + section.singular" />
             <button @click="confirmAddItem(section.key)"
                     class="text-emerald-600 hover:text-emerald-700 transition-colors" title="Confirm">
@@ -1489,7 +1489,7 @@ const SettingsView = {
 
       <!-- Users Reference Table -->
       <div class="bg-white rounded-xl shadow-sm border p-5">
-        <h2 class="font-display font-semibold text-gray-900 border-b border-ab-200 pb-2 mb-4">Users</h2>
+        <h2 class="font-display font-semibold text-gray-900 border-b border-primary-200 pb-2 mb-4">Users</h2>
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
@@ -1504,7 +1504,7 @@ const SettingsView = {
                 <td class="px-4 py-2.5 font-medium text-gray-900">{{ s.name }}</td>
                 <td class="px-4 py-2.5 text-gray-600">{{ s.email }}</td>
                 <td class="px-4 py-2.5">
-                  <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-ab-50 text-ab-800 border border-ab-200">{{ s.role }}</span>
+                  <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary-50 text-primary-800 border border-primary-200">{{ s.role }}</span>
                 </td>
               </tr>
             </tbody>
@@ -1607,7 +1607,7 @@ const NewGuestWizardView = {
             <div :class="[
               'w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-colors',
               currentStep > i + 1 ? 'bg-emerald-500 border-emerald-500 text-white' :
-              currentStep === i + 1 ? 'bg-ab-600 border-ab-600 text-white' :
+              currentStep === i + 1 ? 'bg-primary-600 border-primary-600 text-white' :
               'bg-gray-200 border-gray-300 text-gray-500'
             ]">
               <i v-if="currentStep > i + 1" class="pi pi-check text-xs" />
@@ -1624,15 +1624,15 @@ const NewGuestWizardView = {
 
       <!-- Step 1: Basic Info -->
       <div v-if="currentStep === 1" class="bg-white rounded-xl shadow-sm border p-5">
-        <h2 class="font-display font-semibold text-gray-900 border-b border-ab-200 pb-2 mb-4">Basic Information</h2>
+        <h2 class="font-display font-semibold text-gray-900 border-b border-primary-200 pb-2 mb-4">Basic Information</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Name <span class="text-red-500">*</span></label>
-            <input v-model="form.name" type="text" placeholder="Full name" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none" />
+            <input v-model="form.name" type="text" placeholder="Full name" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none" />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Type <span class="text-red-500">*</span></label>
-            <select v-model="form.type" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none">
+            <select v-model="form.type" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none">
               <option value="">Select type...</option>
               <option value="JP">JP (Japanese)</option>
               <option value="NA">NA (North American)</option>
@@ -1640,18 +1640,18 @@ const NewGuestWizardView = {
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Department <span class="text-red-500">*</span></label>
-            <select v-model="form.department" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none">
+            <select v-model="form.department" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none">
               <option value="">Select department...</option>
               <option v-for="d in store.config.departments" :key="d" :value="d">{{ d }}</option>
             </select>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Company</label>
-            <input v-model="form.company" type="text" placeholder="Company or agency" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none" />
+            <input v-model="form.company" type="text" placeholder="Company or agency" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none" />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Status <span class="text-red-500">*</span></label>
-            <select v-model="form.status" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none">
+            <select v-model="form.status" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none">
               <option value="Invited">Invited</option>
               <option value="Confirmed">Confirmed</option>
             </select>
@@ -1661,75 +1661,75 @@ const NewGuestWizardView = {
 
       <!-- Step 2: Travel & Accommodation -->
       <div v-if="currentStep === 2" class="bg-white rounded-xl shadow-sm border p-5">
-        <h2 class="font-display font-semibold text-gray-900 border-b border-ab-200 pb-2 mb-4">Travel</h2>
+        <h2 class="font-display font-semibold text-gray-900 border-b border-primary-200 pb-2 mb-4">Travel</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Flight Carrier</label>
-            <input v-model="form.travel.carrier" type="text" placeholder="e.g. JAL, ANA, Delta" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none" />
+            <input v-model="form.travel.carrier" type="text" placeholder="e.g. JAL, ANA, Delta" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none" />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Route</label>
-            <input v-model="form.travel.route" type="text" placeholder="e.g. NRT → BOS" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none" />
+            <input v-model="form.travel.route" type="text" placeholder="e.g. NRT → BOS" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none" />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Departure Date</label>
-            <input v-model="form.travel.departureDate" type="date" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none" />
+            <input v-model="form.travel.departureDate" type="date" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none" />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Arrival Date</label>
-            <input v-model="form.travel.arrivalDate" type="date" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none" />
+            <input v-model="form.travel.arrivalDate" type="date" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none" />
           </div>
         </div>
-        <h2 class="font-display font-semibold text-gray-900 border-b border-ab-200 pb-2 mb-4">Accommodation</h2>
+        <h2 class="font-display font-semibold text-gray-900 border-b border-primary-200 pb-2 mb-4">Accommodation</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Hotel</label>
-            <input v-model="form.accommodation.hotel" type="text" placeholder="Hotel name" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none" />
+            <input v-model="form.accommodation.hotel" type="text" placeholder="Hotel name" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none" />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Room Type</label>
-            <input v-model="form.accommodation.roomType" type="text" placeholder="e.g. Suite, Deluxe King" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none" />
+            <input v-model="form.accommodation.roomType" type="text" placeholder="e.g. Suite, Deluxe King" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none" />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Check-in</label>
-            <input v-model="form.accommodation.checkIn" type="date" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none" />
+            <input v-model="form.accommodation.checkIn" type="date" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none" />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Check-out</label>
-            <input v-model="form.accommodation.checkOut" type="date" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none" />
+            <input v-model="form.accommodation.checkOut" type="date" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none" />
           </div>
         </div>
       </div>
 
       <!-- Step 3: Dietary & Special Handling -->
       <div v-if="currentStep === 3" class="bg-white rounded-xl shadow-sm border p-5">
-        <h2 class="font-display font-semibold text-gray-900 border-b border-ab-200 pb-2 mb-4">Dietary Information</h2>
+        <h2 class="font-display font-semibold text-gray-900 border-b border-primary-200 pb-2 mb-4">Dietary Information</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Dietary Type</label>
-            <input v-model="form.dietary.type" type="text" placeholder="e.g. Vegetarian, Vegan, No restrictions" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none" />
+            <input v-model="form.dietary.type" type="text" placeholder="e.g. Vegetarian, Vegan, No restrictions" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none" />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Restrictions</label>
-            <input v-model="form.dietary.restrictionsStr" type="text" placeholder="Comma-separated, e.g. No pork, No shellfish" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none" />
+            <input v-model="form.dietary.restrictionsStr" type="text" placeholder="Comma-separated, e.g. No pork, No shellfish" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none" />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Allergies</label>
-            <input v-model="form.dietary.allergiesStr" type="text" placeholder="Comma-separated, e.g. Tree nuts, Wheat" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none" />
+            <input v-model="form.dietary.allergiesStr" type="text" placeholder="Comma-separated, e.g. Tree nuts, Wheat" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none" />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Preferences</label>
-            <input v-model="form.dietary.preferencesStr" type="text" placeholder="Comma-separated, e.g. Japanese food, Green tea" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none" />
+            <input v-model="form.dietary.preferencesStr" type="text" placeholder="Comma-separated, e.g. Japanese food, Green tea" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none" />
           </div>
         </div>
-        <h2 class="font-display font-semibold text-gray-900 border-b border-ab-200 pb-2 mb-4">Special Handling</h2>
+        <h2 class="font-display font-semibold text-gray-900 border-b border-primary-200 pb-2 mb-4">Special Handling</h2>
         <div class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Special Handling Notes</label>
-            <textarea v-model="form.specialHandling" rows="3" placeholder="Any special requirements or VIP notes..." class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ab-300 outline-none resize-none" />
+            <textarea v-model="form.specialHandling" rows="3" placeholder="Any special requirements or VIP notes..." class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-300 outline-none resize-none" />
           </div>
           <div class="flex items-center gap-2">
-            <input v-model="form.interpreterRequired" type="checkbox" id="interpreter" class="w-4 h-4 rounded border-gray-300 text-ab-600 focus:ring-ab-300" />
+            <input v-model="form.interpreterRequired" type="checkbox" id="interpreter" class="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-300" />
             <label for="interpreter" class="text-sm font-medium text-gray-700">Interpreter Required</label>
           </div>
         </div>
@@ -1738,7 +1738,7 @@ const NewGuestWizardView = {
       <!-- Step 4: Review & Submit -->
       <div v-if="currentStep === 4" class="space-y-4">
         <div class="bg-white rounded-xl shadow-sm border p-5">
-          <h2 class="font-display font-semibold text-gray-900 border-b border-ab-200 pb-2 mb-4">Guest Details</h2>
+          <h2 class="font-display font-semibold text-gray-900 border-b border-primary-200 pb-2 mb-4">Guest Details</h2>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
             <div><span class="text-gray-500 font-medium">Name</span><div class="mt-0.5 text-gray-900 font-medium">{{ form.name }}</div></div>
             <div><span class="text-gray-500 font-medium">Type</span><div class="mt-0.5 text-gray-900">{{ form.type === 'JP' ? 'Japanese' : 'North American' }}</div></div>
@@ -1751,7 +1751,7 @@ const NewGuestWizardView = {
         </div>
 
         <div v-if="hasTravelData" class="bg-white rounded-xl shadow-sm border p-5">
-          <h2 class="font-display font-semibold text-gray-900 border-b border-ab-200 pb-2 mb-4">Travel</h2>
+          <h2 class="font-display font-semibold text-gray-900 border-b border-primary-200 pb-2 mb-4">Travel</h2>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
             <div v-if="form.travel.carrier"><span class="text-gray-500 font-medium">Carrier</span><div class="mt-0.5 text-gray-900">{{ form.travel.carrier }}</div></div>
             <div v-if="form.travel.route"><span class="text-gray-500 font-medium">Route</span><div class="mt-0.5 text-gray-900">{{ form.travel.route }}</div></div>
@@ -1761,7 +1761,7 @@ const NewGuestWizardView = {
         </div>
 
         <div v-if="hasAccomData" class="bg-white rounded-xl shadow-sm border p-5">
-          <h2 class="font-display font-semibold text-gray-900 border-b border-ab-200 pb-2 mb-4">Accommodation</h2>
+          <h2 class="font-display font-semibold text-gray-900 border-b border-primary-200 pb-2 mb-4">Accommodation</h2>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
             <div v-if="form.accommodation.hotel"><span class="text-gray-500 font-medium">Hotel</span><div class="mt-0.5 text-gray-900">{{ form.accommodation.hotel }}</div></div>
             <div v-if="form.accommodation.roomType"><span class="text-gray-500 font-medium">Room Type</span><div class="mt-0.5 text-gray-900">{{ form.accommodation.roomType }}</div></div>
@@ -1771,7 +1771,7 @@ const NewGuestWizardView = {
         </div>
 
         <div v-if="hasDietaryData" class="bg-white rounded-xl shadow-sm border p-5">
-          <h2 class="font-display font-semibold text-gray-900 border-b border-ab-200 pb-2 mb-4">Dietary</h2>
+          <h2 class="font-display font-semibold text-gray-900 border-b border-primary-200 pb-2 mb-4">Dietary</h2>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
             <div v-if="form.dietary.type"><span class="text-gray-500 font-medium">Type</span><div class="mt-0.5 text-gray-900">{{ form.dietary.type }}</div></div>
             <div v-if="form.dietary.restrictionsStr"><span class="text-gray-500 font-medium">Restrictions</span><div class="mt-0.5 text-gray-900">{{ form.dietary.restrictionsStr }}</div></div>
@@ -1789,7 +1789,7 @@ const NewGuestWizardView = {
         <div v-else />
         <button v-if="currentStep < 4" @click="currentStep++" :disabled="!canProceed" :class="[
           'flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-colors',
-          canProceed ? 'bg-ab-600 text-white hover:bg-ab-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+          canProceed ? 'bg-primary-600 text-white hover:bg-primary-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
         ]">
           Next <i class="pi pi-arrow-right text-xs" />
         </button>

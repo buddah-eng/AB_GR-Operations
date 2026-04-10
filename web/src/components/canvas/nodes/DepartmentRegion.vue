@@ -71,7 +71,6 @@ defineProps<{
 }
 
 .department-region__count {
-  font-family: var(--font-body);
   font-size: 10px;
   color: var(--text-muted);
   margin-left: auto;

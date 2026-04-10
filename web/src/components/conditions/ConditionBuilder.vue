@@ -97,7 +97,6 @@ function handleRemoveRoot(): void {
 
 <style scoped>
 .cb-root {
-  font-family: var(--font-body);
 }
 
 /* Skeleton */
@@ -122,8 +121,8 @@ function handleRemoveRoot(): void {
   align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-4);
-  background: #fef2f2;
-  border: var(--border-thin) solid #fecaca;
+  background: var(--color-error-bg);
+  border: var(--border-thin) solid var(--color-error-bg-border);
   border-radius: var(--radius-lg);
 }
 
@@ -135,7 +134,7 @@ function handleRemoveRoot(): void {
 }
 
 .cb-error-text {
-  color: #991b1b;
+  color: var(--color-error-text);
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
   margin: 0;
@@ -167,7 +166,6 @@ function handleRemoveRoot(): void {
 }
 
 .cb-empty-text {
-  font-family: var(--font-body);
   font-size: var(--text-sm);
   color: var(--text-muted);
   margin: 0 0 var(--space-4);

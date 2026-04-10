@@ -1,12 +1,12 @@
 /**
  * GR-Ops Design System — Design Tokens
  *
- * Two themes: OSS neutral (default) and Anime Boston (applied via .theme-ab class or env vars).
+ * Two themes: OSS neutral (default) and convention-specific (applied via .theme-ab class or env vars).
  * Components reference these tokens — never hardcode colors or fonts.
  *
  * Typography: M PLUS 1 (display) + Lato (body)
  * OSS palette: Refined cool grays + slate blue primary + warm amber accent
- * AB palette: Convention blue (#4A90C4) + energetic orange (#E8962D)
+ * Convention palette: Convention blue (#4A90C4) + energetic orange (#E8962D)
  */
 
 /* ============================================================
@@ -171,6 +171,34 @@
   --color-warning: #f59e0b;
   --color-error: #ef4444;
   --color-info: #3b82f6;
+  --color-purple: #7e22ce;
+  --color-sky: #0ea5e9;
+
+  /* Status backgrounds */
+  --color-success-bg: #f0fdf4;
+  --color-success-bg-strong: #dcfce7;
+  --color-success-bg-border: #bbf7d0;
+  --color-success-text: #166534;
+  --color-success-text-dark: #15803d;
+  --color-error-bg: #fef2f2;
+  --color-error-bg-border: #fecaca;
+  --color-error-text: #991b1b;
+  --color-error-text-dark: #b91c1c;
+  --color-error-text-mid: #dc2626;
+  --color-warning-bg: #fffbeb;
+  --color-info-bg: #eff6ff;
+  --color-info-bg-border: #bfdbfe;
+  --color-info-text: #1d4ed8;
+  --color-purple-bg: #faf5ff;
+  --color-purple-bg-border: #e9d5ff;
+  --color-purple-border: #d8b4fe;
+  --color-purple-border-hover: #c084fc;
+  --color-purple-mid: #a855f7;
+  --color-sky-bg: #f0f9ff;
+  --color-sky-border: #7dd3fc;
+  --color-sky-text: #0369a1;
+  --color-sky-handle: #38bdf8;
+  --color-error-border-accent: #fca5a5;
 
   /* Text */
   --text-primary: var(--primary-900);
@@ -190,13 +218,13 @@
 }
 
 /* ============================================================
-   ANIME BOSTON THEME
+   Convention-specific theme override (Anime Boston)
    Applied via .theme-ab on <html> or env-var-driven build
    Fun blue + energetic orange, convention energy
    ============================================================ */
 
 .theme-ab {
-  /* Primary — AB blue (from convention poster) */
+  /* Primary — convention blue */
   --primary-50: #f0f5fa;
   --primary-100: #d6edf7;
   --primary-200: #b8dff0;
@@ -209,7 +237,7 @@
   --primary-900: #234b72;
   --primary-950: #1a3a5c;
 
-  /* Accent — AB orange (from convention logo) */
+  /* Accent — convention orange */
   --accent-50: #fff8ed;
   --accent-100: #ffefd4;
   --accent-200: #ffd9a0;
@@ -221,7 +249,7 @@
   --accent-800: #7c4805;
   --accent-900: #5e3604;
 
-  /* Override backgrounds for AB energy */
+  /* Override backgrounds for convention energy */
   --bg-sidebar: var(--primary-900);
   --border-focus: var(--primary-600);
 }

@@ -71,60 +71,15 @@
         <div class="builder-main-config">
           <!-- TABLE config -->
           <template v-if="selectedViewType === 'table'">
-            <div>
-              <h3 class="section-header">Columns</h3>
-              <div class="builder-column-list">
-                <div
-                  v-for="(col, idx) in tableColumns"
-                  :key="col.key"
-                  class="builder-column-item"
-                  draggable="true"
-                  @dragstart="() => { columnDragIdx = idx }"
-                  @dragover.prevent
-                  @drop.prevent="() => handleColumnReorder(idx)"
-                >
-                  <i class="pi pi-grip-vertical builder-grip" />
-                  <span class="builder-column-item__label">{{ col.label }}</span>
-                  <Tag :value="col.type ?? 'text'" rounded class="!text-[10px]" severity="secondary" />
-                  <InputText
-                    :model-value="col.width ?? ''"
-                    placeholder="auto"
-                    class="builder-column-item__width"
-                    aria-label="Column width"
-                    @update:model-value="(v) => updateColumnWidth(idx, String(v))"
-                  />
-                  <ToggleButton
-                    :model-value="col.visible !== false"
-                    on-icon="pi pi-eye"
-                    off-icon="pi pi-eye-slash"
-                    class="!p-1 !text-xs"
-                    :aria-label="col.visible !== false ? 'Hide column' : 'Show column'"
-                    @update:model-value="(v: boolean) => toggleColumnVisible(idx, v)"
-                  />
-                  <Button
-                    icon="pi pi-times"
-                    severity="danger"
-                    text
-                    rounded
-                    size="small"
-                    class="!p-1"
-                    aria-label="Remove column"
-                    @click="removeColumn(idx)"
-                  />
-                </div>
-              </div>
-
-              <div class="builder-add-column">
-                <Select
-                  :options="availableColumnProps"
-                  option-label="label"
-                  option-value="key"
-                  placeholder="Add column..."
-                  class="w-full"
-                  @change="(e) => addColumn(e.value as string)"
-                />
-              </div>
-            </div>
+            <ViewColumnEditor
+              :columns="tableColumns"
+              :available-props="availableColumnProps"
+              @add="addColumn"
+              @remove="removeColumn"
+              @update-width="updateColumnWidth"
+              @toggle-visible="toggleColumnVisible"
+              @reorder="(from, to) => handleColumnReorder(from, to)"
+            />
 
             <div class="form-field">
               <label>Row Click Action</label>
@@ -324,14 +279,13 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
-import Tag from 'primevue/tag'
 import Message from 'primevue/message'
 import Select from 'primevue/select'
 import SelectButton from 'primevue/selectbutton'
-import ToggleButton from 'primevue/togglebutton'
 
 import type { OntologyProperty } from '@/types'
 import type { ConditionExpression } from '@/types/forms'
+import ViewColumnEditor from '@/components/builders/ViewColumnEditor.vue'
 import type {
   ViewConfig,
   ViewColumn,
@@ -363,7 +317,6 @@ const viewId = ref<string | null>(null)
 // Table
 const tableColumns = ref<ViewColumn[]>([])
 const rowAction = ref<string>('navigate_to_detail')
-let columnDragIdx: number | null = null
 
 // Kanban
 const groupByField = ref<string | undefined>(undefined)
@@ -460,16 +413,12 @@ function toggleColumnVisible(idx: number, visible: boolean): void {
   )
 }
 
-function handleColumnReorder(targetIdx: number): void {
-  if (columnDragIdx === null || columnDragIdx === targetIdx) {
-    columnDragIdx = null
-    return
-  }
+function handleColumnReorder(fromIdx: number, toIdx: number): void {
+  if (fromIdx === toIdx) return
   const cols = [...tableColumns.value]
-  const [moved] = cols.splice(columnDragIdx, 1)
-  cols.splice(targetIdx, 0, moved)
+  const [moved] = cols.splice(fromIdx, 1)
+  cols.splice(toIdx, 0, moved)
   tableColumns.value = cols
-  columnDragIdx = null
 }
 
 /* ---- Kanban management ---- */
@@ -668,7 +617,6 @@ onMounted(async () => {
 }
 
 .builder-toolbar__name-input {
-  font-family: var(--font-display);
   font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
   width: 16rem;
@@ -736,51 +684,6 @@ onMounted(async () => {
   margin-bottom: var(--space-6);
 }
 
-.builder-column-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-}
-
-.builder-column-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  background: var(--bg-card);
-  border-radius: var(--radius-md);
-  border: var(--border-thin) solid var(--border-color);
-  transition: all var(--duration-fast) var(--ease-default);
-}
-
-.builder-column-item:hover {
-  border-color: var(--surface-300);
-  box-shadow: var(--shadow-xs);
-}
-
-.builder-column-item__label {
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-  flex: 1;
-}
-
-.builder-column-item__width {
-  width: 5rem;
-  font-size: var(--text-xs) !important;
-}
-
-.builder-grip {
-  font-size: var(--text-xs);
-  color: var(--surface-300);
-  cursor: grab;
-}
-
-.builder-add-column {
-  margin-top: var(--space-3);
-}
-
 .builder-sort-list {
   display: flex;
   flex-direction: column;
@@ -812,7 +715,6 @@ onMounted(async () => {
 }
 
 .builder-preset-item__name {
-  font-family: var(--font-body);
   font-size: var(--text-sm);
   color: var(--text-primary);
   flex: 1;

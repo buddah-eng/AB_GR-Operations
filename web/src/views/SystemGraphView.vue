@@ -461,7 +461,7 @@ onUnmounted(() => {
 .view-error {
   border-radius: var(--radius-lg);
   border-left: 4px solid var(--color-error);
-  background: #fef2f2;
+  background: var(--color-error-bg);
   padding: var(--space-4) var(--space-5);
 }
 
@@ -476,16 +476,15 @@ onUnmounted(() => {
 }
 
 .view-error__text {
-  font-family: var(--font-body);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
-  color: #b91c1c;
+  color: var(--color-error-text-dark);
 }
 
 .view-error__retry {
   margin-top: var(--space-2);
   font-size: var(--text-xs);
-  color: #dc2626;
+  color: var(--color-error-text-mid);
   text-decoration: underline;
   background: none;
   border: none;
@@ -494,7 +493,7 @@ onUnmounted(() => {
 }
 
 .view-error__retry:hover {
-  color: #991b1b;
+  color: var(--color-error-text);
 }
 
 /* Loading */
@@ -508,7 +507,6 @@ onUnmounted(() => {
 
 .view-loading__text {
   margin-top: var(--space-3);
-  font-family: var(--font-body);
   font-size: var(--text-sm);
   color: var(--text-muted);
 }
@@ -535,7 +533,6 @@ onUnmounted(() => {
 }
 
 .view-detail-item__value {
-  font-family: var(--font-body);
   font-size: var(--text-sm);
   color: var(--text-primary);
 }
@@ -568,7 +565,6 @@ onUnmounted(() => {
 }
 
 .view-property-row__value {
-  font-family: var(--font-body);
   font-size: var(--text-xs);
   color: var(--text-primary);
   text-align: right;

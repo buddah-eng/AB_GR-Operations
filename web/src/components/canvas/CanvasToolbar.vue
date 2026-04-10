@@ -255,9 +255,9 @@ function handleSearch(event: Event): void {
 }
 
 .toolbar-toggle-btn--active-purple {
-  background: #faf5ff;
-  color: #7e22ce;
-  border-color: #d8b4fe;
+  background: var(--color-purple-bg);
+  color: var(--color-purple);
+  border-color: var(--color-purple-border);
 }
 
 /* Search */
@@ -276,7 +276,6 @@ function handleSearch(event: Event): void {
 }
 
 .toolbar-search__input {
-  font-family: var(--font-body);
   font-size: var(--text-xs);
   color: var(--text-primary);
   background: var(--bg-card);

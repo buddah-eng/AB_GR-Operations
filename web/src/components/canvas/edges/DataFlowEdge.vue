@@ -100,9 +100,9 @@ const edgeStyle = computed(() => ({
 }
 
 .dataflow-edge-label--pii {
-  background: #fef2f2;
-  border: var(--border-thin) solid #fca5a5;
-  color: #b91c1c;
+  background: var(--color-error-bg);
+  border: var(--border-thin) solid var(--color-error-border-accent);
+  color: var(--color-error-text-dark);
 }
 
 .dataflow-edge-label__shield {

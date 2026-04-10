@@ -197,7 +197,6 @@ function handleCancel(): void {
 
 <style scoped>
 .df-root {
-  font-family: var(--font-body);
 }
 
 /* Skeleton loading */
@@ -223,8 +222,8 @@ function handleCancel(): void {
   align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-4);
-  background: #fef2f2;
-  border: var(--border-thin) solid #fecaca;
+  background: var(--color-error-bg);
+  border: var(--border-thin) solid var(--color-error-bg-border);
   border-radius: var(--radius-lg);
 }
 
@@ -236,7 +235,7 @@ function handleCancel(): void {
 }
 
 .df-error-text {
-  color: #991b1b;
+  color: var(--color-error-text);
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
   margin: 0;
@@ -257,7 +256,6 @@ function handleCancel(): void {
 }
 
 .df-description {
-  font-family: var(--font-body);
   font-size: var(--text-sm);
   color: var(--text-muted);
   margin: var(--space-2) 0 0;
@@ -320,7 +318,6 @@ function handleCancel(): void {
 }
 
 .df-empty-text {
-  font-family: var(--font-body);
   font-size: var(--text-sm);
   color: var(--text-muted);
   margin: 0;

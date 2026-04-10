@@ -191,7 +191,6 @@ function handleDrop(toGroup: string): void {
 
 <style scoped>
 .vk-root {
-  font-family: var(--font-body);
 }
 
 /* Skeleton loading */
@@ -245,7 +244,6 @@ function handleDrop(toGroup: string): void {
 }
 
 .vk-empty-text {
-  font-family: var(--font-body);
   font-size: var(--text-sm);
   color: var(--text-muted);
   margin: 0;
@@ -360,7 +358,6 @@ function handleDrop(toGroup: string): void {
 }
 
 .vk-card-subtitle {
-  font-family: var(--font-body);
   font-size: var(--text-xs);
   color: var(--text-muted);
   line-height: var(--leading-normal);

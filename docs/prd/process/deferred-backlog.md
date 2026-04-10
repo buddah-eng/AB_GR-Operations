@@ -24,6 +24,7 @@ Deferring without documentation is a shortcut. Deferring without a gate conditio
 | ID | Item | Source PRD | Section | Gate Condition | Status |
 |----|------|-----------|---------|----------------|--------|
 | D-001 | Redis cross-instance cache invalidation for ontology | core/ontology-engine.md | §3 Caching | Cloud Run migration (platform/scaling.md) is implemented — multi-instance deployment requires shared cache | DEFERRED |
+| D-002 | Frontend component testing infrastructure (Vitest + Vue Test Utils) | Phase 4.5 (all frontend PRDs) | Frontend test infrastructure established (vitest config, vue-test-utils installed, test patterns defined) | DEFERRED |
 
 ---
 

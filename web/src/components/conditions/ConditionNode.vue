@@ -395,7 +395,6 @@ function updateNotChild(updated: ConditionExpression): void {
   border: var(--border-thin) solid var(--surface-100);
   padding: var(--space-3);
   transition: border-color var(--duration-normal) var(--ease-default);
-  font-family: var(--font-body);
 }
 
 .cn-root--leaf {
@@ -424,7 +423,6 @@ function updateNotChild(updated: ConditionExpression): void {
 }
 
 .cn-select {
-  font-family: var(--font-body);
   font-size: var(--text-sm);
 }
 
@@ -438,7 +436,6 @@ function updateNotChild(updated: ConditionExpression): void {
 
 .cn-input {
   width: 10rem;
-  font-family: var(--font-body);
   font-size: var(--text-sm);
 }
 
@@ -526,9 +523,9 @@ function updateNotChild(updated: ConditionExpression): void {
   text-transform: uppercase;
   letter-spacing: var(--tracking-wider);
   color: var(--color-error);
-  background: #fef2f2;
+  background: var(--color-error-bg);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-md);
-  border: var(--border-thin) solid #fecaca;
+  border: var(--border-thin) solid var(--color-error-bg-border);
 }
 </style>

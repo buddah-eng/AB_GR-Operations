@@ -187,7 +187,6 @@ function getRowValue(row: Record<string, unknown>): string {
 
 <style scoped>
 .vdb-root {
-  font-family: var(--font-body);
 }
 
 /* Skeleton */
@@ -249,7 +248,6 @@ function getRowValue(row: Record<string, unknown>): string {
 }
 
 .vdb-empty-text {
-  font-family: var(--font-body);
   font-size: var(--text-sm);
   color: var(--text-muted);
   margin: 0;
@@ -348,7 +346,6 @@ function getRowValue(row: Record<string, unknown>): string {
 }
 
 .vdb-stat-subtitle {
-  font-family: var(--font-body);
   font-size: var(--text-xs);
   color: var(--text-muted);
   margin-top: var(--space-1);

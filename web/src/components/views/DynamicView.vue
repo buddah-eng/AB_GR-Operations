@@ -130,7 +130,6 @@ function handlePresetSave(_preset: Omit<ViewPreset, 'id'>): void {
 
 <style scoped>
 .dv-root {
-  font-family: var(--font-body);
 }
 
 /* Header */
@@ -156,7 +155,6 @@ function handlePresetSave(_preset: Omit<ViewPreset, 'id'>): void {
 }
 
 .dv-description {
-  font-family: var(--font-body);
   font-size: var(--text-sm);
   color: var(--text-muted);
   margin: var(--space-1) 0 0;
@@ -193,8 +191,8 @@ function handlePresetSave(_preset: Omit<ViewPreset, 'id'>): void {
   align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-4);
-  background: #fef2f2;
-  border: var(--border-thin) solid #fecaca;
+  background: var(--color-error-bg);
+  border: var(--border-thin) solid var(--color-error-bg-border);
   border-radius: var(--radius-lg);
 }
 
@@ -206,7 +204,7 @@ function handlePresetSave(_preset: Omit<ViewPreset, 'id'>): void {
 }
 
 .dv-error-text {
-  color: #991b1b;
+  color: var(--color-error-text);
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
   margin: 0;

@@ -77,14 +77,14 @@ const edgeStyle = computed(() => ({
 
 <style scoped>
 .workflow-edge-label {
-  background: #faf5ff;
-  border: var(--border-thin) solid #e9d5ff;
+  background: var(--color-purple-bg);
+  border: var(--border-thin) solid var(--color-purple-bg-border);
   border-radius: var(--radius-md);
   padding: 2px var(--space-2);
   font-family: var(--font-display);
   font-size: 10px;
   font-weight: var(--weight-semibold);
-  color: #7e22ce;
+  color: var(--color-purple);
   box-shadow: var(--shadow-xs);
   transition: all var(--duration-fast) var(--ease-default);
   cursor: default;
@@ -93,7 +93,7 @@ const edgeStyle = computed(() => ({
 
 .workflow-edge-label:hover {
   box-shadow: var(--shadow-sm);
-  border-color: #c084fc;
+  border-color: var(--color-purple-border-hover);
   transform: scale(1.05);
 }
 </style>

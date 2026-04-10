@@ -38,15 +38,15 @@ const selected = computed(() => node.selected)
 
 <style scoped>
 .integration-node {
-  background: #f0f9ff;
+  background: var(--color-sky-bg);
   min-width: 160px;
   padding: var(--space-3) var(--space-4);
   cursor: pointer;
-  border-color: #7dd3fc;
+  border-color: var(--color-sky-border);
 }
 
 .integration-node.selected {
-  border-color: #0ea5e9;
+  border-color: var(--color-sky);
   box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
 }
 
@@ -58,7 +58,7 @@ const selected = computed(() => node.selected)
 
 .integration-node__icon {
   font-size: var(--text-sm);
-  color: #0ea5e9;
+  color: var(--color-sky);
   flex-shrink: 0;
 }
 
@@ -84,7 +84,7 @@ const selected = computed(() => node.selected)
   font-family: var(--font-display);
   font-size: 10px;
   font-weight: var(--weight-semibold);
-  color: #0369a1;
+  color: var(--color-sky-text);
   background: rgba(14, 165, 233, 0.1);
   border-radius: var(--radius-full);
   padding: 2px var(--space-2);
@@ -94,13 +94,13 @@ const selected = computed(() => node.selected)
 .integration-node__handle {
   width: 8px !important;
   height: 8px !important;
-  background: #38bdf8 !important;
-  border: var(--border-thin) solid #f0f9ff !important;
+  background: var(--color-sky-handle) !important;
+  border: var(--border-thin) solid var(--color-sky-bg) !important;
   transition: all var(--duration-fast) var(--ease-default);
 }
 
 .integration-node:hover .integration-node__handle {
-  background: #0ea5e9 !important;
+  background: var(--color-sky) !important;
   transform: scale(1.2);
 }
 </style>

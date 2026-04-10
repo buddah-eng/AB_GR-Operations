@@ -37,16 +37,16 @@ const selected = computed(() => node.selected)
 
 <style scoped>
 .workflow-node {
-  background: #faf5ff;
+  background: var(--color-purple-bg);
   min-width: 160px;
   padding: var(--space-3) var(--space-4);
   cursor: pointer;
   border-style: dashed;
-  border-color: #d8b4fe;
+  border-color: var(--color-purple-border);
 }
 
 .workflow-node.selected {
-  border-color: #a855f7;
+  border-color: var(--color-purple-mid);
   box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.15);
 }
 
@@ -58,7 +58,7 @@ const selected = computed(() => node.selected)
 
 .workflow-node__icon {
   font-size: var(--text-sm);
-  color: #a855f7;
+  color: var(--color-purple-mid);
   flex-shrink: 0;
 }
 
@@ -84,7 +84,7 @@ const selected = computed(() => node.selected)
   width: 8px;
   height: 8px;
   border-radius: var(--radius-full);
-  background: #c084fc;
+  background: var(--color-purple-border-hover);
   animation: workflow-pulse 2s var(--ease-default) infinite;
 }
 
@@ -105,13 +105,13 @@ const selected = computed(() => node.selected)
 .workflow-node__handle {
   width: 8px !important;
   height: 8px !important;
-  background: #c084fc !important;
-  border: var(--border-thin) solid #faf5ff !important;
+  background: var(--color-purple-border-hover) !important;
+  border: var(--border-thin) solid var(--color-purple-bg) !important;
   transition: all var(--duration-fast) var(--ease-default);
 }
 
 .workflow-node:hover .workflow-node__handle {
-  background: #a855f7 !important;
+  background: var(--color-purple-mid) !important;
   transform: scale(1.2);
 }
 </style>

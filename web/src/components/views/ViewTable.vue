@@ -145,7 +145,6 @@ function handleRowClick(event: { data: Record<string, unknown> }): void {
 
 <style scoped>
 .vt-root {
-  font-family: var(--font-body);
 }
 
 /* Table wrapper */
@@ -198,7 +197,6 @@ function handleRowClick(event: { data: Record<string, unknown> }): void {
 }
 
 .vt-empty-text {
-  font-family: var(--font-body);
   font-size: var(--text-sm);
   color: var(--text-muted);
   margin: 0;
@@ -210,7 +208,6 @@ function handleRowClick(event: { data: Record<string, unknown> }): void {
 
 /* PrimeVue DataTable overrides within this component */
 .vt-table-wrap :deep(.p-datatable) {
-  font-family: var(--font-body);
 }
 
 .vt-table-wrap :deep(.p-datatable-thead > tr > th) {

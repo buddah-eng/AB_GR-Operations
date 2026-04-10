@@ -170,7 +170,6 @@ function handleEventClick(event: Record<string, unknown>): void {
 
 <style scoped>
 .vtl-root {
-  font-family: var(--font-body);
 }
 
 /* Skeleton */
@@ -216,7 +215,6 @@ function handleEventClick(event: Record<string, unknown>): void {
 }
 
 .vtl-empty-text {
-  font-family: var(--font-body);
   font-size: var(--text-sm);
   color: var(--text-muted);
   margin: 0;
@@ -264,7 +262,6 @@ function handleEventClick(event: Record<string, unknown>): void {
 }
 
 .vtl-group-count {
-  font-family: var(--font-body);
   font-size: var(--text-xs);
   color: var(--text-muted);
 }
@@ -337,7 +334,6 @@ function handleEventClick(event: Record<string, unknown>): void {
 }
 
 .vtl-event-desc {
-  font-family: var(--font-body);
   font-size: var(--text-xs);
   color: var(--text-muted);
   margin-top: var(--space-1);

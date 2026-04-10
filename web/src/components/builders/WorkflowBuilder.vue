@@ -39,17 +39,11 @@
       </div>
     </div>
 
-    <!-- Validation bar -->
-    <div v-if="validationItems.length > 0" class="wf-validation-bar">
-      <div
-        v-for="item in validationItems"
-        :key="item.label"
-        :class="['wf-validation-item', item.ok ? 'wf-validation-item--ok' : 'wf-validation-item--error']"
-      >
-        <i :class="item.ok ? 'pi pi-check-circle' : 'pi pi-times-circle'" />
-        <span>{{ item.label }}</span>
-      </div>
-    </div>
+    <WorkflowValidationBar
+      :validation-items="validationItems"
+      :dry-run-results="dryRunResults"
+      @clear-dry-run="dryRunResults = []"
+    />
 
     <!-- Error -->
     <Message
@@ -62,171 +56,32 @@
       {{ errorMessage }}
     </Message>
 
-    <!-- Dry run results -->
-    <div v-if="dryRunResults.length > 0" class="wf-dry-run-panel">
-      <div class="wf-dry-run-panel__header">
-        <h3 class="wf-dry-run-panel__title">Dry Run Results</h3>
-        <Button
-          icon="pi pi-times"
-          severity="secondary"
-          text
-          rounded
-          size="small"
-          @click="dryRunResults = []"
-        />
-      </div>
-      <div class="wf-dry-run-panel__results">
-        <div
-          v-for="(result, idx) in dryRunResults"
-          :key="idx"
-          :class="['wf-dry-run-result', result.wouldExecute ? 'wf-dry-run-result--active' : 'wf-dry-run-result--skip']"
-        >
-          <i :class="result.wouldExecute ? 'pi pi-check' : 'pi pi-minus'" />
-          <span>Step {{ result.actionIndex + 1 }}: {{ result.reason }}</span>
-        </div>
-      </div>
-    </div>
-
     <!-- 3-panel layout -->
     <div class="builder-panels">
       <!-- Left: Trigger picker + Condition -->
-      <div class="builder-sidebar builder-sidebar--left wf-trigger-panel">
-        <!-- Trigger type -->
-        <div class="wf-trigger-section">
-          <h3 class="wf-section-label">Trigger</h3>
-          <div class="wf-trigger-list">
-            <div
-              v-for="triggerInfo in triggerTypeInfoList"
-              :key="triggerInfo.type"
-              :class="['wf-trigger-option', selectedTriggerType === triggerInfo.type ? 'wf-trigger-option--active' : '']"
-              :aria-label="`Select trigger: ${triggerInfo.label}`"
-              role="radio"
-              :aria-checked="selectedTriggerType === triggerInfo.type"
-              @click="selectedTriggerType = triggerInfo.type"
-            >
-              <i :class="[triggerInfo.icon, 'wf-trigger-option__icon']" />
-              <div>
-                <div class="wf-trigger-option__label">{{ triggerInfo.label }}</div>
-                <div class="wf-trigger-option__desc">{{ triggerInfo.description }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Trigger config -->
-        <div class="wf-trigger-config">
-          <template v-if="selectedTriggerType === 'domain_event'">
-            <div class="wf-config-fields">
-              <div class="form-field">
-                <label>Concept</label>
-                <Select
-                  v-model="triggerConceptKey"
-                  :options="ontologyStore.concepts"
-                  option-label="label"
-                  option-value="key"
-                  placeholder="Select concept"
-                  class="w-full"
-                />
-              </div>
-              <div class="form-field">
-                <label>Event</label>
-                <Select
-                  v-model="triggerEventName"
-                  :options="domainEventOptions"
-                  option-label="label"
-                  option-value="value"
-                  placeholder="Select event"
-                  class="w-full"
-                />
-              </div>
-            </div>
-          </template>
-
-          <template v-if="selectedTriggerType === 'field_changed'">
-            <div class="wf-config-fields">
-              <div class="form-field">
-                <label>Concept</label>
-                <Select
-                  v-model="triggerConceptKey"
-                  :options="ontologyStore.concepts"
-                  option-label="label"
-                  option-value="key"
-                  placeholder="Select concept"
-                  class="w-full"
-                />
-              </div>
-              <div class="form-field">
-                <label>Field</label>
-                <Select
-                  v-model="triggerFieldName"
-                  :options="triggerConceptProperties"
-                  option-label="label"
-                  option-value="key"
-                  placeholder="Select field"
-                  class="w-full"
-                />
-              </div>
-            </div>
-          </template>
-
-          <template v-if="selectedTriggerType === 'scheduled'">
-            <div class="wf-config-fields">
-              <div class="form-field">
-                <label>Schedule</label>
-                <Select
-                  v-model="schedulePreset"
-                  :options="schedulePresets"
-                  option-label="label"
-                  option-value="value"
-                  placeholder="Select schedule"
-                  class="w-full"
-                />
-              </div>
-              <div class="form-field">
-                <label>Custom Cron</label>
-                <InputText
-                  v-model="triggerSchedule"
-                  placeholder="*/15 * * * *"
-                  class="w-full"
-                />
-              </div>
-              <div v-if="triggerSchedule" class="wf-cron-preview">
-                {{ humanReadableCron }}
-              </div>
-            </div>
-          </template>
-
-          <template v-if="selectedTriggerType === 'manual'">
-            <div class="wf-config-fields">
-              <div class="form-field">
-                <label>Button Label</label>
-                <InputText
-                  v-model="triggerButtonLabel"
-                  placeholder="Run workflow"
-                  class="w-full"
-                />
-              </div>
-              <div class="form-field">
-                <label>Description</label>
-                <InputText
-                  v-model="triggerDescription"
-                  placeholder="What this workflow does"
-                  class="w-full"
-                />
-              </div>
-            </div>
-          </template>
-        </div>
-
-        <!-- Condition -->
-        <div class="wf-condition-section">
-          <h3 class="wf-section-label">Only run when...</h3>
-          <ConditionBuilder
-            :model-value="workflowCondition"
-            :properties="triggerConceptProperties"
-            @update:model-value="(v) => { workflowCondition = v }"
-          />
-        </div>
+      <div class="builder-sidebar builder-sidebar--left">
+        <TriggerConfigPanel
+          :selected-trigger-type="selectedTriggerType"
+          :trigger-concept-key="triggerConceptKey"
+          :trigger-event-name="triggerEventName"
+          :trigger-field-name="triggerFieldName"
+          :trigger-schedule="triggerSchedule"
+          :trigger-button-label="triggerButtonLabel"
+          :trigger-description="triggerDescription"
+          :schedule-preset="schedulePreset"
+          :condition="workflowCondition"
+          :concepts="ontologyStore.concepts"
+          :concept-properties="triggerConceptProperties"
+          @update:trigger-type="(v) => { selectedTriggerType = v }"
+          @update:concept-key="(v) => { triggerConceptKey = v }"
+          @update:event-name="(v) => { triggerEventName = v }"
+          @update:field-name="(v) => { triggerFieldName = v }"
+          @update:schedule="(v) => { triggerSchedule = v }"
+          @update:schedule-preset="(v) => { schedulePreset = v }"
+          @update:button-label="(v) => { triggerButtonLabel = v }"
+          @update:description="(v) => { triggerDescription = v }"
+          @update:condition="(v) => { workflowCondition = v }"
+        />
       </div>
 
       <!-- Center: Action chain -->
@@ -329,12 +184,12 @@ import type {
 } from '@/types/workflow'
 import {
   ACTION_TYPE_INFO,
-  TRIGGER_TYPE_INFO,
 } from '@/types/workflow'
 import { useOntologyStore } from '@/stores/ontology'
 import { api } from '@/api/client'
-import ConditionBuilder from '@/components/conditions/ConditionBuilder.vue'
 import ActionConfigPanel from '@/components/builders/ActionConfigPanel.vue'
+import TriggerConfigPanel from '@/components/builders/TriggerConfigPanel.vue'
+import WorkflowValidationBar from '@/components/builders/WorkflowValidationBar.vue'
 
 /* ---- Route & Store ---- */
 
@@ -385,22 +240,7 @@ const dryRunResults = ref<
 
 /* ---- Lists ---- */
 
-const triggerTypeInfoList = [...TRIGGER_TYPE_INFO]
 const actionTypeInfoList = [...ACTION_TYPE_INFO]
-
-const domainEventOptions = [
-  { label: 'Created', value: 'created' },
-  { label: 'Updated', value: 'updated' },
-  { label: 'Deleted', value: 'deleted' },
-  { label: 'Status Changed', value: 'status_changed' },
-]
-
-const schedulePresets = [
-  { label: 'Every 15 minutes', value: '*/15 * * * *' },
-  { label: 'Every hour', value: '0 * * * *' },
-  { label: 'Daily at midnight', value: '0 0 * * *' },
-  { label: 'Weekly (Monday)', value: '0 0 * * 1' },
-]
 
 /* ---- Computed ---- */
 
@@ -411,14 +251,6 @@ const triggerConceptProperties = computed<OntologyProperty[]>(() =>
 const selectedAction = computed<MutableAction | null>(() =>
   selectedActionIdx.value !== null ? actions.value[selectedActionIdx.value] ?? null : null,
 )
-
-const humanReadableCron = computed(() => {
-  const cron = triggerSchedule.value.trim()
-  if (!cron) return ''
-  const preset = schedulePresets.find((p) => p.value === cron)
-  if (preset) return preset.label
-  return `Custom: ${cron}`
-})
 
 const validationItems = computed(() => {
   const items: Array<{ label: string; ok: boolean }> = []
@@ -698,7 +530,6 @@ onMounted(async () => {
 }
 
 .builder-toolbar__name-input {
-  font-family: var(--font-display);
   font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
   width: 16rem;
@@ -713,87 +544,6 @@ onMounted(async () => {
 
 .builder-message {
   margin: var(--space-2) var(--space-5) 0;
-}
-
-/* Validation bar */
-.wf-validation-bar {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-2) var(--space-5);
-  border-bottom: var(--border-thin) solid var(--border-color);
-  background: var(--surface-50);
-  font-family: var(--font-display);
-  font-size: var(--text-sm);
-}
-
-.wf-validation-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.wf-validation-item--ok {
-  color: var(--color-success);
-}
-
-.wf-validation-item--error {
-  color: var(--color-error);
-}
-
-/* Dry run panel */
-.wf-dry-run-panel {
-  flex-shrink: 0;
-  margin: var(--space-2) var(--space-5) 0;
-  padding: var(--space-4);
-  background: #eff6ff;
-  border: var(--border-thin) solid #bfdbfe;
-  border-radius: var(--radius-lg);
-}
-
-.wf-dry-run-panel__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-2);
-}
-
-.wf-dry-run-panel__title {
-  font-family: var(--font-display);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  color: #1d4ed8;
-}
-
-.wf-dry-run-panel__results {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.wf-dry-run-result {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-}
-
-.wf-dry-run-result--active {
-  color: #15803d;
-}
-
-.wf-dry-run-result--active i {
-  color: var(--color-success);
-}
-
-.wf-dry-run-result--skip {
-  color: var(--text-muted);
-}
-
-.wf-dry-run-result--skip i {
-  color: var(--surface-300);
 }
 
 /* Panels */
@@ -830,99 +580,11 @@ onMounted(async () => {
 
 /* Section labels */
 .wf-section-label {
-  font-family: var(--font-display);
   font-size: var(--text-xs);
   font-weight: var(--weight-extrabold);
   text-transform: uppercase;
   letter-spacing: var(--tracking-wider);
   color: var(--text-muted);
-}
-
-/* Trigger panel */
-.wf-trigger-section {
-  margin-bottom: var(--space-6);
-}
-
-.wf-trigger-section .wf-section-label {
-  margin-bottom: var(--space-3);
-}
-
-.wf-trigger-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.wf-trigger-option {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-default);
-  border: var(--border-thin) solid var(--border-color);
-  background: var(--bg-card);
-}
-
-.wf-trigger-option:hover {
-  border-color: var(--surface-300);
-  box-shadow: var(--shadow-xs);
-}
-
-.wf-trigger-option--active {
-  border-color: var(--primary-500);
-  background: var(--primary-50);
-  box-shadow: 0 0 0 3px var(--primary-100);
-}
-
-.wf-trigger-option__icon {
-  font-size: var(--text-sm);
-  margin-top: 2px;
-  color: var(--text-secondary);
-}
-
-.wf-trigger-option--active .wf-trigger-option__icon {
-  color: var(--primary-600);
-}
-
-.wf-trigger-option__label {
-  font-family: var(--font-display);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  color: var(--text-primary);
-}
-
-.wf-trigger-option__desc {
-  font-family: var(--font-body);
-  font-size: 11px;
-  color: var(--text-muted);
-  line-height: var(--leading-snug);
-}
-
-/* Trigger config */
-.wf-trigger-config {
-  margin-bottom: var(--space-6);
-}
-
-.wf-config-fields {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.wf-cron-preview {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  background: var(--surface-100);
-  border-radius: var(--radius-md);
-  padding: var(--space-1) var(--space-2);
-}
-
-/* Condition section */
-.wf-condition-section .wf-section-label {
-  margin-bottom: var(--space-2);
 }
 
 /* Action chain */
@@ -964,7 +626,6 @@ onMounted(async () => {
   justify-content: center;
   border-radius: var(--radius-full);
   background: var(--surface-100);
-  font-family: var(--font-display);
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
   color: var(--text-secondary);
@@ -985,7 +646,6 @@ onMounted(async () => {
 }
 
 .wf-action-card__label {
-  font-family: var(--font-display);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   color: var(--text-primary);
@@ -995,7 +655,6 @@ onMounted(async () => {
 }
 
 .wf-action-card__summary {
-  font-family: var(--font-body);
   font-size: 11px;
   color: var(--text-muted);
   overflow: hidden;

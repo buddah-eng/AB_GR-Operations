@@ -13,14 +13,7 @@
       </div>
 
       <div class="builder-toolbar__right">
-        <SelectButton
-          v-model="selectedLayout"
-          :options="layoutOptions"
-          option-label="label"
-          option-value="value"
-          :allow-empty="false"
-          aria-label="Layout mode"
-        />
+        <FormLayoutPicker v-model="selectedLayout" />
         <ToggleButton
           v-model="previewMode"
           on-label="Preview"
@@ -260,98 +253,12 @@
 
       <!-- Right: Field config panel -->
       <div class="builder-sidebar builder-sidebar--right">
-        <div v-if="selectedField" class="builder-config">
-          <div class="builder-config__title section-header">
-            Field Configuration
-          </div>
-
-          <div class="builder-config__fields">
-            <!-- Label override -->
-            <div class="form-field">
-              <label>Label</label>
-              <InputText
-                v-model="selectedField.label"
-                :placeholder="getPropertyLabel(selectedField.key)"
-                class="w-full"
-              />
-            </div>
-
-            <!-- Placeholder -->
-            <div class="form-field">
-              <label>Placeholder</label>
-              <InputText
-                v-model="selectedField.placeholder"
-                placeholder="Placeholder text"
-                class="w-full"
-              />
-            </div>
-
-            <!-- Help text -->
-            <div class="form-field">
-              <label>Help Text</label>
-              <InputText
-                v-model="selectedField.helpText"
-                placeholder="Help text shown below field"
-                class="w-full"
-              />
-            </div>
-
-            <!-- ColSpan (two-column only) -->
-            <div v-if="selectedLayout === 'two-column'" class="form-field">
-              <label>Column Span</label>
-              <SelectButton
-                :model-value="selectedField.colSpan ?? 1"
-                :options="colSpanOptions"
-                option-label="label"
-                option-value="value"
-                :allow-empty="false"
-                @update:model-value="(v: 1 | 2) => { if (selectedField) selectedField.colSpan = v }"
-              />
-            </div>
-
-            <!-- Required -->
-            <div class="builder-config__toggle-row">
-              <label class="form-field">Required</label>
-              <ToggleButton
-                :model-value="selectedField.required ?? false"
-                on-label="Yes"
-                off-label="No"
-                class="!text-xs"
-                @update:model-value="(v: boolean) => { if (selectedField) selectedField.required = v }"
-              />
-            </div>
-
-            <!-- Read only -->
-            <div class="builder-config__toggle-row">
-              <label class="form-field">Read Only</label>
-              <ToggleButton
-                :model-value="selectedField.readOnly ?? false"
-                on-label="Yes"
-                off-label="No"
-                class="!text-xs"
-                @update:model-value="(v: boolean) => { if (selectedField) selectedField.readOnly = v }"
-              />
-            </div>
-
-            <!-- ShowIf condition -->
-            <div class="form-field">
-              <label>Visibility Condition</label>
-              <ConditionBuilder
-                :model-value="selectedField.showIf ?? null"
-                :properties="conceptProperties"
-                @update:model-value="(v) => { if (selectedField) selectedField.showIf = v ?? undefined }"
-              />
-            </div>
-          </div>
-        </div>
-
-        <!-- No field selected -->
-        <div v-else class="empty-state">
-          <div class="icon">
-            <i class="pi pi-arrow-left" />
-          </div>
-          <p>Click a field on the canvas to configure it</p>
-        </div>
+        <FormFieldEditor
+          :field="selectedField"
+          :property-label="selectedField ? getPropertyLabel(selectedField.key) : ''"
+          :show-col-span="selectedLayout === 'two-column'"
+          :properties="conceptProperties"
+        />
       </div>
     </div>
   </div>
@@ -364,15 +271,16 @@ import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Message from 'primevue/message'
-import SelectButton from 'primevue/selectbutton'
 import ToggleButton from 'primevue/togglebutton'
 
 import type { OntologyProperty } from '@/types'
-import type { FormConfig, FormFieldConfig, FormLayout, ConditionExpression } from '@/types/forms'
+import type { FormConfig, FormFieldConfig, FormLayout } from '@/types/forms'
 import { useOntologyStore } from '@/stores/ontology'
 import { api } from '@/api/client'
 import DynamicForm from '@/components/forms/DynamicForm.vue'
-import ConditionBuilder from '@/components/conditions/ConditionBuilder.vue'
+import FormFieldEditor from '@/components/builders/FormFieldEditor.vue'
+import type { BuilderField } from '@/components/builders/FormFieldEditor.vue'
+import FormLayoutPicker from '@/components/builders/FormLayoutPicker.vue'
 
 /* ---- Route & Store ---- */
 
@@ -382,18 +290,6 @@ const ontologyStore = useOntologyStore()
 const conceptKey = computed(() => String(route.params.conceptKey ?? ''))
 
 /* ---- Builder state ---- */
-
-interface BuilderField {
-  key: string
-  label?: string
-  placeholder?: string
-  helpText?: string
-  colSpan?: 1 | 2
-  showIf?: ConditionExpression
-  required?: boolean
-  readOnly?: boolean
-  defaultValue?: unknown
-}
 
 interface BuilderSection {
   title: string
@@ -414,19 +310,6 @@ const formId = ref<string | null>(null)
 const sections = ref<BuilderSection[]>([
   { title: 'Section 1', fields: [] },
 ])
-
-/* ---- Layout options ---- */
-
-const layoutOptions = [
-  { label: 'Single', value: 'single-column' as FormLayout },
-  { label: 'Two Column', value: 'two-column' as FormLayout },
-  { label: 'Wizard', value: 'wizard' as FormLayout },
-]
-
-const colSpanOptions = [
-  { label: '1 col', value: 1 as const },
-  { label: '2 cols', value: 2 as const },
-]
 
 /* ---- Properties ---- */
 
@@ -821,7 +704,6 @@ watch(conceptKey, async () => {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-family: var(--font-body);
   font-size: var(--text-sm);
   color: var(--accent-800);
 }
@@ -938,7 +820,6 @@ watch(conceptKey, async () => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: var(--font-body);
 }
 
 /* Canvas */
@@ -1077,7 +958,6 @@ watch(conceptKey, async () => {
 }
 
 .builder-field-card__label {
-  font-family: var(--font-body);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   color: var(--text-primary);
@@ -1106,7 +986,6 @@ watch(conceptKey, async () => {
   justify-content: center;
   padding: var(--space-8) 0;
   color: var(--text-muted);
-  font-family: var(--font-body);
   font-size: var(--text-sm);
 }
 
@@ -1124,32 +1003,4 @@ watch(conceptKey, async () => {
   margin-top: var(--space-2);
 }
 
-/* Config panel */
-.builder-config {
-  padding: var(--space-5);
-}
-
-.builder-config__title {
-  margin-bottom: var(--space-4);
-}
-
-.builder-config__fields {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.builder-config__toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.builder-config__toggle-row label {
-  font-family: var(--font-display);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  color: var(--text-secondary);
-  letter-spacing: var(--tracking-wide);
-}
 </style>

@@ -201,7 +201,6 @@ function handleSubmit(): void {
 
 <style scoped>
 .fw-root {
-  font-family: var(--font-body);
 }
 
 /* Step navigation */
@@ -251,12 +250,12 @@ function handleSubmit(): void {
 }
 
 .fw-step-button--complete {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--color-success-bg-strong);
+  color: var(--color-success-text);
 }
 
 .fw-step-button--complete:hover {
-  background: #bbf7d0;
+  background: var(--color-success-bg-border);
 }
 
 .fw-step-badge {
@@ -274,7 +273,7 @@ function handleSubmit(): void {
 }
 
 .fw-step-badge--done {
-  background: #22c55e;
+  background: var(--color-success);
   color: white;
 }
 
@@ -336,7 +335,6 @@ function handleSubmit(): void {
 }
 
 .fw-step-description {
-  font-family: var(--font-body);
   font-size: var(--text-sm);
   color: var(--text-muted);
   margin: 0 0 var(--space-5);
