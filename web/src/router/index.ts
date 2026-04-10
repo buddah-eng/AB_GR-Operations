@@ -108,6 +108,35 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/SystemGraphView.vue'),
   },
   {
+    path: '/builder/form/:conceptKey',
+    name: 'form-builder',
+    component: () => import('@/components/builders/FormBuilder.vue'),
+    props: true,
+  },
+  {
+    path: '/builder/view/:conceptKey',
+    name: 'view-builder',
+    component: () => import('@/components/builders/ViewBuilder.vue'),
+    props: true,
+  },
+  {
+    path: '/builder/workflow/:id?',
+    name: 'workflow-builder',
+    component: () => import('@/components/builders/WorkflowBuilder.vue'),
+    props: true,
+  },
+  {
+    path: '/canvas/workflow/:id',
+    name: 'workflow-canvas',
+    component: () => import('@/views/WorkflowCanvasView.vue'),
+    props: true,
+  },
+  {
+    path: '/canvas/data-flows',
+    name: 'data-flow-canvas',
+    component: () => import('@/views/DataFlowCanvasView.vue'),
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: '/dashboard',
   },
