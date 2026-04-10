@@ -11,7 +11,7 @@ import { auth, googleProvider } from '@/firebase'
 import { api } from '@/api/client'
 import type { Role } from '@/types'
 
-const DEV_BYPASS = import.meta.env.VITE_DEV_BYPASS_AUTH === 'true'
+const DEV_BYPASS = import.meta.env.VITE_DEV_BYPASS_AUTH === 'true' || !import.meta.env.VITE_FIREBASE_API_KEY
 
 export const useAuthStore = defineStore('auth', () => {
   /* ---- state ---- */
@@ -36,6 +36,11 @@ export const useAuthStore = defineStore('auth', () => {
     // In dev bypass mode, skip Firebase auth entirely
     if (DEV_BYPASS) {
       role.value = 'director'
+      loading.value = false
+      return
+    }
+
+    if (!auth) {
       loading.value = false
       return
     }

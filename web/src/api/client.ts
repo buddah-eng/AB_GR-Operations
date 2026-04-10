@@ -5,7 +5,7 @@ import type { ApiResponse } from '@/types'
 /*  Concurrency-limited API client with Firebase Auth ID tokens        */
 /* ------------------------------------------------------------------ */
 
-const DEV_BYPASS = import.meta.env.VITE_DEV_BYPASS_AUTH === 'true'
+const DEV_BYPASS = import.meta.env.VITE_DEV_BYPASS_AUTH === 'true' || !import.meta.env.VITE_FIREBASE_API_KEY
 const MAX_CONCURRENT = 8
 let activeCount = 0
 const queue: Array<() => void> = []
@@ -18,10 +18,7 @@ function drainQueue(): void {
 }
 
 function getBaseUrl(): string {
-  const url = import.meta.env.VITE_API_BASE_URL
-  if (!url) {
-    throw new Error('VITE_API_BASE_URL is not configured')
-  }
+  const url = import.meta.env.VITE_API_BASE_URL ?? ''
   return url.endsWith('/') ? url.slice(0, -1) : url
 }
 
