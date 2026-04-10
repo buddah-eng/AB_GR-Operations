@@ -54,6 +54,12 @@ async function bootstrap(): Promise<void> {
 
   /* ---- Mount ---- */
   app.mount('#app')
+
+  /* ---- Eagerly load ontology (needed by DomainListView, builders, canvas) ---- */
+  import('./stores/ontology').then(({ useOntologyStore }) => {
+    const ontologyStore = useOntologyStore()
+    ontologyStore.loadOntology()
+  })
 }
 
 bootstrap()
