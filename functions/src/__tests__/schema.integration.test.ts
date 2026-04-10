@@ -215,7 +215,7 @@ describe("GIN indexes", () => {
       `SELECT tablename, indexdef
          FROM pg_indexes
         WHERE schemaname = 'public'
-          AND indexdef LIKE '%GIN%'
+          AND indexdef ILIKE '%gin%'
         ORDER BY tablename`
     );
 

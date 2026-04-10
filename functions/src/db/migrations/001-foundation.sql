@@ -147,7 +147,7 @@ CREATE TABLE ontology_properties (
   changed_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
   change_reason       TEXT,
   previous_version_id UUID REFERENCES ontology_properties(id),
-  UNIQUE (concept_key, key, version)
+  UNIQUE (concept_key, key, version, owner_department)
 );
 
 CREATE INDEX idx_properties_concept ON ontology_properties (concept_key) WHERE status = 'active';
@@ -466,11 +466,11 @@ DECLARE
   v_session_id  UUID;
   v_ip          INET;
 BEGIN
-  v_actor_id   := coalesce(current_setting('app.actor_id',   true), 'pg_trigger_fallback');
-  v_actor_type := coalesce(current_setting('app.actor_type', true), 'system');
-  v_change_set := coalesce(current_setting('app.change_set', true)::UUID, gen_random_uuid());
-  v_session_id := current_setting('app.session_id', true)::UUID;
-  v_ip         := current_setting('app.ip_address', true)::INET;
+  v_actor_id   := coalesce(NULLIF(current_setting('app.actor_id',   true), ''), 'pg_trigger_fallback');
+  v_actor_type := coalesce(NULLIF(current_setting('app.actor_type', true), ''), 'system');
+  v_change_set := coalesce(NULLIF(current_setting('app.change_set', true), '')::UUID, gen_random_uuid());
+  v_session_id := NULLIF(current_setting('app.session_id', true), '')::UUID;
+  v_ip         := NULLIF(current_setting('app.ip_address', true), '')::INET;
 
   INSERT INTO ontology_audit_log (
     change_set, actor_id, actor_type, action,
@@ -522,11 +522,11 @@ DECLARE
   v_session_id  UUID;
   v_ip          INET;
 BEGIN
-  v_actor_id   := coalesce(current_setting('app.actor_id',   true), 'pg_trigger_fallback');
-  v_actor_type := coalesce(current_setting('app.actor_type', true), 'system');
-  v_change_set := coalesce(current_setting('app.change_set', true)::UUID, gen_random_uuid());
-  v_session_id := current_setting('app.session_id', true)::UUID;
-  v_ip         := current_setting('app.ip_address', true)::INET;
+  v_actor_id   := coalesce(NULLIF(current_setting('app.actor_id',   true), ''), 'pg_trigger_fallback');
+  v_actor_type := coalesce(NULLIF(current_setting('app.actor_type', true), ''), 'system');
+  v_change_set := coalesce(NULLIF(current_setting('app.change_set', true), '')::UUID, gen_random_uuid());
+  v_session_id := NULLIF(current_setting('app.session_id', true), '')::UUID;
+  v_ip         := NULLIF(current_setting('app.ip_address', true), '')::INET;
 
   INSERT INTO domain_audit_log (
     change_set, actor_id, actor_type, action,
