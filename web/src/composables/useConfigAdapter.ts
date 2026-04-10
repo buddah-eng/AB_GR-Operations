@@ -17,7 +17,7 @@ export function adaptViewConfig(raw: Record<string, unknown>): ViewConfig {
   return {
     id: (raw.id as string) ?? '',
     name: raw.name as string | undefined,
-    title: (raw.title as string) ?? (raw.name as string) ?? '',
+    title: (raw.title as string) ?? '',
     viewType: (raw.viewType ?? raw.view_type ?? 'table') as ViewConfig['viewType'],
     conceptKey: (raw.conceptKey ?? raw.concept_key ?? '') as string,
     columns,

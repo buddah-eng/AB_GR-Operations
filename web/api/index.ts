@@ -96,6 +96,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         viewType: row.view_type, columns: row.columns, filters: row.filters,
         sort: row.sort, groupBy: row.group_by, timelineStart: row.timeline_start,
         timelineEnd: row.timeline_end, rowAction: row.row_action, presets: row.presets,
+        tabs: row.tabs,
       })
       return
     }
@@ -167,12 +168,80 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return
     }
 
+    // --- /api/config --- global platform config
+    if (path === '/api/config') {
+      try {
+        const result = await pool.query(
+          "SELECT * FROM platform_config WHERE key = 'theme' LIMIT 1"
+        )
+        ok(res, result.rows[0] ?? { key: 'theme', value: {} })
+      } catch {
+        ok(res, { key: 'theme', value: {} })
+      }
+      return
+    }
+
+    // --- /api/form-configs --- list form configs (for builders)
+    const formConfigsMatch = path.match(/^\/api\/form-configs/)
+    if (formConfigsMatch) {
+      const conceptKey = new URL(req.url ?? '', 'http://localhost').searchParams.get('conceptKey')
+      const where = conceptKey ? "WHERE concept_key = $1 AND status = 'active'" : "WHERE status = 'active'"
+      const params = conceptKey ? [conceptKey] : []
+      const result = await pool.query(`SELECT * FROM form_configs ${where} ORDER BY concept_key, name`, params)
+      ok(res, result.rows)
+      return
+    }
+
+    // --- /api/view-configs --- list view configs (for builders)
+    const viewConfigsMatch = path.match(/^\/api\/view-configs/)
+    if (viewConfigsMatch) {
+      const conceptKey = new URL(req.url ?? '', 'http://localhost').searchParams.get('conceptKey')
+      const where = conceptKey ? "WHERE concept_key = $1 AND status = 'active'" : "WHERE status = 'active'"
+      const params = conceptKey ? [conceptKey] : []
+      const result = await pool.query(`SELECT * FROM view_configs ${where} ORDER BY concept_key, name`, params)
+      ok(res, result.rows)
+      return
+    }
+
+    // --- /api/visualization/graph --- system graph for canvas
+    if (path === '/api/visualization/graph') {
+      const [concepts, relationships, properties] = await Promise.all([
+        pool.query("SELECT * FROM ontology_concepts WHERE status = 'active'"),
+        pool.query("SELECT * FROM ontology_relationships WHERE status = 'active'"),
+        pool.query("SELECT concept_key, count(*) as prop_count FROM ontology_properties WHERE status = 'active' GROUP BY concept_key"),
+      ])
+      const propCounts: Record<string, number> = {}
+      for (const r of properties.rows) propCounts[r.concept_key] = parseInt(r.prop_count)
+
+      const nodes = concepts.rows.map((c: any) => ({
+        id: c.key, type: 'concept', label: c.name,
+        data: { key: c.key, name: c.name, pluralName: c.plural_name, icon: c.icon, propertyCount: propCounts[c.key] ?? 0, isConfig: c.is_config, isRegistry: c.is_registry },
+      }))
+      const edges = relationships.rows.map((r: any) => ({
+        id: `${r.source_concept_key}-${r.key}-${r.target_concept_key}`,
+        source: r.source_concept_key, target: r.target_concept_key,
+        type: 'relationship', label: r.label,
+        data: { key: r.key, cardinality: r.cardinality },
+      }))
+      ok(res, { nodes, edges })
+      return
+    }
+
+    // --- /api/data-routes --- data flow canvas
+    if (path.startsWith('/api/data-routes')) {
+      const result = await pool.query("SELECT * FROM data_routes WHERE enabled = true")
+      ok(res, result.rows)
+      return
+    }
+
     // --- /api/domains/:concept/:id ---
     const domainDetailMatch = path.match(/^\/api\/domains\/([^/]+)\/([^/]+)$/)
     if (domainDetailMatch) {
       const [, concept, id] = domainDetailMatch
       const table = conceptToTable(concept)
-      const result = await pool.query(`SELECT * FROM ${table} WHERE id = $1 AND NOT archived`, [id])
+      const noArchived = ['workflow_configs', 'guest_form_sessions'].includes(table)
+      const whereClause = noArchived ? 'WHERE id = $1' : 'WHERE id = $1 AND NOT archived'
+      const result = await pool.query(`SELECT * FROM ${table} ${whereClause}`, [id])
       if (result.rows.length === 0) { notFound(res, `Record not found`); return }
       ok(res, result.rows[0])
       return
@@ -183,10 +252,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (domainMatch) {
       const [, concept] = domainMatch
       const table = conceptToTable(concept)
-      const result = await pool.query(
-        `SELECT * FROM ${table} WHERE NOT archived ORDER BY created_at DESC LIMIT 100`
-      )
-      ok(res, { records: result.rows, total: result.rowCount })
+      const noArchived = ['workflow_configs', 'guest_form_sessions'].includes(table)
+      const whereClause = noArchived ? '' : 'WHERE NOT archived'
+      try {
+        const result = await pool.query(
+          `SELECT * FROM ${table} ${whereClause} ORDER BY created_at DESC LIMIT 100`
+        )
+        ok(res, { records: result.rows, total: result.rowCount })
+      } catch (tableErr) {
+        // Table might not exist yet — return empty result instead of 500
+        const msg = tableErr instanceof Error ? tableErr.message : ''
+        if (msg.includes('does not exist')) {
+          ok(res, { records: [], total: 0 })
+        } else {
+          throw tableErr
+        }
+      }
       return
     }
 
@@ -198,13 +279,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-/** Map concept keys to Postgres table names */
+/** Map concept keys AND route slugs to Postgres table names */
 function conceptToTable(concept: string): string {
   const map: Record<string, string> = {
+    // Concept keys (singular, from config-driven routes)
     guest: 'guests', staff: 'staff', schedule_event: 'schedule_events',
     prep_item: 'prep_items', pairing: 'pairings', venue: 'venues',
     transport_booking: 'transport_bookings', generated_contract: 'generated_contracts',
     workflow_config: 'workflow_configs', transport_driver: 'transport_drivers',
+    guest_form_session: 'guest_form_sessions',
+    // Route slugs (already plural, from DomainListView routes)
+    pairings: 'pairings', venues: 'venues', accommodations: 'accommodations',
+    autographs: 'autographs', dietary: 'dietary', travel: 'transport_bookings',
   }
-  return map[concept] ?? `${concept}s`
+  return map[concept] ?? concept
 }

@@ -48,7 +48,11 @@ const { config: viewConfig, loading: _configLoading, error: viewError } = useVie
 const { records, loading: dataLoading, error: dataError, total, reload } = useConceptData(conceptKey)
 
 const concept = computed(() => ontologyStore.getConceptByKey(conceptKey.value))
-const pageTitle = computed(() => concept.value?.pluralLabel ?? concept.value?.label ?? conceptKey.value)
+const pageTitle = computed(() => {
+  const c = concept.value
+  if (c) return c.pluralLabel ?? c.label ?? conceptKey.value
+  return conceptKey.value.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) + 's'
+})
 const canCreate = computed(() => !!concept.value)
 
 function navigateToForm(): void {
