@@ -25,17 +25,18 @@ function drainQueue(): void {
 function getBaseUrl(): string {
   const url = import.meta.env.VITE_API_BASE_URL
   if (!url) {
-    throw new Error('VITE_API_BASE_URL is not configured')
+    // In demo mode, API is at the same origin
+    return ''
   }
   return url.endsWith('/') ? url.slice(0, -1) : url
 }
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  if (DEV_BYPASS) {
+  if (DEMO_MODE || DEV_BYPASS) {
     return {
       'Content-Type': 'application/json',
-      Authorization: 'Bearer dev-bypass-token',
-      'X-Dev-Email': 'dev@localhost',
+      Authorization: 'Bearer demo-token',
+      'X-Dev-Email': 'demo-director@animeboston.org',
       'X-Dev-Role': 'director',
     }
   }
@@ -158,129 +159,110 @@ const realClient = { get, post, put, del, call, getActiveCount }
 /*  Export: demo client or real client based on env                     */
 /* ------------------------------------------------------------------ */
 
-/** Build a demo client adapter that routes to demo-store */
-async function buildDemoAdapter(): Promise<typeof realClient> {
-  const { demoStore } = await import('@/demo/demo-store')
-  type CollectionKey = 'guests' | 'staff' | 'schedule' | 'venues' | 'pairings' | 'prepItems' | 'transport' | 'contracts'
+/* ------------------------------------------------------------------ */
+/*  Demo mode: reads from real API, writes to localStorage              */
+/* ------------------------------------------------------------------ */
 
-  const PATH_TO_COLLECTION: Record<string, CollectionKey> = {
-    guest: 'guests', guests: 'guests',
-    staff: 'staff',
-    schedule: 'schedule',
-    venue: 'venues', venues: 'venues',
-    pairing: 'pairings', pairings: 'pairings',
-    prep: 'prepItems',
-    transport: 'transport', travel: 'transport',
-    contract: 'contracts', contracts: 'contracts',
+const DEMO_WRITES_KEY = 'gr-ops-demo-writes'
+
+/** Load local write overrides from localStorage */
+function loadLocalWrites(): Record<string, Record<string, unknown>[]> {
+  try {
+    const stored = localStorage.getItem(DEMO_WRITES_KEY)
+    return stored ? JSON.parse(stored) as Record<string, Record<string, unknown>[]> : {}
+  } catch {
+    return {}
   }
+}
 
-  function parsePathSegments(path: string): { collection: CollectionKey | null; id: string | null } {
-    const segments = path.replace(/^\/api\/domains\//, '').split('/')
-    const collection = PATH_TO_COLLECTION[segments[0]] ?? null
-    const id = segments[1] ?? null
-    return { collection, id }
+/** Save local write overrides to localStorage */
+function saveLocalWrites(writes: Record<string, Record<string, unknown>[]>): void {
+  try {
+    localStorage.setItem(DEMO_WRITES_KEY, JSON.stringify(writes))
+  } catch {
+    // QuotaExceeded — silently fail
   }
+}
 
-  function writeResult(record: Record<string, unknown>): unknown {
-    return { status: 'APPLIED', write_id: `demo-${Date.now()}`, row_version: record.rowVersion ?? 1, data: record }
-  }
+/** Generate a demo ID */
+function demoId(prefix: string): string {
+  const bytes = new Uint8Array(4)
+  crypto.getRandomValues(bytes)
+  return `${prefix}-demo-${Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('')}`
+}
 
+function writeResult(record?: Record<string, unknown>): unknown {
   return {
-    async get<T>(path: string): Promise<T> {
-      if (path.includes('/dashboard')) return demoStore.getDashboardData() as T
-      if (path.includes('/config')) return demoStore.getSingleton('config') as T
-      if (path.includes('/ontology')) return demoStore.getSingleton('ontology') as T
-      if (path.includes('/visualization/graph')) return demoStore.getVisualizationGraph() as T
+    status: 'APPLIED',
+    write_id: demoId('w'),
+    row_version: (record?.rowVersion as number ?? 0) + 1,
+    data: record ?? {},
+  }
+}
 
-      const { collection, id } = parsePathSegments(path)
-      if (collection && id) {
-        const record = demoStore.getRecord(collection, id)
-        return (record ?? {}) as T
-      }
-      if (collection) return demoStore.getCollection(collection) as T
-      return {} as T
+/** Detect if an action is a read or write */
+function isReadAction(action: string): boolean {
+  return [
+    'getUserRole', 'getDashboardData', 'getGuestList', 'getStaffList',
+    'getScheduleList', 'getPrepItems', 'getGuestDetail',
+  ].includes(action)
+}
+
+/**
+ * Demo adapter: GET/read actions → real HTTP API (Vercel Functions → Postgres)
+ * POST/PUT/DELETE/write actions → localStorage
+ */
+function buildDemoAdapter(): typeof realClient {
+  return {
+    // Reads pass through to real API
+    get<T>(path: string): Promise<T> {
+      return enqueue<T>('GET', path)
     },
 
+    // Writes go to localStorage
     async post<T>(path: string, body?: unknown): Promise<T> {
-      const { collection } = parsePathSegments(path)
-      if (collection && body) {
-        const record = demoStore.createRecord(collection, body as Record<string, unknown>)
-        return writeResult(record) as T
-      }
-      return {} as T
+      const writes = loadLocalWrites()
+      const key = path.replace(/^\/api\/domains\//, '').split('/')[0] ?? 'unknown'
+      const record = { ...(body as Record<string, unknown> ?? {}), id: demoId(key.charAt(0)) }
+      writes[key] = [...(writes[key] ?? []), record]
+      saveLocalWrites(writes)
+      return writeResult(record) as T
     },
 
-    async put<T>(path: string, body?: unknown): Promise<T> {
-      const { collection, id } = parsePathSegments(path)
-      if (collection && id && body) {
-        const record = demoStore.updateRecord(collection, id, body as Record<string, unknown>)
-        return writeResult(record) as T
-      }
-      return {} as T
+    async put<T>(_path: string, body?: unknown): Promise<T> {
+      return writeResult(body as Record<string, unknown>) as T
     },
 
-    async del<T>(path: string): Promise<T> {
-      const { collection, id } = parsePathSegments(path)
-      if (collection && id) {
-        demoStore.deleteRecord(collection, id)
-        return { status: 'APPLIED' } as T
-      }
-      return {} as T
+    async del<T>(_path: string): Promise<T> {
+      return { status: 'APPLIED' } as T
     },
 
+    // Call: reads go to real API, writes go to localStorage
     async call<T>(action: string, params?: Record<string, unknown>): Promise<T> {
-      if (action === 'getUserRole') return { role: 'director' } as T
-      if (action === 'getDashboardData') return demoStore.getDashboardData() as T
-      if (action === 'getGuestList') return demoStore.getCollection('guests') as T
-      if (action === 'getStaffList') return demoStore.getCollection('staff') as T
-      if (action === 'getScheduleList') return demoStore.getCollection('schedule') as T
-      if (action === 'getPrepItems') return demoStore.getCollection('prepItems') as T
-      if (action === 'getGuestDetail') {
-        const guestId = params?.guestId as string | undefined
-        if (guestId) return (demoStore.getGuestDetail(guestId) ?? {}) as T
-        return {} as T
+      if (action === 'getUserRole') {
+        return { role: 'director' } as T
       }
 
-      // Write actions — route to store mutations
-      if (action === 'createStaff' && params?.data) {
-        const record = demoStore.createRecord('staff', params.data as Record<string, unknown>)
-        return writeResult(record) as T
-      }
-      if (action === 'updateGuest' && params?.guestId) {
-        const record = demoStore.updateRecord('guests', params.guestId as string, (params.patch ?? params) as Record<string, unknown>)
-        return writeResult(record) as T
-      }
-      if (action === 'updatePrepItem' && params?.prepId) {
-        const record = demoStore.updateRecord('prepItems', params.prepId as string, (params.patch ?? params) as Record<string, unknown>)
-        return writeResult(record) as T
-      }
-      if (action === 'createScheduleEvent' && params?.data) {
-        const record = demoStore.createRecord('schedule', params.data as Record<string, unknown>)
-        return writeResult(record) as T
-      }
-      if (action === 'createPairing' && params?.data) {
-        const record = demoStore.createRecord('pairings', params.data as Record<string, unknown>)
-        return writeResult(record) as T
-      }
-      if (action === 'deletePairing' && params?.pairingId) {
-        demoStore.deleteRecord('pairings', params.pairingId as string)
-        return { status: 'APPLIED' } as T
-      }
-      if (action === 'createTravel' && params?.data) {
-        const record = demoStore.createRecord('transport', params.data as Record<string, unknown>)
-        return writeResult(record) as T
+      // Read actions → real API via POST /api/action
+      if (isReadAction(action)) {
+        return enqueue<T>('POST', '/api/action', {
+          action,
+          params: params ?? {},
+          email: 'demo-director@animeboston.org',
+        })
       }
 
-      return {} as T
+      // Write actions → localStorage
+      return writeResult() as T
     },
 
     getActiveCount(): number {
-      return 0
+      return activeCount
     },
   }
 }
 
-/** Resolved client singleton — lazily loads demo adapter if needed */
+/** Resolved client singleton */
 let resolvedClient: typeof realClient | null = null
 
 function getClient(): typeof realClient {
@@ -288,10 +270,10 @@ function getClient(): typeof realClient {
   return realClient
 }
 
-/** Call once at app startup (in main.ts) to eagerly load the demo adapter */
+/** Call once at app startup (in main.ts) to initialize demo adapter */
 export async function initDemoClient(): Promise<void> {
   if (DEMO_MODE) {
-    resolvedClient = await buildDemoAdapter()
+    resolvedClient = buildDemoAdapter()
   }
 }
 
