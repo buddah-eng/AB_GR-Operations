@@ -50,6 +50,13 @@ import { venueRouter } from "./api/venues";
 import { equipmentRouter } from "./api/equipment";
 import { calendarSyncRouter } from "./api/calendar-sync";
 import { guidebookSyncRouter } from "./api/guidebook-sync";
+import { transportRouter } from "./api/transport";
+import { guestSelfServiceRouter } from "./api/guest-self-service";
+import { contractsRouter } from "./api/contracts";
+import { itinerariesRouter } from "./api/itineraries";
+import { guestLifecycleRouter } from "./api/guest-lifecycle";
+import { prepTrackingRouter } from "./api/prep-tracking";
+import { pairingsRouter } from "./api/pairings";
 
 // --- Initialize Firebase Admin ---
 
@@ -144,6 +151,13 @@ app.use("/api/venues", venueRouter);
 app.use("/api/equipment", equipmentRouter);
 app.use("/api/calendar-sync", calendarSyncRouter);
 app.use("/api/guidebook-sync", guidebookSyncRouter);
+app.use("/api/transport", transportRouter);
+app.use("/api/guest-self-service", guestSelfServiceRouter);
+app.use("/api/contracts", contractsRouter);
+app.use("/api/itineraries", itinerariesRouter);
+app.use("/api/guests", guestLifecycleRouter);
+app.use("/api/prep", prepTrackingRouter);
+app.use("/api/pairings", pairingsRouter);
 
 // --- Webhook delivery & workflow engine ---
 
