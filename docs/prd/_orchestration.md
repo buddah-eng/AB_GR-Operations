@@ -145,6 +145,7 @@ Builder and canvas are parallel interfaces: builders serve technical/power users
 | `ui/condition-builder-ui.md` | Shared visual builder for ConditionExpressions | condition-expression |
 | `ui/form-view-builder.md` | Drag-drop config UI for forms + views | dynamic-forms, view-renderer, condition-builder-ui |
 | `automation/workflow-builder.md` | Visual node editor for building workflows (traditional builder — coexists with workflow canvas) | workflow-engine, workflow-actions, condition-builder-ui |
+| `platform/branding.md` | Convention branding as config (colors, fonts, logo). Neutral OSS default + convention-specific themes. Token rename, runtime branding, settings UI, color scale generation. | All UI components |
 
 **Parallel tracks in Phase 4.5:**
 - Canvas engine → system-visualization-architecture is sequential (engine first, then architecture)
@@ -153,6 +154,7 @@ Builder and canvas are parallel interfaces: builders serve technical/power users
 - UI rendering (forms + views + condition builder) can run in parallel with canvas work
 - form-view-builder depends on forms + views completing
 - workflow-builder is independent of canvas (parallel interface for different users)
+- branding applies to ALL components — should be established early so components build on the design system
 
 ### Phase 5 — Shared Services
 
