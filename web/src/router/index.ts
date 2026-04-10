@@ -1,7 +1,6 @@
 import {
   createRouter,
   createWebHistory,
-  createWebHashHistory,
   type RouteRecordRaw,
 } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -150,9 +149,7 @@ const routes: RouteRecordRaw[] = [
 /* ------------------------------------------------------------------ */
 
 const router = createRouter({
-  history: isDemoMode
-    ? createWebHashHistory(import.meta.env.BASE_URL)
-    : createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes,
 })
 

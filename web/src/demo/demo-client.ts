@@ -47,33 +47,72 @@ function buildDashboardData(): Record<string, unknown> {
   const preps = demoState.adjustPrepItems(
     clone(prepItemsData) as PrepItem[],
   )
+  const transport = demoState.adjustTransportStatus(
+    clone(transportData) as Array<Record<string, unknown>>,
+  )
 
   const totalGuests = guests.length
-  const confirmedGuests = guests.filter(
-    (g) => g.status === 'confirmed' || g.status === 'arrived' || g.status === 'attending',
-  ).length
-  const jpGuests = guests.filter((g) => g.type === 'JP').length
-  const naGuests = guests.filter((g) => g.type === 'NA').length
-
-  const totalPrep = preps.length
   const completedPrep = preps.filter((p) => p.status === 'complete').length
-  const prepPercent = totalPrep > 0 ? Math.round((completedPrep / totalPrep) * 100) : 0
+  const overduePrep = preps.filter((p) => p.status === 'not_started').length
+  const prepPercent = totalGuests > 0 ? Math.round((completedPrep / preps.length) * 100) : 0
 
-  const totalEvents = scheduleData.length
-  const confirmedEvents = scheduleData.filter((e) => e.status === 'confirmed').length
+  // Build coverage data from pairings — the dashboard staffing section needs this
+  const guestsWithLiaison = new Set(
+    pairingsData
+      .filter((p) => p.role === 'Main Liaison' && p.status === 'active')
+      .map((p) => p.guestId),
+  )
+  const coverage = guests.map((g) => {
+    const guestPairings = pairingsData.filter((p) => p.guestId === g.guestId)
+    return {
+      guestId: g.guestId,
+      guestName: g.name,
+      hasLiaison: guestPairings.some((p) => p.role === 'Main Liaison'),
+      interpreterRequired: g.interpreterRequired ?? false,
+      hasInterpreter: guestPairings.some((p) => p.role === 'Interpreter'),
+    }
+  })
+
+  // Guests missing travel = confirmed+ guests without any transport booking
+  const guestsWithTransport = new Set(transport.map((t) => (t as Record<string, unknown>).guestId))
+  const missingTravel = guests.filter(
+    (g) => ['confirmed', 'travel_arranged', 'arrived', 'attending'].includes(g.status)
+      && !guestsWithTransport.has(g.guestId),
+  ).length
+
+  // Days until convention
+  const conventionStart = new Date('2026-04-03')
+  const today = new Date()
+  const daysUntil = Math.max(0, Math.ceil((conventionStart.getTime() - today.getTime()) / 86400000))
+
+  // Today's events (use Saturday Apr 4 as the "today" for during-event feel)
+  const demoDate = demoState.timeState.value === 'during-event' ? '2026-04-04' : '2026-04-03'
+  const todayEvents = (scheduleData as Array<Record<string, unknown>>).filter(
+    (e) => e.date === demoDate,
+  )
+
+  // Status counts — capitalize first letter to match dashboard expectations
+  const byStatus: Record<string, number> = {}
+  for (const g of guests) {
+    const label = g.status.charAt(0).toUpperCase() + g.status.slice(1).replace(/_/g, ' ')
+    byStatus[label] = (byStatus[label] ?? 0) + 1
+  }
 
   return {
     guests: {
       total: totalGuests,
-      confirmed: confirmedGuests,
-      jp: jpGuests,
-      na: naGuests,
+      confirmed: guests.filter((g) => ['confirmed', 'arrived', 'attending'].includes(g.status)).length,
+      jp: guests.filter((g) => g.type === 'JP').length,
+      na: guests.filter((g) => g.type === 'NA').length,
+      missingTravel,
       byDepartment: groupBy(guests as unknown as ReadonlyArray<Record<string, unknown>>, 'department'),
-      byStatus: groupBy(guests as unknown as ReadonlyArray<Record<string, unknown>>, 'status'),
+      byStatus,
     },
     schedule: {
-      total: totalEvents,
-      confirmed: confirmedEvents,
+      total: scheduleData.length,
+      confirmed: scheduleData.filter((e) => e.status === 'confirmed').length,
+      daysUntilConvention: daysUntil,
+      todayEvents,
       byDay: {
         '2026-04-03': scheduleData.filter((e) => e.date === '2026-04-03').length,
         '2026-04-04': scheduleData.filter((e) => e.date === '2026-04-04').length,
@@ -81,20 +120,25 @@ function buildDashboardData(): Record<string, unknown> {
       },
     },
     prep: {
-      total: totalPrep,
+      total: preps.length,
       completed: completedPrep,
+      percentComplete: prepPercent,
       percent: prepPercent,
+      overdue: overduePrep,
       inProgress: preps.filter((p) => p.status === 'in_progress').length,
-      notStarted: preps.filter((p) => p.status === 'not_started').length,
+      notStarted: overduePrep,
     },
     staffing: {
       total: staffData.length,
+      guestsWithLiaison: guestsWithLiaison.size,
+      coverage,
       byRole: groupBy(staffData, 'role'),
       byDepartment: groupBy(staffData, 'department'),
     },
     violations: {
       total: 0,
       items: [],
+      byStatus: { Active: 0 },
     },
     pendingChanges: {
       total: 0,
