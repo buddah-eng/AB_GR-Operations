@@ -47,14 +47,25 @@
         />
       </template>
       <template #end>
-        <span class="text-sm text-surface-500">
-          {{ filteredGuests.length }} guest{{ filteredGuests.length !== 1 ? 's' : '' }}
-        </span>
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-surface-500">
+            {{ filteredGuests.length }} guest{{ filteredGuests.length !== 1 ? 's' : '' }}
+          </span>
+          <Button
+            :icon="viewMode === 'table' ? 'pi pi-th-large' : 'pi pi-list'"
+            :severity="'secondary'"
+            text
+            rounded
+            :aria-label="viewMode === 'table' ? 'Switch to card view' : 'Switch to table view'"
+            @click="toggleViewMode"
+          />
+        </div>
       </template>
     </Toolbar>
 
     <!-- Guest data table -->
     <DataTable
+      v-if="viewMode === 'table'"
       :value="filteredGuests"
       :loading="loading"
       :paginator="filteredGuests.length > 25"
@@ -97,6 +108,59 @@
       </Column>
       <Column field="company" header="Company" sortable style="min-width: 8rem" />
     </DataTable>
+
+    <!-- Guest card grid -->
+    <div v-if="viewMode === 'card'" class="guest-card-grid">
+      <div v-if="loading" class="text-center py-8 text-surface-400">Loading...</div>
+      <div v-else-if="filteredGuests.length === 0" class="text-center py-8 text-surface-400">
+        No guests found
+      </div>
+      <template v-else>
+        <div
+          v-for="guest in filteredGuests"
+          :key="guest.guestId"
+          class="guest-card"
+          tabindex="0"
+          @click="openGuestFromCard(guest)"
+          @keydown.enter="openGuestFromCard(guest)"
+        >
+          <div class="guest-card__header">
+            <div
+              class="guest-card__avatar"
+              :style="{ backgroundColor: getDepartmentColor(guest.department) }"
+            >
+              {{ getInitials(guest.name) }}
+            </div>
+            <div class="guest-card__identity">
+              <div class="guest-card__name">{{ guest.name }}</div>
+              <div class="guest-card__company">{{ guest.company || '\u2014' }}</div>
+            </div>
+          </div>
+          <div class="guest-card__badges">
+            <Tag :value="guest.status" :severity="getStatusSeverity(guest.status)" rounded />
+            <Tag :value="guest.type" severity="secondary" rounded />
+          </div>
+          <div class="guest-card__prep">
+            <div class="guest-card__prep-label">
+              <span class="text-xs text-surface-500">Prep</span>
+              <span class="text-xs font-semibold text-surface-700">{{ guest.prepPercent }}%</span>
+            </div>
+            <ProgressBar :value="guest.prepPercent" style="height: 0.5rem" :showValue="false" />
+          </div>
+          <div class="guest-card__footer">
+            <span class="text-xs text-surface-500">
+              <i class="pi pi-users mr-1" />{{ guest.staffCount }} assigned
+            </span>
+            <span
+              v-if="guest.interpreterRequired"
+              class="text-xs text-surface-500"
+            >
+              <i class="pi pi-language mr-1" />Interpreter
+            </span>
+          </div>
+        </div>
+      </template>
+    </div>
   </div>
 </template>
 
@@ -128,6 +192,7 @@ const filterStatus = ref<string | null>(null)
 const filterDepartment = ref<string | null>(null)
 const searchQuery = ref('')
 const needsAttention = ref(false)
+const viewMode = ref<'table' | 'card'>('table')
 
 const statusOptions = ['Confirmed', 'Invited', 'Cancelled']
 
@@ -179,6 +244,35 @@ function getStatusSeverity(status: string): 'success' | 'info' | 'danger' | 'sec
   return map[status] ?? 'secondary'
 }
 
+const departmentColorMap: Record<string, string> = {
+  Anime: '#3b82f6',
+  Gaming: '#10b981',
+  Music: '#8b5cf6',
+  Cosplay: '#ec4899',
+  Panels: '#f59e0b',
+  Artists: '#ef4444',
+  Industry: '#6366f1',
+}
+
+function toggleViewMode(): void {
+  viewMode.value = viewMode.value === 'table' ? 'card' : 'table'
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length === 0) return '??'
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+function getDepartmentColor(department: string): string {
+  return departmentColorMap[department] ?? '#94a3b8'
+}
+
+function openGuestFromCard(guest: GuestSummary): void {
+  router.push({ name: 'guest-hub', params: { id: guest.guestId } })
+}
+
 function loadData(): void {
   loading.value = true
   const filters: Record<string, string> = {}
@@ -209,3 +303,112 @@ function openGuest(event: DataTableRowClickEvent): void {
 
 onMounted(loadData)
 </script>
+
+<style scoped>
+.guest-card-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .guest-card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .guest-card-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.guest-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--p-surface-200);
+  border-radius: 0.75rem;
+  background: var(--p-surface-0);
+  cursor: pointer;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.guest-card:hover {
+  border-color: var(--p-primary-300);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.guest-card:focus-visible {
+  outline: 2px solid var(--p-primary-500);
+  outline-offset: 2px;
+}
+
+.guest-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.guest-card__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  flex-shrink: 0;
+  letter-spacing: 0.025em;
+}
+
+.guest-card__identity {
+  min-width: 0;
+}
+
+.guest-card__name {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--p-surface-800);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.guest-card__company {
+  font-size: 0.8125rem;
+  color: var(--p-surface-500);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.guest-card__badges {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.guest-card__prep {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.guest-card__prep-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.guest-card__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--p-surface-100);
+}
+</style>
