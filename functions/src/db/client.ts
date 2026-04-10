@@ -15,18 +15,29 @@ let pool: Pool | null = null;
 
 function getPool(): Pool {
   if (!pool) {
+    // Support DATABASE_URL (Neon/Vercel) or individual env vars (Firebase/Cloud Run)
+    const connectionConfig = process.env.DATABASE_URL
+      ? {
+          connectionString: process.env.DATABASE_URL,
+          ssl: { rejectUnauthorized: false },
+          max: parseInt(process.env.DB_POOL_MAX ?? "5", 10),
+        }
+      : {
+          host: process.env.DB_HOST ?? "localhost",
+          port: parseInt(process.env.DB_PORT ?? "5432", 10),
+          database: process.env.DB_NAME ?? "gr_ops",
+          user: process.env.DB_USER ?? "gr_ops",
+          password: process.env.DB_PASSWORD ?? "",
+          ssl: process.env.NODE_ENV === "test"
+            ? false
+            : process.env.DB_SSL === "false"
+              ? false
+              : { rejectUnauthorized: false },
+          max: parseInt(process.env.DB_POOL_MAX ?? "10", 10),
+        };
+
     pool = new Pool({
-      host: process.env.DB_HOST ?? "localhost",
-      port: parseInt(process.env.DB_PORT ?? "5432", 10),
-      database: process.env.DB_NAME ?? "gr_ops",
-      user: process.env.DB_USER ?? "gr_ops",
-      password: process.env.DB_PASSWORD ?? "",
-      ssl: process.env.NODE_ENV === "test"
-        ? false
-        : process.env.DB_SSL === "false"
-          ? false
-          : { rejectUnauthorized: false },
-      max: parseInt(process.env.DB_POOL_MAX ?? "10", 10),
+      ...connectionConfig,
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 5_000,
     });

@@ -51,23 +51,28 @@ import { equipmentRouter } from "./api/equipment";
 import { calendarSyncRouter } from "./api/calendar-sync";
 import { guidebookSyncRouter } from "./api/guidebook-sync";
 
-// --- Initialize Firebase Admin ---
+// --- Initialize Firebase Admin (skip on Vercel / non-Firebase environments) ---
 
-admin.initializeApp();
+if (!process.env.VERCEL && !process.env.SKIP_FIREBASE_INIT) {
+  admin.initializeApp();
+}
 
 // --- Express App ---
 
 const app = express();
 
-// CORS: allow Firebase Hosting origins and localhost for development
+// CORS: allow all origins in dev/Vercel, restrict in production Firebase
+const isDevOrVercel = !!process.env.VERCEL || !!process.env.FUNCTIONS_EMULATOR;
 app.use(
   cors({
-    origin: [
-      new RegExp(`^https://${process.env.GCLOUD_PROJECT}\\.web\\.app$`),
-      new RegExp(`^https://${process.env.GCLOUD_PROJECT}\\.firebaseapp\\.com$`),
-      /^http:\/\/localhost:\d+$/,                      // Local development
-      /^http:\/\/127\.0\.0\.1:\d+$/,                  // Local development alt
-    ],
+    origin: isDevOrVercel
+      ? true  // Allow all origins in dev/Vercel
+      : [
+          new RegExp(`^https://${process.env.GCLOUD_PROJECT}\\.web\\.app$`),
+          new RegExp(`^https://${process.env.GCLOUD_PROJECT}\\.firebaseapp\\.com$`),
+          /^http:\/\/localhost:\d+$/,
+          /^http:\/\/127\.0\.0\.1:\d+$/,
+        ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: [
       "Content-Type",
@@ -76,11 +81,10 @@ app.use(
       "X-MCP-Delegation",
       "X-Guest-Token",
       "X-Driver-Token",
-      // Dev headers — only effective in emulator (auth middleware rejects bypass tokens in prod)
-      ...(process.env.FUNCTIONS_EMULATOR ? ["X-Dev-Email", "X-Dev-Role", "X-Dev-Actor-Type"] : []),
+      "X-Dev-Email", "X-Dev-Role", "X-Dev-Actor-Type",
     ],
     credentials: true,
-    maxAge: 3600, // Pre-flight cache: 1 hour
+    maxAge: 3600,
   })
 );
 
@@ -181,7 +185,11 @@ app.use(
   }
 );
 
-// --- Export Cloud Functions ---
+// --- Export raw Express app (for Vercel / non-Firebase deployments) ---
+
+export { app };
+
+// --- Export Cloud Functions (Firebase deployment) ---
 
 export const api = onRequest(
   {

@@ -193,8 +193,8 @@ async function tryScopedTokenAuth(req: Request, token: string): Promise<void> {
 }
 
 function authenticateDevBypass(req: Request): void {
-  if (!process.env.FUNCTIONS_EMULATOR) {
-    logger.warn("dev-bypass-token rejected — not running in emulator");
+  if (!process.env.FUNCTIONS_EMULATOR && !process.env.VERCEL) {
+    logger.warn("dev-bypass-token rejected — not running in emulator or Vercel");
     return;
   }
 
