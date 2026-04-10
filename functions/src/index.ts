@@ -43,6 +43,13 @@ import { externalConnectionsRouter } from "./api/external-connections";
 import { observabilityRouter } from "./api/observability";
 import { registerPipelineEngine } from "./pipelines/service";
 import { searchRouter } from "./api/search";
+import { staffRouter } from "./api/staff";
+import { volunteerRouter } from "./api/volunteers";
+import { schedulingRouter } from "./api/scheduling";
+import { venueRouter } from "./api/venues";
+import { equipmentRouter } from "./api/equipment";
+import { calendarSyncRouter } from "./api/calendar-sync";
+import { guidebookSyncRouter } from "./api/guidebook-sync";
 
 // --- Initialize Firebase Admin ---
 
@@ -130,6 +137,13 @@ app.use("/api/external-connections", externalConnectionsRouter);
 app.use("/api/observability", observabilityRouter);
 app.get("/api/stream", createSSEHandler());
 app.use("/api/search", searchRouter);
+app.use("/api/staff", staffRouter);
+app.use("/api/volunteers", volunteerRouter);
+app.use("/api/scheduling", schedulingRouter);
+app.use("/api/venues", venueRouter);
+app.use("/api/equipment", equipmentRouter);
+app.use("/api/calendar-sync", calendarSyncRouter);
+app.use("/api/guidebook-sync", guidebookSyncRouter);
 
 // --- Webhook delivery & workflow engine ---
 
