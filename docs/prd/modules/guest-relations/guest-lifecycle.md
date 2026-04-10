@@ -40,6 +40,11 @@ draft → invited → confirmed → travel_arranged → arrived → attending �
 - [ ] Valid transitions succeed and fire workflows
 - [ ] Invalid transitions return 400 with explanation
 - [ ] Each transition logged as domain event with previous/new status
+- [ ] Guest status forms render from FormConfig loaded from Postgres
+- [ ] Guest lifecycle views render from ViewConfig loaded from Postgres
+- [ ] Status transitions use workflow engine, not hardcoded state machine
+
+**Dependencies:** `config-integration.md`
 
 ### 2. Guest Types
 

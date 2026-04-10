@@ -72,6 +72,35 @@ When any criterion is **FAIL**:
 
 ---
 
+## 3.5 Behavioral Verification
+
+> "That's not a refactor, that's a clear failing of the database and documentation. It's slop."
+
+Tests passing and builds succeeding are necessary but **NOT sufficient**. A ViewConfig sitting unused in Postgres is dead code, even if tests for the ViewConfig service pass. After all acceptance criteria pass on paper, the gate must include at least ONE behavioral smoke test per phase that proves the system actually works end-to-end for a real user action.
+
+### By phase type:
+
+| Phase Type | Behavioral Smoke Test |
+|------------|----------------------|
+| **UI phases** | Navigate to the page in a running app. Confirm it renders real data through the config-driven pipeline (ontology -> ViewConfig -> rendered component). Screenshot or describe the rendered state. |
+| **API phases** | Make a real HTTP request (curl, Postman, or test client) and verify the response body, status code, and side effects (e.g., row created in DB). |
+| **Infrastructure phases** | Verify the consumer layer actually loads and uses the infrastructure. An audit trigger that exists but is never fired by an API handler is not infrastructure — it's dead code. |
+
+### What counts:
+
+- A form that renders fields from a FormConfig loaded from the database: **behavioral evidence**
+- A test that asserts `FormConfigService.getById()` returns a record: **unit evidence only** (necessary but not sufficient)
+- A ViewConfig row in a seed file with no page that reads it: **dead code**, not a passing criterion
+
+### Procedure:
+
+1. After all line-by-line acceptance criteria are PASS, identify the primary user action the phase enables
+2. Execute that action against a running system (dev server, test environment, or integration test that exercises the full stack)
+3. Document the result: what was done, what was observed, pass or fail
+4. If the behavioral test fails, the phase fails — even if every line-by-line criterion is PASS
+
+---
+
 ## 4. Memory Gate
 
 After the acceptance gate passes:
@@ -91,3 +120,6 @@ This ensures future sessions have context on what was verified and how.
 - [ ] No FAIL criteria allowed at phase completion
 - [ ] Results saved to project memory
 - [ ] Gate blocks phase advancement until all criteria pass
+- [ ] At least one behavioral smoke test per phase proves the system works end-to-end for a real user action
+- [ ] Behavioral smoke test is documented with action taken, observed result, and pass/fail status
+- [ ] "Tests pass" and "build succeeds" alone do not satisfy the gate without behavioral verification

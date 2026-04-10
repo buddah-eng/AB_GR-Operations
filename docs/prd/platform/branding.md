@@ -25,8 +25,8 @@ The current codebase has Anime Boston branding hardcoded — `ab-*` color tokens
 | Primary color scale (`ab-*`) | `web/tailwind.config.js:14-28` | 11-step blue scale extracted from AB poster |
 | Accent color scale (`accent-*`) | `web/tailwind.config.js:30-41` | 11-step orange scale from AB logo |
 | Surface neutrals (`surface-*`) | `web/tailwind.config.js:43-56` | Gray scale (convention-neutral, can stay) |
-| Display font | `web/tailwind.config.js:11` | Nunito |
-| Body font | `web/tailwind.config.js:12` | Source Sans 3 |
+| Display font | `web/tailwind.config.js:11` | Nunito (must change to M PLUS 1) |
+| Body font | `web/tailwind.config.js:12` | Source Sans 3 (must change to Lato) |
 | Logo | `web/public/ab-logo.jpg` | Anime Boston logo |
 | Hero image | `web/public/ab-koinobori.jpg` | AB Koinobori poster |
 | Favicon | `web/public/favicon.svg` | AB-colored circle |
@@ -72,8 +72,9 @@ The current codebase has Anime Boston branding hardcoded — `ab-*` color tokens
   },
   
   "fonts": {
-    "display": "Nunito",
-    "body": "Source Sans 3"
+    "display": "M PLUS 1",
+    "displayWeight": "900",
+    "body": "Lato"
   },
   
   "meta": {
@@ -89,8 +90,8 @@ The current codebase has Anime Boston branding hardcoded — `ab-*` color tokens
 VITE_ORG_NAME="Anime Boston"
 VITE_PRIMARY_600="#4A90C4"
 VITE_ACCENT_400="#E8962D"
-VITE_FONT_DISPLAY="Nunito"
-VITE_FONT_BODY="Source Sans 3"
+VITE_FONT_DISPLAY="M PLUS 1"
+VITE_FONT_BODY="Lato"
 VITE_LOGO_URL="/assets/logo.png"
 ```
 
@@ -145,8 +146,8 @@ export default {
         surface: { /* ... unchanged ... */ }
       },
       fontFamily: {
-        display: [process.env.VITE_FONT_DISPLAY || 'Inter', 'system-ui', 'sans-serif'],
-        sans: [process.env.VITE_FONT_BODY || 'Inter', 'system-ui', 'sans-serif'],
+        display: [process.env.VITE_FONT_DISPLAY || 'M PLUS 1', 'system-ui', 'sans-serif'],
+        sans: [process.env.VITE_FONT_BODY || 'Lato', 'system-ui', 'sans-serif'],
       }
     }
   }
@@ -231,7 +232,7 @@ async function loadTheme() {
 | `ab-50` through `ab-950` | `primary-50` through `primary-950` | All `.vue` files, `tailwind.config.js`, `global.css` |
 | `ab-logo.jpg`, `ab-koinobori.jpg` | Removed from repo, loaded from config | `web/public/`, `docs/` |
 | `--ab-ink`, `--ab-deep`, etc. | `--primary-ink`, `--primary-deep` or just use Tailwind tokens | `global.css`, demo HTML |
-| Font: Nunito + Source Sans 3 | Configurable, default: Inter (or system) | `tailwind.config.js`, Google Fonts link |
+| Font: Nunito + Source Sans 3 | Configurable, default: M PLUS 1 (display, Black/900 weight) + Lato (body). Japanese-inspired display font for convention aesthetic. | `tailwind.config.js`, Google Fonts link |
 | "Anime Boston" in titles | `{{convention.name}}` from config | Component templates, page titles |
 
 **This is a find-and-replace + config extraction.** No architectural changes — just moving hardcoded values to config.
@@ -244,7 +245,32 @@ async function loadTheme() {
 
 ---
 
-### 7. Settings UI
+### 7. Dual-Theme System
+
+**Purpose:** Define the OSS-neutral default theme and the AB convention override.
+
+**Detail:**
+
+The platform ships with two theme modes:
+
+| Theme | Class | Colors | Fonts | When Active |
+|-------|-------|--------|-------|-------------|
+| **OSS Default** | (no class) | Refined minimal — neutral blue/slate primary, warm gray accent | M PLUS 1 (display), Lato (body) | Fresh deployment, no convention config |
+| **AB Override** | `.theme-ab` | Blue (`#4A90C4` primary) + amber/orange (`#E8962D` accent) from AB poster palette | Same fonts, both themes | When `platform_config.theme.convention = 'anime-boston'` |
+
+**Token naming:** All tokens use `primary-*` and `accent-*`, never `ab-*`. The AB theme overrides the token values, not the token names. This keeps the source code convention-neutral.
+
+**Application:** The `<html>` element receives the `.theme-ab` class at runtime when the convention is identified. Tailwind utilities reference `primary-*` / `accent-*` tokens which resolve to different values per theme.
+
+**Acceptance Criteria:**
+- [ ] Default theme renders a refined, neutral design suitable for any convention
+- [ ] AB theme applied via `.theme-ab` class produces the blue/amber palette
+- [ ] Token names are `primary-*` and `accent-*` everywhere — zero `ab-*` tokens
+- [ ] Theme switching is runtime (class toggle), not a rebuild
+
+---
+
+### 8. Settings UI
 
 **Purpose:** Define how admins change branding.
 
@@ -270,7 +296,7 @@ Settings page → Branding section:
 
 ---
 
-### 8. Test Plan
+### 9. Test Plan
 
 | Test | Type | What | Acceptance |
 |------|------|------|------------|

@@ -110,7 +110,12 @@ Contract rendered at `/guests/:id/contract`:
 - `[Export PDF]` button generates/downloads PDF
 - `[Regenerate]` button re-runs clause assembly (picks up changes to guest record or clause text)
 
-### 7. Test Plan
+### 7. Config-Driven Rendering
+
+**Acceptance Criteria:**
+- [ ] Contract views render through the platform's in-app document viewer, not hardcoded pages
+
+### 8. Test Plan
 
 | Test | What | Acceptance |
 |------|------|------------|

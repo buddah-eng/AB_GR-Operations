@@ -98,7 +98,38 @@ All active bookings in one view:
 - **Timeline:** horizontal timeline of all pickups/dropoffs for the day
 - **Quick actions:** reassign driver, cancel booking, send notification
 
-### 7. Test Plan
+### 7. Driver Name Phase-Awareness (R7)
+
+Driver information visibility changes based on the event's temporal phase. Implemented via `ConditionExpression` on the `driver_name`, `driver_phone`, and `driver_plate` property visibility, driven by an event phase config value (`pre`, `during`, `post`).
+
+| Phase | Driver Fields Shown | Rationale |
+|---|---|---|
+| **Pre-event** | Vendor/company name only. Driver name shows "TBD" or vendor company details. No specific driver names or contact info. | Drivers aren't assigned yet; showing placeholder avoids confusion |
+| **During-event** | Driver name, phone, plate number — full driver details visible | Active coordination requires full contact info |
+| **Post-event** | Driver name visible for records. Full detail for wrap-up reporting | Needed for expense reconciliation and feedback |
+
+**ConditionExpression example:**
+```json
+{
+  "field": "event_phase",
+  "operator": "equals",
+  "value": "during",
+  "visibleProperties": ["driver_name", "driver_phone", "driver_plate"]
+}
+```
+
+Phase transition is determined by the convention's event phase config (pre/during/post), and updates driver field visibility automatically across all transport booking views.
+
+**Acceptance Criteria:**
+- [ ] Pre-event transport records show vendor/company details, not driver names
+- [ ] During/post-event transport records show named drivers with contact info
+- [ ] Phase transition updates driver visibility automatically via ConditionExpression
+- [ ] Transport views render from ViewConfig loaded from Postgres
+- [ ] Transport forms render from FormConfig loaded from Postgres
+
+**Dependencies:** `config-integration.md`
+
+### 8. Test Plan
 
 | Test | What | Acceptance |
 |------|------|------------|

@@ -68,7 +68,15 @@ Prep items with `auto_complete_event` set are completed automatically:
 
 Workflow subscribes to these events, matches by guest_id + auto_complete_event, updates status to 'complete'.
 
-### 6. Test Plan
+### 6. Config-Driven Rendering
+
+**Acceptance Criteria:**
+- [ ] Prep tracker renders as kanban from ViewConfig loaded from Postgres
+- [ ] Prep item forms render from FormConfig loaded from Postgres
+
+**Dependencies:** `config-integration.md`
+
+### 7. Test Plan
 
 | Test | What | Acceptance |
 |------|------|------------|

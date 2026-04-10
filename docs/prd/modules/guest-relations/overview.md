@@ -19,3 +19,25 @@ Guest Relations is the first department module deployed on the platform. It mana
 **Integration with shared services:** Scheduling (guest panels, autograph sessions, concerts), Venues (green rooms, signing areas, panel rooms), Volunteers (liaison/interpreter assignment from volunteer pool), Equipment (AV for panels, signing supplies).
 
 **Sub-PRDs:** guest-lifecycle, pairings-staffing, prep-tracking, contracts, itineraries, transport-logistics, guest-self-service — each an atomic PRD in this folder.
+
+---
+
+## Department-Centric Settings (R4)
+
+The GR settings page is organized by department, not by generic feature categories. Each settings section reads its structure and options from ontology/config tables in Postgres — no hardcoded settings panels.
+
+**Settings sections (GR-specific):**
+- Guest types & constraints (JP/NA/other defaults, required fields)
+- Staffing templates (required pairing roles per guest type)
+- Prep checklist templates (items created per guest type)
+- Contract clause inventory (conditional clauses and sort order)
+- Transport providers (Blacklane/Karhoo/volunteer config)
+- Self-service form configuration (sections, field visibility, token expiration)
+- Notification preferences (which transitions trigger which alerts)
+
+**Acceptance Criteria:**
+- [ ] Settings page is department-centric, showing GR-specific config panels
+- [ ] Each settings section reads from ontology/config tables, not hardcoded UI
+- [ ] Adding a new setting section requires only a config record, not a code change
+
+**Dependencies:** `config-integration.md`

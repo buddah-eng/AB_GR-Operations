@@ -95,7 +95,15 @@ All fields validated against ontology property constraints (required, min/max, p
 - **No enumeration:** Invalid token, expired token, and non-existent token all return identical 403 response
 - **CORS:** Restricted to convention domain only
 
-### 8. Test Plan
+### 8. Config-Driven Rendering
+
+**Acceptance Criteria:**
+- [ ] External guest forms render from FormConfig loaded from Postgres
+- [ ] Form fields derive from ontology Property definitions
+
+**Dependencies:** `config-integration.md`
+
+### 9. Test Plan
 
 | Test | What | Acceptance |
 |------|------|------------|

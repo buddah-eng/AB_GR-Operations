@@ -65,6 +65,12 @@ Data-scoped view for liaisons:
 
 ### 6. Test Plan
 
+**Acceptance Criteria:**
+- [ ] Pairing views render from ViewConfig loaded from Postgres
+- [ ] Staffing assignment forms render from FormConfig loaded from Postgres
+
+**Dependencies:** `config-integration.md`
+
 | Test | What | Acceptance |
 |------|------|------------|
 | Template evaluation | JP guest → liaison + interpreter placeholders created | Correct roles and count |

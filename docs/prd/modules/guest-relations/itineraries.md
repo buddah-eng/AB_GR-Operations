@@ -103,7 +103,14 @@ Friday 3:00 PM — Panel with Arata Fujimoto (Panel Hall A)
 
 Data scope: liaison's itinerary auto-filtered by pairings relation.
 
-### 6. Test Plan
+### 6. Config-Driven Rendering
+
+**Acceptance Criteria:**
+- [ ] Itinerary view renders from ViewConfig loaded from Postgres
+
+**Dependencies:** `config-integration.md`
+
+### 7. Test Plan
 
 | Test | What | Acceptance |
 |------|------|------------|

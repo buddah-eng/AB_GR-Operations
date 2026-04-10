@@ -12,7 +12,7 @@ Today these integrations are scattered across individual PRDs (`transport-logist
 
 External pipelines extend the internal pipeline system (`data-infrastructure/internal-pipelines.md`) with external boundary concerns: authentication, network failures, rate limits, sync cursors, and conflict resolution. An external pipeline wraps a connection definition, a sync direction, a data mapping, and error handling into a managed, monitored unit.
 
-**Dependencies:** `data-infrastructure/internal-pipelines.md`, `data-infrastructure/data-routing.md`, `data-infrastructure/data-transforms.md`, `core/event-bus.md`, `core/audit-system.md`, `api/integration-patterns.md`
+**Dependencies:** `data-infrastructure/internal-pipelines.md`, `data-infrastructure/data-routing.md`, `data-infrastructure/data-transforms.md`, `core/event-bus.md`, `core/audit-system.md`, `core/rbac-engine.md`, `core/auth-system.md`, `api/integration-patterns.md`
 
 ---
 
@@ -694,7 +694,95 @@ Google Calendar push notifications use a channel model:
 
 ---
 
-## 9. External Pipeline Storage
+## 9. RBAC & Security
+
+### Purpose
+
+Define how role-based access control and security policies apply to external pipeline configuration, execution, and data flow. Ensures external integrations do not bypass the platform's permission model.
+
+### Detail
+
+**Dependencies:** `core/rbac-engine.md`, `core/auth-system.md` -- all RBAC checks use the shared RBAC engine; authentication follows the platform auth system.
+
+**Credential and connection management:**
+
+Only users with the `admin` role can create, edit, or disable external connections (`external_connections` table). This includes:
+
+- Configuring API keys, OAuth credentials, and service account JSON
+- Setting rate limits, polling intervals, and timeout values
+- Enabling/disabling connections and managing connection health
+- Registering webhook endpoints and secrets
+
+Non-admin users can view connection status (name, provider, status, last_health_check) but cannot see `credential_ref`, `auth_config`, or any credential-adjacent fields. The API strips these fields from non-admin responses.
+
+**Pipeline configuration permissions:**
+
+| Operation | Required Role | Scope |
+|-----------|--------------|-------|
+| Create external pipeline | `admin` | Global -- external pipelines are platform-wide infrastructure |
+| Edit pipeline configuration | `admin` | Global |
+| Enable/disable pipeline | `admin` | Global |
+| View pipeline status and sync state | `director` | Department-scoped -- directors see pipelines relevant to their department |
+| Resolve sync conflicts (`sync_pending`) | User with `edit` permission on the affected record's concept | Record-scoped |
+
+**Pipeline execution model:**
+
+External pipelines execute with a **service account role**, not the role of any individual user. This is because pipelines run on schedules and via webhooks -- there is no authenticated user session at execution time.
+
+- The service account role is defined per pipeline in the `external_pipelines` table (field: `execution_role_key`).
+- The service account role must have read/write permissions on the source and target concepts.
+- The service account role is validated at pipeline creation time. If the role lacks required permissions, pipeline creation fails with a descriptive error.
+- Pipeline audit log entries record `actor_type: 'service_account'` and the `execution_role_key`, not a user ID.
+
+**Write pipeline integration:**
+
+Data ingested from external sources goes through the standard write pipeline:
+
+```
+External API response
+  -> Transform (data-transforms.md)
+  -> Auth check (service account role)
+  -> RBAC enforcement (field-level permissions)
+  -> Validation (ontology constraints)
+  -> Audit log entry
+  -> Write to Postgres
+  -> Domain event emission
+```
+
+This ensures external data is subject to the same validation, RBAC, and audit rules as data entered through the platform UI or internal API. No external integration bypasses the write pipeline.
+
+**Field-level RBAC on externally-sourced data:**
+
+When external data updates a platform record, field-level RBAC still applies to how that data is presented:
+
+- If a role cannot see a field (e.g., `phone_number` is restricted to `admin` and `guest-relations-director`), external updates to that field are written to the database (via the service account) but filtered from the restricted role's view.
+- The data is stored correctly -- RBAC controls visibility, not storage. External sources are authoritative for the data they provide; RBAC controls who can see it.
+
+**Sync conflict resolution permissions:**
+
+The `sync_pending` table (section 4) contains records requiring human review. Access to resolve these conflicts is controlled by RBAC:
+
+- A user can view `sync_pending` records only for concepts they have `read` permission on.
+- A user can resolve (accept/reject) `sync_pending` records only for concepts they have `edit` permission on.
+- The resolution UI filters the pending list based on the current user's RBAC role.
+- Resolution actions are audited with the resolving user's ID.
+
+### Acceptance Criteria
+
+- [ ] External pipeline credentials are admin-only -- non-admin users cannot view or modify credentials
+- [ ] Non-admin connection status responses strip `credential_ref` and `auth_config` fields
+- [ ] Pipeline CRUD operations require admin role
+- [ ] Ingested data goes through the full write pipeline (auth, RBAC, validation, audit)
+- [ ] External pipelines execute with a service account role, not a user role
+- [ ] Service account role is validated at pipeline creation time
+- [ ] Field-level RBAC applies to externally-sourced data (controls visibility, not storage)
+- [ ] Conflict resolution UI respects edit permissions on the affected concept
+- [ ] Users can only view `sync_pending` records for concepts they have read access to
+- [ ] Pipeline audit entries record `actor_type: 'service_account'` with the execution role key
+
+---
+
+## 10. External Pipeline Storage
 
 ### Purpose
 
@@ -757,7 +845,7 @@ CREATE INDEX idx_ext_pipeline_direction ON external_pipelines (direction) WHERE 
 
 ---
 
-## 10. Integration with Existing PRDs
+## 11. Integration with Existing PRDs
 
 ### Purpose
 
@@ -788,9 +876,9 @@ Define how external pipelines relate to domain-specific integration PRDs.
 
 ---
 
-## 11. Test Plan
+## 12. Test Plan
 
-### 11.1 Connection Tests
+### 12.1 Connection Tests
 
 | Test | Type | Setup | Expected |
 |------|------|-------|----------|
@@ -800,7 +888,7 @@ Define how external pipelines relate to domain-specific integration PRDs.
 | CN-04 | Unit | Credential not in Postgres | Query external_connections, credential_ref is a Secret Manager path |
 | CN-05 | Unit | Credential not in logs | Execute pipeline with logging, grep logs for credential | Zero matches |
 
-### 11.2 Inbound Pipeline Tests
+### 12.2 Inbound Pipeline Tests
 
 | Test | Type | Setup | Expected |
 |------|------|-------|----------|
@@ -812,7 +900,7 @@ Define how external pipelines relate to domain-specific integration PRDs.
 | IN-06 | Integration | Poll returns error (500) | Retry with backoff, error logged |
 | IN-07 | Integration | Interrupted sync resumes from cursor | Processing starts from stored cursor_value |
 
-### 11.3 Outbound Pipeline Tests
+### 12.3 Outbound Pipeline Tests
 
 | Test | Type | Setup | Expected |
 |------|------|-------|----------|
@@ -823,7 +911,7 @@ Define how external pipelines relate to domain-specific integration PRDs.
 | OB-05 | Integration | External API returns 429 | Pipeline respects Retry-After header |
 | OB-06 | Integration | External API returns 500 | Retry with exponential backoff |
 
-### 11.4 Bidirectional Pipeline Tests
+### 12.4 Bidirectional Pipeline Tests
 
 | Test | Type | Setup | Expected |
 |------|------|-------|----------|
@@ -835,7 +923,7 @@ Define how external pipelines relate to domain-specific integration PRDs.
 | BD-06 | Integration | Time change > 15 min (manual_merge) | sync_pending created for review |
 | BD-07 | Integration | Time change < 15 min (auto_accept_threshold) | Auto-accepted with notification |
 
-### 11.5 Resilience Tests
+### 12.5 Resilience Tests
 
 | Test | Type | Setup | Expected |
 |------|------|-------|----------|
@@ -847,7 +935,7 @@ Define how external pipelines relate to domain-specific integration PRDs.
 | RS-06 | Integration | Webhook with invalid signature | 401 returned, payload not processed |
 | RS-07 | Integration | Duplicate webhook delivery | Idempotent -- no duplicate records |
 
-### 11.6 Performance Tests
+### 12.6 Performance Tests
 
 | Test | Setup | Target |
 |------|-------|--------|
@@ -856,7 +944,24 @@ Define how external pipelines relate to domain-specific integration PRDs.
 | 100 concurrent webhook deliveries | Burst webhook traffic | All processed, < 5s latency |
 | Sync state query for dashboard | 10,000 sync_state rows | < 500ms |
 
-### 11.7 Security Tests
+### 12.7 RBAC & Security Tests
+
+| Test | Type | Setup | Expected |
+|------|------|-------|----------|
+| RB-01 | Integration | Non-admin creates external connection | 403 Forbidden |
+| RB-02 | Integration | Admin creates external connection | Connection created |
+| RB-03 | Integration | Non-admin views connection status | Status visible, `credential_ref` and `auth_config` stripped |
+| RB-04 | Integration | Non-admin edits pipeline configuration | 403 Forbidden |
+| RB-05 | Integration | Director views pipeline sync state for own department | Sync state visible |
+| RB-06 | Integration | Volunteer views pipeline sync state | 403 Forbidden |
+| RB-07 | Integration | Pipeline creates record via service account role | Audit entry shows `actor_type: 'service_account'` |
+| RB-08 | Integration | Pipeline writes to concept service account lacks permission for | Write rejected, pipeline error logged |
+| RB-09 | Integration | User with `read` but no `edit` attempts to resolve `sync_pending` | 403 Forbidden |
+| RB-10 | Integration | User with `edit` resolves `sync_pending` | Resolution recorded with user ID |
+| RB-11 | Integration | External update writes restricted field, non-admin queries record | Restricted field not visible in response |
+| RB-12 | Integration | Inbound pipeline data goes through full write pipeline | Auth, RBAC, validation, and audit all execute |
+
+### 12.8 Security Tests
 
 | Test | Type | Setup | Expected |
 |------|------|-------|----------|
@@ -870,7 +975,7 @@ Define how external pipelines relate to domain-specific integration PRDs.
 
 ---
 
-## 12. Dependencies
+## 13. Dependencies
 
 | PRD | Relationship |
 |-----|-------------|
@@ -878,6 +983,8 @@ Define how external pipelines relate to domain-specific integration PRDs.
 | `data-infrastructure/data-routing.md` | External pipelines use routes for data movement |
 | `data-infrastructure/data-transforms.md` | Response/request transforms use the transform engine |
 | `core/event-bus.md` | Pipeline triggers and domain events |
+| `core/rbac-engine.md` | RBAC enforcement on pipeline config, execution roles, and field-level visibility |
+| `core/auth-system.md` | Authentication for admin-only operations and service account identity |
 | `core/audit-system.md` | Pipeline executions are audited |
 | `core/condition-expression.md` | Trigger conditions use the shared evaluator |
 | `api/integration-patterns.md` | API auth patterns and webhook infrastructure |

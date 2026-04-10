@@ -35,6 +35,10 @@ to decide if you need to load the full document.
 | Deferred Backlog | `process/deferred-backlog.md` | Living tracker for deferred acceptance criteria with gate conditions. Checked at every phase start. Met gates become requirements. | `process`, `deferred`, `gate`, `tracking` | living |
 | User Language Standard | `process/user-language-standard.md` | Property.label is single source of truth for user-facing text. Terminology translation table. Error message standards. Role-specific language. | `process`, `ux`, `language`, `terminology` | done |
 | UX Checklist | `process/ux-checklist.md` | Every screen: 4 questions, empty states, loading states, error handling, accessibility, feedback. Verified during acceptance gate. | `process`, `ux`, `accessibility`, `verification` | done |
+| Demo Data Integrity | `process/demo-data-integrity.md` | Zero orphan references across seed data. Forward/backward checks. Name/type/temporal consistency. | `process`, `demo`, `data-quality` | done |
+| Demo Narrative Quality | `process/demo-narrative-quality.md` | Pre/during/post-event stories coherent and emotionally resonant. Canvas "aha" moment. | `process`, `demo`, `narrative` | done |
+| Demo Visual Impact | `process/demo-visual-impact.md` | 30-second test, mobile, AB branding, navigation completeness, canvas wow. | `process`, `demo`, `visual`, `ux` | done |
+| Subagent Orchestration | `process/subagent-orchestration.md` | Parallel dispatch rules, scope partitions, model selection, pre-spawn checklist, post-parallel integration. | `process`, `agents`, `parallel`, `orchestration` | done |
 
 ### Platform
 
@@ -47,6 +51,10 @@ to decide if you need to load the full document.
 | OSS Model | `platform/oss-model.md` | Engine (repo) vs application (DB). AGPL-3.0. Fork → deploy → populate ontology. No convention-specific data in source. | `oss`, `engine-vs-app`, `fork-model` | done |
 | Branding | `platform/branding.md` | Colors/fonts/logo as config, not code. ab-* → primary-*. Tailwind from env vars. Runtime branding from DB. Settings UI with color picker. | `branding`, `theming`, `tailwind`, `config` | done |
 | Template Infrastructure | `platform/template-infrastructure.md` | Unified template system: one table for record sets, notifications, documents, form/view presets, workflows. Versioned, scoped, CRUD API, import/export. Replaces 6+ separate template tables. | `templates`, `infrastructure`, `versioning`, `import-export` | done |
+| Demo Showcase | `platform/demo-showcase.md` | Demo IS the real app on Vercel with DEMO_MODE=true. Real Postgres reads, localStorage writes. Three temporal views + canvas walkthrough. AB non-technical audience. | `demo`, `showcase`, `vercel`, `temporal-views` | done |
+| Demo Architecture | `platform/demo-architecture.md` | Hybrid read/write: real Postgres reads via Vercel Functions, localStorage write interception. Single demo-store.ts. Import/export/reset. No mock API layers. | `demo`, `architecture`, `localstorage`, `hybrid` | done |
+| Demo Deployment | `platform/demo-deployment.md` | Vercel hosting (free tier), demo branch strategy, Neon Postgres, auto-deploy on push. GitHub Pages disqualified. | `demo`, `deployment`, `vercel`, `neon` | done |
+| Demo Data Narrative | `platform/demo-data-narrative.md` | Seed data for pre/during/post event. Authentic AB data (Japanese names, Hynes venues). Driver name phase-awareness. Canvas walkthrough. | `demo`, `seed-data`, `narrative`, `temporal` | done |
 
 ### Core Engine
 
@@ -146,7 +154,8 @@ to decide if you need to load the full document.
 
 | Doc | Path | Shorthand | Tags | Status |
 |-----|------|-----------|------|--------|
-| GR Overview | `modules/guest-relations/overview.md` | 8 concepts (guest, pairing, prep_item, transport_booking, etc.). Relationships, roles, workflows, integration points with shared services. | `gr`, `module-scope`, `concepts`, `relationships` | done |
+| GR Config Integration | `modules/guest-relations/config-integration.md` | **Critical bridge PRD.** Maps every GR page to ViewConfig/FormConfig/PageConfig. Shell components, seed configs, routing, card layouts, migration plan. The missing piece from Phase 6 v1. | `gr`, `config-driven`, `integration`, `shell-components`, `seed-data` | done |
+| GR Overview | `modules/guest-relations/overview.md` | 8 concepts (guest, pairing, prep_item, transport_booking, etc.). Relationships, roles, workflows, integration points with shared services. Department-centric settings. | `gr`, `module-scope`, `concepts`, `relationships` | done |
 | Guest Lifecycle | `modules/guest-relations/guest-lifecycle.md` | draft→invited→confirmed→travel_arranged→arrived→attending→departed. Each transition triggers workflows. Guest types (JP/NA/other) determine constraints. | `guest`, `status-flow`, `invited`, `confirmed`, `attended` | done |
 | Pairings & Staffing | `modules/guest-relations/pairings-staffing.md` | Guest→staff junction with role (liaison/interpreter/backup). Staffing templates from constraints. Coverage tracking. Liaison data-scoped view. | `pairings`, `liaison`, `interpreter`, `staffing-templates` | done |
 | Prep Tracking | `modules/guest-relations/prep-tracking.md` | Template-based checklists per guest type. Completion % per guest/department. Auto-completion via domain events. Overdue alerts via scheduled workflow. | `prep`, `checklist`, `completion`, `overdue`, `alerts` | done |

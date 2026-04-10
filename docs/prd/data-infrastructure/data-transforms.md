@@ -12,7 +12,7 @@ Transforms are defined as JSONB in Postgres, following the same composable, nest
 
 The engine validates transforms at definition time -- checking type compatibility, field existence, and formula syntax -- so that routing failures at execution time are minimized.
 
-**Dependencies:** `data-infrastructure/data-routing.md`, `core/condition-expression.md`, `core/ontology-engine.md`
+**Dependencies:** `data-infrastructure/data-routing.md`, `core/condition-expression.md`, `core/ontology-engine.md`, `core/rbac-engine.md`
 
 ---
 
@@ -385,7 +385,72 @@ This means conditional transforms can use any field in the record -- including f
 
 ---
 
-## 6. Concrete Examples
+## 6. RBAC Enforcement
+
+### Purpose
+
+Define how role-based access control applies to transform creation, modification, deletion, and execution. Ensures transforms that handle sensitive data (PII) are restricted to authorized roles.
+
+### Detail
+
+**Dependency:** `core/rbac-engine.md` -- all RBAC checks use the shared RBAC engine and permission model.
+
+**Transform CRUD permissions:**
+
+| Operation | Required Role | Scope |
+|-----------|--------------|-------|
+| Create standalone transform | `admin` | Global -- standalone transforms are platform-wide resources |
+| Edit standalone transform | `admin` | Global -- modifying a reusable transform affects all routes referencing it |
+| Delete standalone transform | `admin` | Global -- only admins can remove reusable transforms |
+| Create inline transform (on a route) | `director` | Department-scoped -- inline transforms are scoped to the route's `owner_department` |
+| Edit inline transform | `director` | Department-scoped -- same department restriction as creation |
+| Delete inline transform | `director` | Department-scoped |
+
+**API enforcement:**
+
+All transform CRUD endpoints enforce RBAC before processing:
+
+```
+POST   /api/data-transforms       -> requires admin role
+PUT    /api/data-transforms/:id   -> requires admin role
+DELETE /api/data-transforms/:id   -> requires admin role
+
+-- Inline transforms are managed via route endpoints:
+PUT    /api/data-routes/:id       -> requires director role (department-scoped)
+```
+
+The RBAC check runs before validation. If the caller lacks the required role, the endpoint returns `403 Forbidden` with no indication of whether the transform exists (preventing enumeration).
+
+**Transform execution permissions:**
+
+When a transform chain executes as part of a route, it runs with the permissions of the route's `rbac_role_key` (from the `data_routes` table). This means:
+
+- The transform engine does not perform per-user RBAC checks at execution time -- the route's role determines access.
+- If a route's `rbac_role_key` grants access to a concept but not to specific fields, field-level restrictions still apply. A `field_rename` transform on a restricted field will fail with a permission error.
+- The route's RBAC role is validated at route creation time. If the role is later revoked, the route's next execution fails and the error is logged.
+
+**PII transform restrictions:**
+
+The `pii_strip` and `pii_hash` (if added) transforms handle personally identifiable information. These transforms require the executing role to have the `pii:manage` permission:
+
+- At **definition time**: creating a transform chain that includes `pii_strip` requires `pii:manage` on the caller's role. The validation endpoint checks this.
+- At **execution time**: the route's `rbac_role_key` must include `pii:manage`. If not, the transform chain halts with a `PERMISSION_DENIED` error and the route execution is recorded as failed.
+
+This prevents accidental PII exposure through routes configured by users who lack PII authorization.
+
+### Acceptance Criteria
+
+- [ ] Transform CRUD operations enforce RBAC permissions (admin for standalone, director for inline)
+- [ ] Unauthorized CRUD attempts return 403 without leaking resource existence
+- [ ] Transform execution respects the route's `rbac_role_key`
+- [ ] Field-level RBAC restrictions are enforced within transform chains
+- [ ] PII-handling transforms (`pii_strip`) require `pii:manage` permission at both definition and execution time
+- [ ] RBAC role validation occurs at route creation -- invalid roles are rejected
+- [ ] RBAC failures during transform execution halt the chain and log the error
+
+---
+
+## 7. Concrete Examples
 
 ### Purpose
 
@@ -393,7 +458,7 @@ Demonstrate transform chains for real convention operations scenarios.
 
 ### Detail
 
-#### 6.1 Guest to PR Profile
+#### 7.1 Guest to PR Profile
 
 Strip PII, format dates for display, add computed display name, conditionally set language.
 
@@ -419,7 +484,7 @@ Strip PII, format dates for display, add computed display name, conditionally se
 }
 ```
 
-#### 6.2 Guest to Transport Booking
+#### 7.2 Guest to Transport Booking
 
 Extract only transport-relevant fields, format dates for driver view.
 
@@ -436,7 +501,7 @@ Extract only transport-relevant fields, format dates for driver view.
 }
 ```
 
-#### 6.3 Schedule Events to Guidebook Sessions
+#### 7.3 Schedule Events to Guidebook Sessions
 
 Format for Guidebook API consumption.
 
@@ -472,9 +537,9 @@ Format for Guidebook API consumption.
 
 ---
 
-## 7. Test Plan
+## 8. Test Plan
 
-### 7.1 Individual Transform Type Tests
+### 8.1 Individual Transform Type Tests
 
 | Test | Type | Transform | Input | Expected |
 |------|------|-----------|-------|----------|
@@ -500,7 +565,7 @@ Format for Guidebook API consumption.
 | TX-20 | Unit | `lookup` | Record with dept_id matching a department | Department name copied |
 | TX-21 | Unit | `lookup` (no match) | Record with nonexistent dept_id | Record unchanged, no error |
 
-### 7.2 Transform Chain Tests
+### 8.2 Transform Chain Tests
 
 | Test | Type | Setup | Expected |
 |------|------|-------|----------|
@@ -511,7 +576,7 @@ Format for Guidebook API consumption.
 | TC-05 | Unit | Chain of 15 transforms | All execute correctly in order |
 | TC-06 | Unit | Immutability check: input record after chain | Input record object unchanged |
 
-### 7.3 Validation Tests
+### 8.3 Validation Tests
 
 | Test | Type | Setup | Expected |
 |------|------|-------|----------|
@@ -524,7 +589,7 @@ Format for Guidebook API consumption.
 | V-07 | Unit | Nested conditional with invalid inner transform | Validation error with path |
 | V-08 | Unit | Type mismatch (format date on number field) | Validation warning |
 
-### 7.4 Integration Tests
+### 8.4 Integration Tests
 
 | Test | Type | Setup | Expected |
 |------|------|-------|----------|
@@ -533,7 +598,22 @@ Format for Guidebook API consumption.
 | I-03 | Integration | Route with inline transforms, execute route | Inline transforms applied |
 | I-04 | Integration | Guest-to-PR example with real ontology data | PII stripped, dates formatted, conditional applied |
 
-### 7.5 Performance Tests
+### 8.5 RBAC Enforcement Tests
+
+| Test | Type | Setup | Expected |
+|------|------|-------|----------|
+| RB-01 | Integration | Non-admin calls `POST /api/data-transforms` | 403 Forbidden |
+| RB-02 | Integration | Admin calls `POST /api/data-transforms` | Transform created |
+| RB-03 | Integration | Non-admin calls `PUT /api/data-transforms/:id` | 403 Forbidden |
+| RB-04 | Integration | Non-admin calls `DELETE /api/data-transforms/:id` | 403 Forbidden |
+| RB-05 | Integration | Director creates inline transform on own department route | Succeeds |
+| RB-06 | Integration | Director creates inline transform on other department route | 403 Forbidden |
+| RB-07 | Integration | Volunteer role creates inline transform | 403 Forbidden |
+| RB-08 | Integration | Route with `pii_strip` transform, role lacks `pii:manage` | Transform chain halts with PERMISSION_DENIED |
+| RB-09 | Integration | Route with `pii_strip` transform, role has `pii:manage` | Transform chain executes successfully |
+| RB-10 | Integration | Route's `rbac_role_key` revoked after creation | Next execution fails, error logged |
+
+### 8.6 Performance Tests
 
 | Test | Setup | Target |
 |------|-------|--------|
@@ -545,12 +625,13 @@ Format for Guidebook API consumption.
 
 ---
 
-## 8. Dependencies
+## 9. Dependencies
 
 | PRD | Relationship |
 |-----|-------------|
 | `data-infrastructure/data-routing.md` | Transforms are applied during route execution |
 | `core/condition-expression.md` | Conditional transforms use the shared evaluator |
 | `core/ontology-engine.md` | Validation checks field existence and types against ontology |
+| `core/rbac-engine.md` | RBAC enforcement on transform CRUD and execution permissions |
 | `data/encryption.md` | `pii_strip` uses the encrypted flag from ontology properties |
 | `platform/template-infrastructure.md` | Standalone transforms can be stored as reusable templates |

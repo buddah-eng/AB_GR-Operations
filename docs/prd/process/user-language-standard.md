@@ -109,6 +109,48 @@ GOOD: "Something went wrong saving this record. Please try again or contact supp
 
 ---
 
+## 4.5 Contextual Education
+
+> "How are we properly building a system that is self-taught and not just retextured excel docs and google forms"
+
+The platform must be **self-teaching**. Every screen must include contextual guidance explaining WHAT the screen does and HOW to use it. Users should never need a separate manual, training video, or external documentation to understand the platform. If a screen requires explanation that isn't on the screen, the screen is incomplete.
+
+### Types of contextual education:
+
+| Type | Where | What it does | Example |
+|------|-------|-------------|---------|
+| **Field-level help** | Tooltip or description below each input | Explains what the field means and why it matters | "Dietary Restrictions: List any food allergies or dietary needs. This is shared with catering and kitchen teams." |
+| **Section-level context** | Brief text at the top of each form section or view panel | Explains the purpose of this group of fields | "Contact Information — Used for day-of coordination. Only visible to coordinators and above." |
+| **Relationship indicators** | Inline badge, icon, or note on fields that affect other parts of the system | Shows cross-system impact so users understand consequences | "Changing guest status to Arrived triggers a notification to the welcome team." |
+| **First-use guidance** | Inline callout when a user encounters a feature for the first time | Provides orientation without blocking the workflow (NOT a tutorial modal) | A subtle highlighted box on first visit: "This is the Guest Check-In screen. Scan a badge or search by name to mark guests as arrived." |
+
+### Data source:
+
+- The ontology `Property.description` field is the source for field-level help text. If `Property.description` is empty, the field is missing documentation — this is a content gap, not a UI gap.
+- Builder screens must explain what each configuration option does in **operator terms**, not developer terms. A FormConfig field labeled "conditionalExpression" with no explanation is a builder failure.
+
+### What this is NOT:
+
+- A tutorial wizard that runs once and is forgotten
+- A documentation page linked from a help menu
+- Placeholder text inside inputs (that disappears when you type)
+
+### What this IS:
+
+- Persistent, contextual, always-visible guidance integrated into every screen
+- Text that makes the platform usable without prior training
+- Content that comes from the ontology itself, not hardcoded strings
+
+**Acceptance Criteria:**
+- [ ] Every form field has a help description sourced from Property.description (or an explicit override)
+- [ ] Every form section and view panel has a brief contextual explanation
+- [ ] Fields that trigger cross-system effects (workflows, notifications, status changes) display a relationship indicator
+- [ ] First-time users see inline guidance on key screens (not modal tutorials)
+- [ ] Builder screens explain every configuration option in operator-friendly language
+- [ ] No screen in the platform requires external documentation to understand its purpose
+
+---
+
 ## 5. Verification
 
 **When:** During the acceptance gate (process/acceptance-gate.md), for any PRD that defines UI text.

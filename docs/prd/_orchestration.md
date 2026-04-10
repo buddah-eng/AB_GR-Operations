@@ -17,6 +17,10 @@ These are not features. They are mandatory verification procedures that run afte
 | `process/deferred-backlog.md` | Living tracker for deferred acceptance criteria. Each has a gate condition. Gates checked at phase start. Met gates become current-phase requirements. | At phase start and when deferring |
 | `process/user-language-standard.md` | Terminology translation table. Property.label is the single source of truth for user-facing text. No jargon. Referenced by all UI PRDs. | When implementing any user-facing text |
 | `process/ux-checklist.md` | Every screen answers 4 questions + empty states + loading + errors + a11y + feedback. Checked during acceptance gate. | When implementing any UI screen |
+| `process/demo-data-integrity.md` | Zero orphan references across seed data. Forward/backward reference checks. Name/type/temporal consistency. | Before shipping any demo build |
+| `process/demo-narrative-quality.md` | Pre/during/post-event stories are coherent and emotionally resonant. Canvas walkthrough produces "aha" moment. | Before shipping any demo build |
+| `process/demo-visual-impact.md` | 30-second test, mobile responsiveness, AB branding authenticity, navigation completeness, canvas "wow" moment. | Before shipping any demo build |
+| `process/subagent-orchestration.md` | Parallel dispatch rules, scope partitions, model selection, pre-spawn checklist, post-parallel integration | When using subagents for any task |
 
 **These are not optional.** A phase cannot be declared complete unless all 7 process PRDs are satisfied. The phase-completion protocol is the final gate — it runs in cycles until a complete cycle finds zero issues. Any deferred items must be in the backlog with gate conditions.
 
@@ -177,30 +181,70 @@ Depends on Phase 4 rendering + automation.
 - Venue → scheduling → google cal → guidebook is sequential
 - Equipment + cross-dept are independent tracks
 
-### Phase 6 — GR Module (Department-Specific)
+### Phase 6 — GR Module (Config-Driven)
 
 Depends on Phase 5 shared services (especially staff, scheduling, venues).
 
+**Cross-cutting requirement:** Every operational page in this phase MUST render through ViewConfig/FormConfig/PageConfig loaded from Postgres. No hardcoded DataTable implementations. No bespoke 700-line layout files. The config-driven rendering engine built in Phases 3-4.5 is the foundation — Phase 6 USES it. If a page is a hardcoded Vue file instead of a config-driven renderer, it's wrong.
+
 | PRD | What | Depends On |
 |-----|------|------------|
-| `modules/guest-relations/overview.md` | GR scope, concepts, relationships, department config | multi-tenancy, ontology-scoping |
-| `modules/guest-relations/guest-lifecycle.md` | Invited→Confirmed→Attended flow, status workflows | workflow-engine, dynamic-forms |
-| `modules/guest-relations/pairings-staffing.md` | Liaison/interpreter assignment, staffing templates, coverage | staff-management, volunteer-management |
-| `modules/guest-relations/prep-tracking.md` | Prep items per guest, completion %, overdue alerts | workflow-engine, view-renderer |
+| `modules/guest-relations/config-integration.md` | **How config-driven rendering connects to GR Module views. The integration bridge that was missing in the first attempt.** | view-renderer, dynamic-forms, form-view-builder, ontology-engine |
+| `modules/guest-relations/overview.md` | GR scope, concepts, relationships, department-centric settings config | multi-tenancy, ontology-scoping, config-integration |
+| `modules/guest-relations/guest-lifecycle.md` | Invited→Confirmed→Attended flow, status workflows, config-driven forms/views | workflow-engine, dynamic-forms, config-integration |
+| `modules/guest-relations/pairings-staffing.md` | Liaison/interpreter assignment, staffing templates, coverage, config-driven views | staff-management, volunteer-management, config-integration |
+| `modules/guest-relations/prep-tracking.md` | Prep items per guest, completion %, overdue alerts, config-driven views | workflow-engine, view-renderer, config-integration |
 | `modules/guest-relations/contracts.md` | Clause assembly, ConditionExpression per clause, Handlebars, in-app view | condition-expression, in-app-documents, workflow-actions (generate_doc) |
-| `modules/guest-relations/itineraries.md` | Per-guest schedule view from schedule + transport + events | scheduling-calendar, in-app-documents |
-| `modules/guest-relations/transport-logistics.md` | Bookings, flights, drivers, live location, Blacklane/FlightAware | workflow-actions (call_api), external-surfaces, integration-patterns |
-| `modules/guest-relations/guest-self-service.md` | External forms, token auth, YoY pre-population, save-and-resume | external-surfaces, yoy-registry, dynamic-forms |
+| `modules/guest-relations/itineraries.md` | Per-guest schedule view from schedule + transport + events, config-driven rendering | scheduling-calendar, in-app-documents, config-integration |
+| `modules/guest-relations/transport-logistics.md` | Bookings, flights, drivers (phase-aware: pre-event=vendor only, during/post=named), live location | workflow-actions (call_api), external-surfaces, integration-patterns |
+| `modules/guest-relations/guest-self-service.md` | External forms, token auth, YoY pre-population, save-and-resume, config-driven forms | external-surfaces, yoy-registry, dynamic-forms, config-integration |
 
 **Parallel tracks in Phase 6:**
-- overview is foundational for the module
-- guest-lifecycle + pairings + prep-tracking can run in parallel
+- config-integration is foundational — must be first
+- overview depends on config-integration
+- guest-lifecycle + pairings + prep-tracking can run in parallel (all depend on config-integration)
 - contracts + itineraries depend on rendering + workflows
 - transport + self-service depend on external surfaces + integrations
 
-### Phase 7 — Rollout Planning
+**Phase 6 Acceptance Criteria (Non-Negotiable):**
+- [ ] FormConfig loaded from API drives the guest intake form
+- [ ] ViewConfig loaded from API drives the guest list view
+- [ ] PageConfig loaded from API drives the dashboard widget layout
+- [ ] Zero hardcoded DataTable/layout files for operational pages
+- [ ] All UI tabs and buttons are functional, not cosmetic
+- [ ] Settings page is department-centric
+- [ ] List views use card/record layouts, not raw spreadsheet grids
+- [ ] Behavioral verification: load guest list from DB config and render correctly end-to-end
+- [ ] The ontology thesis is demonstrably true: source code is engine, database is application
 
-Depends on all above (reads everything to produce build plan + risk analysis).
+### Phase 7 — Launch Infrastructure (Demo + Docs)
+
+Depends on Phase 6 (GR Module must be config-driven before demo can showcase it).
+
+**Purpose:** The demo IS the real app deployed with `VITE_DEMO_MODE=true`. Reads hit real Postgres (Neon on Vercel). Writes intercepted by localStorage adapter. Seeded with authentic AB data across three temporal views. All builder views functional. No mock HTTP layers. No separate codebase.
+
+| PRD | What | Depends On |
+|-----|------|------------|
+| `platform/demo-architecture.md` | Hybrid read/write model, localStorage adapter, DEMO_MODE flag, seed data scope, import/export, reset-to-seed. Single `demo-store.ts`, no parallel infrastructure. | All implementation phases |
+| `platform/demo-deployment.md` | Vercel hosting (free tier), demo branch strategy, build pipeline, preview-deploy-per-PR. GitHub Pages disqualified. | demo-architecture |
+| `platform/demo-data-narrative.md` | Seed data for 3 temporal states (pre/during/post event). Authentic AB data (Japanese names, Hynes venues, anime scheduling). Canvas walkthrough. Driver names visible during/post only. | demo-architecture |
+| `platform/demo-showcase.md` | Updated: references demo-architecture/deployment/narrative PRDs. Removed all GitHub Pages and static HTML references. | demo-architecture, demo-deployment, demo-data-narrative |
+| `docs/launch-guide/` series | Platform-agnostic primary path + Vercel-specific callouts. Environment setup, deployment, ontology seeding, demo mode, admin setup, first-run. | All implementation phases |
+
+**Phase 7 Acceptance Criteria:**
+- [ ] Demo deployed on Vercel from `demo` branch, publicly accessible without login
+- [ ] All views render data immediately on load (no blank states)
+- [ ] Canvas uses proper layout algorithm (force-directed or dagre), not raw grid
+- [ ] Pre/during/post event views tell a believable story with authentic AB data
+- [ ] Import/export and reset-to-seed work correctly
+- [ ] All builder views functional with seeded config data
+- [ ] Three demo process PRDs (data-integrity, narrative-quality, visual-impact) pass their gates
+- [ ] Launch guide docs exist and are platform-agnostic with Vercel callouts
+- [ ] Driver names visible during/post-event only; pre-event shows company/vendor details only
+
+### Phase 8 — Rollout Planning
+
+Depends on all above (reads everything to produce build plan + risk analysis). Renumbered from Phase 7.
 
 | PRD | What | Depends On |
 |-----|------|------------|
@@ -223,6 +267,9 @@ When using AI agents to write PRDs:
 8. **Three-tier format.** Every doc: shorthand (blockquote) → overview (1 page) → full specification (atomic sub-sections).
 9. **Reference actual code.** Ground specs in the existing codebase at `/home/user/AB_GR-Operations/`. Cite file paths and interfaces.
 10. **Include test plans.** Every atomic sub-section specifies what to test, TDD approach, ≥80% coverage target.
+11. **Mandatory PRD discovery before writing.** Read `_context-index.md`, `_orchestration.md`, and relevant subfolder PRDs before drafting ANY new PRD. Never write a PRD in a vacuum.
+12. **Config-driven rendering is non-negotiable in Phase 6+.** Every operational page must render through ViewConfig/FormConfig/PageConfig loaded from Postgres. If a page is hardcoded, it fails the acceptance gate.
+13. **Behavioral verification required.** "Tests pass" and "build succeeds" are necessary but NOT sufficient. Navigate to the actual page and verify it renders real data through config-driven renderers.
 
 ## Agent Prompt Template
 
@@ -231,7 +278,7 @@ When spawning an agent to write a PRD:
 ```
 You are writing an atomic PRD for the GR-Ops convention operations platform.
 
-Repository: /home/user/AB_GR-Operations
+Repository: C:/Users/buddah laptop/Documents/GitHub/AB_GR-Operations
 Read the codebase to ground your spec in reality.
 
 KEY CONTEXT:
@@ -257,3 +304,9 @@ EACH SUB-SECTION MUST HAVE: purpose, inputs/outputs, dependencies, implementatio
 - Agents must read upstream PRDs before writing downstream ones — stagger by phase
 - The context index must be written AFTER all PRDs, not before — it summarizes what exists
 - Platform framing (shared service, OSS model, multi-tenancy) must be established before any implementation PRDs
+- Phase 6 failed because infrastructure was built but never connected to the frontend — integration is a first-class acceptance criterion
+- The demo is NOT a separate artifact — it is the real app with `DEMO_MODE=true` and a localStorage write adapter
+- Progressive disclosure is rejected — show everything, explain clearly
+- List views must use card/record layouts, not spreadsheet grids
+- Every page must render from DB config. A hardcoded Vue page is a failure, not a shortcut
+- "Close enough" after one verification cycle is the exact shortcut the completion protocol prevents

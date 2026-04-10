@@ -38,13 +38,47 @@ Deferring without documentation is a shortcut. Deferring without a gate conditio
 
 ## Process
 
+### Phase-Start Gate Review (R36)
+
+At the start of every phase, ALL active deferrals MUST be reviewed as a mandatory gate:
+
+1. Walk the entire Active Deferrals table
+2. For each deferral, evaluate whether the gate condition is now met
+3. If a gate condition IS met, the deferred item **becomes a current-phase requirement** — it CANNOT be deferred again
+4. If a gate condition is NOT met, document why and what phase is expected to unblock it
+5. If a gate will never be met (feature cancelled, PRD rescoped), remove the deferral and amend the source PRD
+
+This review is blocking. No phase implementation begins until the gate review is complete and the results are recorded.
+
+### Living Document Protocol (R36)
+
+> "Also where are we tracking a cohesive deferred orchestration plan with gates" — User
+
+This document is the single source of truth for deferred work. It MUST be updated whenever:
+
+- **A new deferral is added** — during the acceptance gate, when a criterion cannot be met
+- **A gate condition changes** — due to PRD rescoping, infrastructure changes, or feature cancellation
+- **A phase begins** — gate review results are recorded (see Phase-Start Gate Review above)
+- **A deferral is resolved** — moved from Active to Resolved table with implementation evidence
+
+Staleness is a defect. If this document does not reflect the current state of all deferred work, the process is broken.
+
+### No Orphan Deferrals (R36)
+
+Every deferral MUST trace to a specific acceptance criterion in a specific PRD section:
+- The **Source PRD** column must reference an actual PRD file path
+- The **Section** column must reference a specific section or acceptance criterion within that PRD
+- If a deferral cannot be traced to a concrete acceptance criterion, it is deleted — untraceable deferrals are not real requirements
+- When a source PRD is amended or removed, all deferrals referencing it must be reviewed and either re-linked or deleted
+
 ### When to add a deferral
 - During the acceptance gate (process/acceptance-gate.md), when a criterion cannot be met
 - The PRD must acknowledge the gap — you cannot defer something the PRD says is required without amending the PRD
 - Document: ID, item description, source PRD + section, specific gate condition
+- Update this document immediately — do not batch deferral documentation
 
 ### When to check gates
-- **At the start of every phase:** review all active deferrals. If a gate condition is now met (because the blocking work was done in a previous phase), the deferred item becomes a requirement of the current phase.
+- **At the start of every phase:** run the Phase-Start Gate Review (see above). If a gate condition is now met (because the blocking work was done in a previous phase), the deferred item becomes a requirement of the current phase. It cannot be re-deferred.
 - **When implementing infrastructure PRDs:** check if any deferrals are gated on the infrastructure being implemented.
 
 ### When to resolve
@@ -53,7 +87,7 @@ Deferring without documentation is a shortcut. Deferring without a gate conditio
 ### Gate condition rules
 - Must be specific: "Cloud Run migration is implemented" not "when we get around to it"
 - Must reference a specific PRD or deliverable that unblocks it
-- If the gate condition changes (e.g., the blocking PRD is rescoped), update the gate
+- If the gate condition changes (e.g., the blocking PRD is rescoped), update the gate and record the change in this document
 - If the gate will never be met (e.g., feature is cancelled), remove the deferral and amend the source PRD
 
 ---
@@ -62,6 +96,9 @@ Deferring without documentation is a shortcut. Deferring without a gate conditio
 
 - [ ] Every deferred acceptance criterion appears in the Active Deferrals table
 - [ ] Every deferral has a specific, verifiable gate condition
-- [ ] Gates are checked at the start of every phase
+- [ ] Every deferral traces to a specific acceptance criterion in a specific PRD section (no orphans)
+- [ ] Gates are reviewed at the start of every phase (Phase-Start Gate Review)
+- [ ] Met gates become current-phase requirements — they cannot be re-deferred
 - [ ] Resolved deferrals are tracked with implementation evidence
 - [ ] No deferral exists without the source PRD acknowledging the gap
+- [ ] This document is updated on every trigger event (add, gate change, phase start, resolve)
