@@ -5,8 +5,6 @@ import {
 } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
-const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true'
-
 /* ------------------------------------------------------------------ */
 /*  Route definitions                                                  */
 /* ------------------------------------------------------------------ */

@@ -322,8 +322,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import Card from 'primevue/card'
 import Button from 'primevue/button'
@@ -368,7 +368,6 @@ interface LegendItem {
 /* ---- State ---- */
 
 const router = useRouter()
-const route = useRoute()
 const toast = useToast()
 const appStore = useAppStore()
 const data = ref<DashboardData | null>(null)
@@ -693,11 +692,6 @@ onMounted(() => {
   clockInterval = setInterval(() => {
     now.value = new Date()
   }, 60_000)
-})
-
-// Re-fetch when demo time state changes (query param from DemoBar)
-watch(() => route.query.t, () => {
-  loadData()
 })
 
 onUnmounted(() => {
