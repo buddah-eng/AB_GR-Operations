@@ -68,8 +68,8 @@ function buildDashboardData(): Record<string, unknown> {
       confirmed: confirmedGuests,
       jp: jpGuests,
       na: naGuests,
-      byDepartment: groupBy(guests, 'department'),
-      byStatus: groupBy(guests, 'status'),
+      byDepartment: groupBy(guests as unknown as ReadonlyArray<Record<string, unknown>>, 'department'),
+      byStatus: groupBy(guests as unknown as ReadonlyArray<Record<string, unknown>>, 'status'),
     },
     schedule: {
       total: totalEvents,
@@ -103,13 +103,13 @@ function buildDashboardData(): Record<string, unknown> {
   }
 }
 
-function groupBy<T extends Record<string, unknown>>(
-  items: T[],
+function groupBy(
+  items: ReadonlyArray<Record<string, unknown>>,
   key: string,
 ): Record<string, number> {
   const result: Record<string, number> = {}
   for (const item of items) {
-    const value = String(item[key] ?? 'Unknown')
+    const value = String((item as Record<string, unknown>)[key] ?? 'Unknown')
     result[value] = (result[value] ?? 0) + 1
   }
   return result

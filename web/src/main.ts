@@ -8,36 +8,52 @@ import { plugin as formkitPlugin, defaultConfig } from '@formkit/vue'
 
 import 'primeicons/primeicons.css'
 import './styles/global.css'
-import './firebase'
 
 import App from './App.vue'
 import router from './router'
+import { initDemoClient, isDemoMode } from './api/client'
 
-const app = createApp(App)
+async function bootstrap(): Promise<void> {
+  /* ---- Demo mode: skip Firebase import, apply theme ---- */
+  if (!isDemoMode) {
+    await import('./firebase')
+  }
 
-/* ---- Pinia ---- */
-const pinia = createPinia()
-app.use(pinia)
+  if (isDemoMode) {
+    document.documentElement.classList.add('theme-ab')
+  }
 
-/* ---- Vue Router ---- */
-app.use(router)
+  /* ---- Initialize demo client before app creation ---- */
+  await initDemoClient()
 
-/* ---- PrimeVue ---- */
-app.use(PrimeVue, {
-  theme: {
-    preset: Aura,
-    options: {
-      prefix: 'p',
-      darkModeSelector: '.dark-mode',
-      cssLayer: false,
+  const app = createApp(App)
+
+  /* ---- Pinia ---- */
+  const pinia = createPinia()
+  app.use(pinia)
+
+  /* ---- Vue Router ---- */
+  app.use(router)
+
+  /* ---- PrimeVue ---- */
+  app.use(PrimeVue, {
+    theme: {
+      preset: Aura,
+      options: {
+        prefix: 'p',
+        darkModeSelector: '.dark-mode',
+        cssLayer: false,
+      },
     },
-  },
-})
-app.use(ToastService)
-app.use(ConfirmationService)
+  })
+  app.use(ToastService)
+  app.use(ConfirmationService)
 
-/* ---- FormKit ---- */
-app.use(formkitPlugin, defaultConfig)
+  /* ---- FormKit ---- */
+  app.use(formkitPlugin, defaultConfig)
 
-/* ---- Mount ---- */
-app.mount('#app')
+  /* ---- Mount ---- */
+  app.mount('#app')
+}
+
+bootstrap()

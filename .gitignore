@@ -31,3 +31,6 @@ web/dist/
 web/.env.local
 web/functions/node_modules/
 web/functions/lib/
+
+# PRDs (internal planning docs, not for public repo)
+docs/prd/

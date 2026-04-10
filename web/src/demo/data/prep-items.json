@@ -65,5 +65,34 @@
   { "id": "prep-058", "label": "Contract draft", "guestName": "Maria Garcia", "guestId": "g-008-garcia", "dueDate": "2026-03-25", "status": "not_started", "owner": "Derek Chang" },
 
   { "id": "prep-059", "label": "Rehearsal space booked", "guestName": "Emily Park", "guestId": "g-010-park", "dueDate": "2026-03-20", "status": "complete", "owner": "Aisha Patel" },
-  { "id": "prep-060", "label": "Sound system for workshop", "guestName": "Emily Park", "guestId": "g-010-park", "dueDate": "2026-03-25", "status": "complete", "owner": "Ben Foster" }
+  { "id": "prep-060", "label": "Sound system for workshop", "guestName": "Emily Park", "guestId": "g-010-park", "dueDate": "2026-03-25", "status": "complete", "owner": "Ben Foster" },
+
+  { "id": "prep-061", "label": "Confirm flight itinerary", "guestName": "Jordan Lee", "guestId": "g-007-lee", "dueDate": "2026-03-15", "status": "complete", "owner": "Kevin Nakamura" },
+  { "id": "prep-062", "label": "Hotel room assignment", "guestName": "Jordan Lee", "guestId": "g-007-lee", "dueDate": "2026-03-20", "status": "complete", "owner": "Kevin Nakamura" },
+  { "id": "prep-063", "label": "Submit dietary requirements to catering", "guestName": "Jordan Lee", "guestId": "g-007-lee", "dueDate": "2026-03-25", "status": "complete", "owner": "Kevin Nakamura" },
+  { "id": "prep-064", "label": "Badge and lanyard prepared", "guestName": "Jordan Lee", "guestId": "g-007-lee", "dueDate": "2026-04-01", "status": "complete", "owner": "Marcus Johnson" },
+  { "id": "prep-065", "label": "Panel A/V setup confirmed", "guestName": "Jordan Lee", "guestId": "g-007-lee", "dueDate": "2026-04-01", "status": "in_progress", "owner": "Marcus Johnson" },
+  { "id": "prep-066", "label": "Welcome packet assembled", "guestName": "Jordan Lee", "guestId": "g-007-lee", "dueDate": "2026-04-02", "status": "not_started", "owner": "Kevin Nakamura" },
+
+  { "id": "prep-067", "label": "Confirm flight itinerary", "guestName": "Takeshi Mori", "guestId": "g-009-mori", "dueDate": "2026-03-15", "status": "complete", "owner": "Nina Volkov" },
+  { "id": "prep-068", "label": "Hotel room assignment", "guestName": "Takeshi Mori", "guestId": "g-009-mori", "dueDate": "2026-03-20", "status": "complete", "owner": "Nina Volkov" },
+  { "id": "prep-069", "label": "Gaming demo equipment procured", "guestName": "Takeshi Mori", "guestId": "g-009-mori", "dueDate": "2026-03-25", "status": "complete", "owner": "Nina Volkov" },
+  { "id": "prep-070", "label": "Badge and lanyard prepared", "guestName": "Takeshi Mori", "guestId": "g-009-mori", "dueDate": "2026-04-01", "status": "in_progress", "owner": "Nina Volkov" },
+  { "id": "prep-071", "label": "Interpreter briefing packet", "guestName": "Takeshi Mori", "guestId": "g-009-mori", "dueDate": "2026-04-01", "status": "not_started", "owner": "Kenji Watanabe" },
+
+  { "id": "prep-072", "label": "Hotel room assignment", "guestName": "Emily Park", "guestId": "g-010-park", "dueDate": "2026-03-20", "status": "complete", "owner": "Ben Foster" },
+  { "id": "prep-073", "label": "Badge and lanyard prepared", "guestName": "Emily Park", "guestId": "g-010-park", "dueDate": "2026-04-01", "status": "in_progress", "owner": "Ben Foster" },
+  { "id": "prep-074", "label": "Welcome packet assembled", "guestName": "Emily Park", "guestId": "g-010-park", "dueDate": "2026-04-02", "status": "not_started", "owner": "Ben Foster" },
+
+  { "id": "prep-075", "label": "Confirm flight itinerary", "guestName": "David Kim", "guestId": "g-011-kim", "dueDate": "2026-03-15", "status": "complete", "owner": "Lisa Park" },
+  { "id": "prep-076", "label": "Suite reservation confirmed", "guestName": "David Kim", "guestId": "g-011-kim", "dueDate": "2026-03-20", "status": "complete", "owner": "Lisa Park" },
+  { "id": "prep-077", "label": "Industry panel logistics", "guestName": "David Kim", "guestId": "g-011-kim", "dueDate": "2026-03-25", "status": "complete", "owner": "Lisa Park" },
+  { "id": "prep-078", "label": "Badge and lanyard prepared", "guestName": "David Kim", "guestId": "g-011-kim", "dueDate": "2026-04-01", "status": "complete", "owner": "Lisa Park" },
+  { "id": "prep-079", "label": "Welcome packet assembled", "guestName": "David Kim", "guestId": "g-011-kim", "dueDate": "2026-04-02", "status": "not_started", "owner": "Lisa Park" },
+
+  { "id": "prep-080", "label": "Confirm flight itinerary", "guestName": "Luna Martinez", "guestId": "g-012-martinez", "dueDate": "2026-03-10", "status": "complete", "owner": "Tomoko Hayashi" },
+  { "id": "prep-081", "label": "Hotel room assignment", "guestName": "Luna Martinez", "guestId": "g-012-martinez", "dueDate": "2026-03-15", "status": "complete", "owner": "Tomoko Hayashi" },
+  { "id": "prep-082", "label": "Concert venue setup plan", "guestName": "Luna Martinez", "guestId": "g-012-martinez", "dueDate": "2026-03-20", "status": "complete", "owner": "Tomoko Hayashi" },
+  { "id": "prep-083", "label": "Badge and lanyard prepared", "guestName": "Luna Martinez", "guestId": "g-012-martinez", "dueDate": "2026-03-25", "status": "complete", "owner": "Ben Foster" },
+  { "id": "prep-084", "label": "Welcome packet assembled", "guestName": "Luna Martinez", "guestId": "g-012-martinez", "dueDate": "2026-03-28", "status": "complete", "owner": "Tomoko Hayashi" }
 ]

@@ -91,6 +91,24 @@
     "notes": "Draft pending department head approval before sending."
   },
   {
+    "contractId": "c-007",
+    "guestId": "g-011-kim",
+    "guestName": "David Kim",
+    "type": "industry_agreement",
+    "status": "sent",
+    "sentDate": "2026-03-20",
+    "signedDate": null,
+    "expiryDate": "2026-04-30",
+    "terms": {
+      "compensation": "Travel + accommodation",
+      "panels": 1,
+      "autographSessions": 0,
+      "photoOps": 0,
+      "exclusivity": "None"
+    },
+    "notes": "Aniplex of America legal reviewing. Sent to David Kim for signature."
+  },
+  {
     "contractId": "c-006",
     "guestId": "g-004-nakamura",
     "guestName": "Nakamura Rin",

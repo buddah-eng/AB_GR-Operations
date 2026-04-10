@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "deploy": "npm run build && firebase deploy --only hosting"
+    "deploy": "npm run build && firebase deploy --only hosting",
+    "build:demo": "vite build --mode demo --base=/AB_GR-Operations/",
+    "build:demo:check": "vue-tsc --noEmit && vite build --mode demo --base=/AB_GR-Operations/"
   },
   "dependencies": {
     "@formkit/themes": "^1.6.0",

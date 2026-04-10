@@ -140,6 +140,8 @@ function selectTab(tab: DemoTimeState | 'how-built'): void {
   .demo-tab {
     padding: 0.35rem 0.5rem;
     font-size: 0;
+    min-height: 44px;
+    min-width: 44px;
   }
 
   .demo-tab i {

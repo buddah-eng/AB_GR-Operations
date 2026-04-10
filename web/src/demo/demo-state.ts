@@ -43,11 +43,12 @@ const GUEST_STATUS_MAP: Record<DemoTimeState, Record<string, string>> = {
 const PREP_COMPLETION_TARGETS: Record<DemoTimeState, number> = {
   'pre-event': 0.45,
   'during-event': 0.85,
-  'post-event': 1.0,
+  'post-event': 0.95,
 }
 
 const TRANSPORT_ACTIVE_MAP: Record<DemoTimeState, Record<string, string>> = {
   'pre-event': {
+    confirmed: 'requested',
     completed: 'confirmed',
   },
   'during-event': {},
