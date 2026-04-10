@@ -199,12 +199,8 @@ export class RoleEngine {
     conceptKey: string,
     record: Readonly<Record<string, unknown>>
   ): Promise<Readonly<Record<string, unknown>>> {
-    const perm = await this.findPermission(roleKey, conceptKey);
-    if (!perm) return {};
-
-    const visibleProps = perm.visibleProperties;
-    // Empty visible_properties with can_view=true means all fields visible
-    if (visibleProps.length === 0) return { ...record };
+    const visibleProps = await this.getVisibleProperties(roleKey, conceptKey);
+    if (visibleProps.length === 0) return {};
 
     return Object.fromEntries(
       Object.entries(record).filter(([key]) => visibleProps.includes(key))
