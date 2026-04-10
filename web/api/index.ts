@@ -229,8 +229,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // --- /api/data-routes --- data flow canvas
     if (path.startsWith('/api/data-routes')) {
-      const result = await pool.query("SELECT * FROM data_routes WHERE enabled = true")
-      ok(res, result.rows)
+      try {
+        const result = await pool.query("SELECT * FROM data_routes WHERE enabled = true")
+        ok(res, result.rows)
+      } catch {
+        ok(res, []) // Table may not exist yet
+      }
+      return
+    }
+
+    // --- /api/stream --- SSE stub (canvas real-time)
+    if (path === '/api/stream') {
+      res.setHeader('Content-Type', 'text/event-stream')
+      res.setHeader('Cache-Control', 'no-cache')
+      res.setHeader('Connection', 'keep-alive')
+      res.write('data: {"type":"connected"}\n\n')
+      // Keep connection open briefly then close (stub for read-only deployment)
+      setTimeout(() => res.end(), 5000)
       return
     }
 

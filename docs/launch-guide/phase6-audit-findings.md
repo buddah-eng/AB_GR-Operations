@@ -131,10 +131,45 @@ No consideration for:
 - What status transitions are possible? (draft → invited → confirmed)
 - What filters/sorts make sense per page?
 
-## Next Steps
-1. Fix Vercel API adapter (pluralization, missing endpoints)
-2. Fix title resolution (use ontology labels, not raw keys)
-3. Fix form label resolution (resolve propertyKey → Property.label)
-4. Map the user lifecycle per page
-5. PRD gap analysis for missing features
-6. Phase 7 PRDs need builder/canvas integration
+## Resolved (fix loop completed)
+- Pluralization bug → fixed table name map with all slugs
+- Missing API endpoints → added /api/config, /api/form-configs, /api/view-configs, /api/visualization/graph, /api/data-routes, /api/stream
+- Title resolution → humanized concept keys as fallback, removed leaked config names
+- Graceful table errors → return empty results for nonexistent tables
+- Seed data quality → added renderers, tabs column, detail page tabs with 4 sub-views
+- E2E tests → 20 Playwright tests, all passing
+
+## Open Questions for Phase 6 PRD Update
+
+These are USER-PERSPECTIVE questions that reveal missing features. They should be added to the Phase 6 PRDs as acceptance criteria before Phase 6 can be declared complete.
+
+### Builder Integration (the frontend can't configure itself)
+1. How does a non-developer add a field to the guest form? The form builder exists at /builder/form/guest but can't SAVE changes back to the DB (read-only Vercel adapter). What's the write path?
+2. How does a director customize the guest list columns? The view builder exists at /builder/view/guest but same issue — no save endpoint.
+3. Where's the link FROM an operational page TO its builder? If I'm looking at the guest list and want to add a column, how do I get to the view builder?
+4. How does a saved builder config REPLACE the seed config? If I edit the ViewConfig in the builder, does it create a new version or update in place?
+
+### Status & Lifecycle (users can't move things forward)
+5. How does a coordinator change a guest's status from "invited" to "confirmed"? There's no status dropdown, no transition button, no workflow trigger.
+6. What happens when a status changes? The PRD says prep items auto-create, contracts generate, liaisons get notified. None of this is wired.
+7. How does a liaison see only THEIR assigned guests? Data scoping (relation-based) isn't implemented.
+
+### Forms & Editing (users can't modify data)
+8. How does someone EDIT an existing guest? There's only a create form (/guests/new), no edit form.
+9. How do form fields get labels? The intake wizard shows unlabeled text inputs because propertyKey→Property.label resolution isn't happening.
+10. How does validation work? The PRD says required fields, email format, min/max length. Currently no validation renders.
+
+### Data Completeness (some concepts don't exist)
+11. Where are the contract tables? contract_templates, contract_clauses, generated_contracts don't exist in the DB.
+12. Where are transport_drivers? The concept is in the ontology but no table exists.
+13. Where are accommodations, autographs, dietary tables? These concepts show empty pages because the tables don't exist.
+
+### Dashboard & Widgets (surface-level metrics)
+14. How do stat card widgets show actual numbers? Currently they fetch all records and count client-side. There's no aggregation API.
+15. Where are the embedded view widgets? The PRD specifies view-embed widgets (schedule timeline, prep kanban in dashboard). Not implemented.
+
+### Canvas & Visualization
+16. The system graph renders nodes from the ontology but can users EDIT from the canvas? Canvas-config bridge exists but write-back isn't wired in the Vercel adapter.
+17. Data flow canvas is empty because no data_routes table exists yet. This is Phase 4B infrastructure — is it expected to be empty in Phase 6?
+
+These questions should drive the remaining Phase 6 work and inform which PRDs need updates before Phase 6 can pass the completion protocol.

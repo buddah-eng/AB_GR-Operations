@@ -51,7 +51,11 @@ const concept = computed(() => ontologyStore.getConceptByKey(conceptKey.value))
 const pageTitle = computed(() => {
   const c = concept.value
   if (c) return c.pluralLabel ?? c.label ?? conceptKey.value
-  return conceptKey.value.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) + 's'
+  // Humanize concept key: schedule_event → Schedule Events, staff → Staff
+  const humanized = conceptKey.value.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
+  // Don't add 's' if already ends in 's' or is a mass noun
+  if (humanized.endsWith('s') || humanized.endsWith('ff') || humanized.toLowerCase() === 'staff' || humanized.toLowerCase() === 'dietary') return humanized
+  return humanized + 's'
 })
 const canCreate = computed(() => !!concept.value)
 

@@ -31,3 +31,4 @@ web/dist/
 web/.env.local
 web/functions/node_modules/
 web/functions/lib/
+.env.vercel
