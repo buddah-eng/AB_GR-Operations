@@ -8,6 +8,12 @@
 
 import { ref } from 'vue'
 
+/* ---- Deep clone (JSON round-trip, safe for frozen Vite JSON imports) ---- */
+
+function deepClone<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T
+}
+
 /* ---- Seed data imports ---- */
 import seedGuests from './data/guests.json'
 import seedStaff from './data/staff.json'
@@ -83,16 +89,16 @@ function generateId(collection: CollectionKey): string {
 function buildSeedState(): DemoState {
   return {
     version: SEED_VERSION,
-    guests: structuredClone(seedGuests) as Record<string, unknown>[],
-    staff: structuredClone(seedStaff) as Record<string, unknown>[],
-    schedule: structuredClone(seedSchedule) as Record<string, unknown>[],
-    venues: structuredClone(seedVenues) as Record<string, unknown>[],
-    pairings: structuredClone(seedPairings) as Record<string, unknown>[],
-    prepItems: structuredClone(seedPrepItems) as Record<string, unknown>[],
-    transport: structuredClone(seedTransport) as Record<string, unknown>[],
-    contracts: structuredClone(seedContracts) as Record<string, unknown>[],
-    ontology: structuredClone(seedOntology) as Record<string, unknown>,
-    config: structuredClone(seedConfig) as Record<string, unknown>,
+    guests: deepClone(seedGuests) as Record<string, unknown>[],
+    staff: deepClone(seedStaff) as Record<string, unknown>[],
+    schedule: deepClone(seedSchedule) as Record<string, unknown>[],
+    venues: deepClone(seedVenues) as Record<string, unknown>[],
+    pairings: deepClone(seedPairings) as Record<string, unknown>[],
+    prepItems: deepClone(seedPrepItems) as Record<string, unknown>[],
+    transport: deepClone(seedTransport) as Record<string, unknown>[],
+    contracts: deepClone(seedContracts) as Record<string, unknown>[],
+    ontology: deepClone(seedOntology) as Record<string, unknown>,
+    config: deepClone(seedConfig) as Record<string, unknown>,
   }
 }
 
@@ -157,18 +163,18 @@ const state = ref<DemoState>(loadOrInitialize())
 /* ---- Getters (immutable clones) ---- */
 
 function getCollection(key: CollectionKey): Record<string, unknown>[] {
-  return structuredClone(state.value[key]) as Record<string, unknown>[]
+  return deepClone(state.value[key]) as Record<string, unknown>[]
 }
 
 function getRecord(collection: CollectionKey, id: string): Record<string, unknown> | null {
   const idField = ID_FIELDS[collection]
   const record = (state.value[collection] as ReadonlyArray<Record<string, unknown>>)
     .find((r) => r[idField] === id)
-  return record ? structuredClone(record) as Record<string, unknown> : null
+  return record ? deepClone(record) as Record<string, unknown> : null
 }
 
 function getSingleton(key: 'ontology' | 'config'): Record<string, unknown> {
-  return structuredClone(state.value[key]) as Record<string, unknown>
+  return deepClone(state.value[key]) as Record<string, unknown>
 }
 
 /* ---- Mutations ---- */
@@ -187,7 +193,7 @@ function createRecord(
   }
 
   schedulePersist()
-  return structuredClone(record) as Record<string, unknown>
+  return deepClone(record) as Record<string, unknown>
 }
 
 function updateRecord(
@@ -213,7 +219,7 @@ function updateRecord(
   }
 
   schedulePersist()
-  return structuredClone(updated) as Record<string, unknown>
+  return deepClone(updated) as Record<string, unknown>
 }
 
 function deleteRecord(collection: CollectionKey, id: string): void {
@@ -243,7 +249,7 @@ function updateSingleton(
     [key]: updated,
   }
   schedulePersist()
-  return structuredClone(updated) as Record<string, unknown>
+  return deepClone(updated) as Record<string, unknown>
 }
 
 /* ---- Reset / Import / Export ---- */
@@ -407,19 +413,19 @@ function getGuestDetail(guestId: string): Record<string, unknown> | null {
     guest,
     schedule: (state.value.schedule as ReadonlyArray<Record<string, unknown>>)
       .filter((e) => e.guestId === guestId)
-      .map((e) => structuredClone(e)),
+      .map((e) => deepClone(e)),
     travel: (state.value.transport as ReadonlyArray<Record<string, unknown>>)
       .filter((t) => t.guestId === guestId)
-      .map((t) => structuredClone(t)),
+      .map((t) => deepClone(t)),
     accommodations: [],
     dietary: [],
     autographs: [],
     prepTracker: (state.value.prepItems as ReadonlyArray<Record<string, unknown>>)
       .filter((p) => p.guestId === guestId)
-      .map((p) => structuredClone(p)),
+      .map((p) => deepClone(p)),
     pairings: (state.value.pairings as ReadonlyArray<Record<string, unknown>>)
       .filter((p) => p.guestId === guestId)
-      .map((p) => structuredClone(p)),
+      .map((p) => deepClone(p)),
     violations: [],
   }
 }
