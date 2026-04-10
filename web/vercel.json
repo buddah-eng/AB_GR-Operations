@@ -2,11 +2,6 @@
   "buildCommand": "npm run build:demo",
   "outputDirectory": "dist",
   "framework": "vite",
-  "functions": {
-    "api/**/*.ts": {
-      "runtime": "@vercel/node@3"
-    }
-  },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.ts" },
     { "source": "/(.*)", "destination": "/index.html" }
