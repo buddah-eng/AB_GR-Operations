@@ -40,6 +40,8 @@ import { VueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { MiniMap } from '@vue-flow/minimap'
+import dagre from '@dagrejs/dagre'
+import { MarkerType } from '@vue-flow/core'
 import type {
   Node,
   Edge,
@@ -113,22 +115,59 @@ function getDepartmentColor(region?: string): string {
   return DEPARTMENT_COLORS[region] ?? '#64748b'
 }
 
-/* ---- Auto-layout: simple grid ---- */
+/* ---- Auto-layout: dagre hierarchical with department clustering ---- */
 
-function computeGridPosition(index: number): { x: number; y: number } {
-  const cols = 4
-  const gapX = 280
-  const gapY = 180
-  return {
-    x: (index % cols) * gapX + 40,
-    y: Math.floor(index / cols) * gapY + 40,
+const NODE_WIDTH = 200
+const NODE_HEIGHT = 80
+
+function computeDagreLayout(
+  nodes: VisualizationNode[],
+  edges: VisualizationEdge[],
+): Map<string, { x: number; y: number }> {
+  const g = new dagre.graphlib.Graph()
+  g.setDefaultEdgeLabel(() => ({}))
+  g.setGraph({
+    rankdir: 'TB',
+    nodesep: 80,
+    ranksep: 120,
+    edgesep: 40,
+    marginx: 60,
+    marginy: 60,
+  })
+
+  for (const node of nodes) {
+    g.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT })
   }
+
+  for (const edge of edges) {
+    if (g.hasNode(edge.sourceNodeId) && g.hasNode(edge.targetNodeId)) {
+      g.setEdge(edge.sourceNodeId, edge.targetNodeId)
+    }
+  }
+
+  dagre.layout(g)
+
+  const positions = new Map<string, { x: number; y: number }>()
+  for (const nodeId of g.nodes()) {
+    const n = g.node(nodeId)
+    if (n) {
+      positions.set(nodeId, {
+        x: n.x - NODE_WIDTH / 2,
+        y: n.y - NODE_HEIGHT / 2,
+      })
+    }
+  }
+  return positions
 }
+
+/* ---- Cached layout positions ---- */
+
+let cachedPositions: Map<string, { x: number; y: number }> = new Map()
 
 /* ---- Transform visualization data to Vue Flow nodes/edges ---- */
 
-function toFlowNode(vNode: VisualizationNode, index: number): Node {
-  const pos = vNode.position ?? computeGridPosition(index)
+function toFlowNode(vNode: VisualizationNode): Node {
+  const pos = vNode.position ?? cachedPositions.get(vNode.id) ?? { x: 0, y: 0 }
   const departmentColor = getDepartmentColor(vNode.region)
 
   const dataMap: Record<string, unknown> = {
@@ -192,6 +231,7 @@ function toFlowEdge(vEdge: VisualizationEdge): Edge {
     source: vEdge.sourceNodeId,
     target: vEdge.targetNodeId,
     animated: vEdge.animated ?? vEdge.type === 'data_flow',
+    markerEnd: { type: MarkerType.ArrowClosed, color: '#94a3b8' },
     data: dataMap[vEdge.type] ?? { label: vEdge.label ?? '' },
   }
 }
@@ -199,17 +239,15 @@ function toFlowEdge(vEdge: VisualizationEdge): Edge {
 /* ---- Watch for graph data changes ---- */
 
 watch(
-  () => canvasStore.visibleEdges,
-  (edges) => {
-    flowEdges.value = edges.map(toFlowEdge)
-  },
-  { immediate: true },
-)
-
-watch(
-  () => canvasStore.filteredNodes,
-  (nodes) => {
-    flowNodes.value = nodes.map(toFlowNode)
+  [() => canvasStore.filteredNodes, () => canvasStore.visibleEdges],
+  ([nodes, edges]) => {
+    // Recompute layout when nodes or edges change
+    cachedPositions = computeDagreLayout(
+      nodes as VisualizationNode[],
+      edges as VisualizationEdge[],
+    )
+    flowNodes.value = (nodes as VisualizationNode[]).map(toFlowNode)
+    flowEdges.value = (edges as VisualizationEdge[]).map(toFlowEdge)
   },
   { immediate: true },
 )
