@@ -30,7 +30,7 @@
       <Column
         v-for="col in visibleColumns"
         :key="col.key"
-        :field="'properties.' + col.key"
+        :field="col.key"
         :header="col.label"
         sortable
       />
