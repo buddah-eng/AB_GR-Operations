@@ -158,26 +158,140 @@ const realClient = { get, post, put, del, call, getActiveCount }
 /*  Export: demo client or real client based on env                     */
 /* ------------------------------------------------------------------ */
 
-async function loadDemoClient(): Promise<typeof realClient> {
-  const { demoClient } = await import('@/demo/demo-client')
-  return demoClient
+/** Build a demo client adapter that routes to demo-store */
+async function buildDemoAdapter(): Promise<typeof realClient> {
+  const { demoStore } = await import('@/demo/demo-store')
+  type CollectionKey = 'guests' | 'staff' | 'schedule' | 'venues' | 'pairings' | 'prepItems' | 'transport' | 'contracts'
+
+  const PATH_TO_COLLECTION: Record<string, CollectionKey> = {
+    guest: 'guests', guests: 'guests',
+    staff: 'staff',
+    schedule: 'schedule',
+    venue: 'venues', venues: 'venues',
+    pairing: 'pairings', pairings: 'pairings',
+    prep: 'prepItems',
+    transport: 'transport', travel: 'transport',
+    contract: 'contracts', contracts: 'contracts',
+  }
+
+  function parsePathSegments(path: string): { collection: CollectionKey | null; id: string | null } {
+    const segments = path.replace(/^\/api\/domains\//, '').split('/')
+    const collection = PATH_TO_COLLECTION[segments[0]] ?? null
+    const id = segments[1] ?? null
+    return { collection, id }
+  }
+
+  function writeResult(record: Record<string, unknown>): unknown {
+    return { status: 'APPLIED', write_id: `demo-${Date.now()}`, row_version: record.rowVersion ?? 1, data: record }
+  }
+
+  return {
+    async get<T>(path: string): Promise<T> {
+      if (path.includes('/dashboard')) return demoStore.getDashboardData() as T
+      if (path.includes('/config')) return demoStore.getSingleton('config') as T
+      if (path.includes('/ontology')) return demoStore.getSingleton('ontology') as T
+      if (path.includes('/visualization/graph')) return demoStore.getVisualizationGraph() as T
+
+      const { collection, id } = parsePathSegments(path)
+      if (collection && id) {
+        const record = demoStore.getRecord(collection, id)
+        return (record ?? {}) as T
+      }
+      if (collection) return demoStore.getCollection(collection) as T
+      return {} as T
+    },
+
+    async post<T>(path: string, body?: unknown): Promise<T> {
+      const { collection } = parsePathSegments(path)
+      if (collection && body) {
+        const record = demoStore.createRecord(collection, body as Record<string, unknown>)
+        return writeResult(record) as T
+      }
+      return {} as T
+    },
+
+    async put<T>(path: string, body?: unknown): Promise<T> {
+      const { collection, id } = parsePathSegments(path)
+      if (collection && id && body) {
+        const record = demoStore.updateRecord(collection, id, body as Record<string, unknown>)
+        return writeResult(record) as T
+      }
+      return {} as T
+    },
+
+    async del<T>(path: string): Promise<T> {
+      const { collection, id } = parsePathSegments(path)
+      if (collection && id) {
+        demoStore.deleteRecord(collection, id)
+        return { status: 'APPLIED' } as T
+      }
+      return {} as T
+    },
+
+    async call<T>(action: string, params?: Record<string, unknown>): Promise<T> {
+      if (action === 'getUserRole') return { role: 'director' } as T
+      if (action === 'getDashboardData') return demoStore.getDashboardData() as T
+      if (action === 'getGuestList') return demoStore.getCollection('guests') as T
+      if (action === 'getStaffList') return demoStore.getCollection('staff') as T
+      if (action === 'getScheduleList') return demoStore.getCollection('schedule') as T
+      if (action === 'getPrepItems') return demoStore.getCollection('prepItems') as T
+      if (action === 'getGuestDetail') {
+        const guestId = params?.guestId as string | undefined
+        if (guestId) return (demoStore.getGuestDetail(guestId) ?? {}) as T
+        return {} as T
+      }
+
+      // Write actions — route to store mutations
+      if (action === 'createStaff' && params?.data) {
+        const record = demoStore.createRecord('staff', params.data as Record<string, unknown>)
+        return writeResult(record) as T
+      }
+      if (action === 'updateGuest' && params?.guestId) {
+        const record = demoStore.updateRecord('guests', params.guestId as string, (params.patch ?? params) as Record<string, unknown>)
+        return writeResult(record) as T
+      }
+      if (action === 'updatePrepItem' && params?.prepId) {
+        const record = demoStore.updateRecord('prepItems', params.prepId as string, (params.patch ?? params) as Record<string, unknown>)
+        return writeResult(record) as T
+      }
+      if (action === 'createScheduleEvent' && params?.data) {
+        const record = demoStore.createRecord('schedule', params.data as Record<string, unknown>)
+        return writeResult(record) as T
+      }
+      if (action === 'createPairing' && params?.data) {
+        const record = demoStore.createRecord('pairings', params.data as Record<string, unknown>)
+        return writeResult(record) as T
+      }
+      if (action === 'deletePairing' && params?.pairingId) {
+        demoStore.deleteRecord('pairings', params.pairingId as string)
+        return { status: 'APPLIED' } as T
+      }
+      if (action === 'createTravel' && params?.data) {
+        const record = demoStore.createRecord('transport', params.data as Record<string, unknown>)
+        return writeResult(record) as T
+      }
+
+      return {} as T
+    },
+
+    getActiveCount(): number {
+      return 0
+    },
+  }
 }
 
-/** Resolved client singleton — lazily loads demo client if needed */
+/** Resolved client singleton — lazily loads demo adapter if needed */
 let resolvedClient: typeof realClient | null = null
 
 function getClient(): typeof realClient {
   if (resolvedClient) return resolvedClient
-
-  // In demo mode, the demo client is loaded synchronously at init time
-  // (see initDemoClient below). Before that, return real client as fallback.
   return realClient
 }
 
-/** Call once at app startup (in main.ts) to eagerly load the demo client */
+/** Call once at app startup (in main.ts) to eagerly load the demo adapter */
 export async function initDemoClient(): Promise<void> {
   if (DEMO_MODE) {
-    resolvedClient = await loadDemoClient()
+    resolvedClient = await buildDemoAdapter()
   }
 }
 
