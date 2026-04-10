@@ -55,13 +55,25 @@ const ontologyStore = useOntologyStore()
 const loading = ref(false)
 const records = ref<Record<string, unknown>[]>([])
 
+/** Try both plural and singular forms of the domain key for ontology lookup */
+const conceptKey = computed(() => {
+  if (ontologyStore.getConceptByKey(props.domain)) return props.domain
+  // Try removing trailing 's' for singular form
+  const singular = props.domain.endsWith('s') ? props.domain.slice(0, -1) : props.domain
+  if (ontologyStore.getConceptByKey(singular)) return singular
+  // Try snake_case variants
+  const snake = singular.replace(/-/g, '_')
+  if (ontologyStore.getConceptByKey(snake)) return snake
+  return props.domain
+})
+
 const domainLabel = computed(() => {
-  const concept = ontologyStore.getConceptByKey(props.domain)
+  const concept = ontologyStore.getConceptByKey(conceptKey.value)
   return concept?.pluralLabel ?? props.domain.charAt(0).toUpperCase() + props.domain.slice(1)
 })
 
 const visibleColumns = computed(() => {
-  const conceptProps = ontologyStore.getPropertiesForConcept(props.domain)
+  const conceptProps = ontologyStore.getPropertiesForConcept(conceptKey.value)
   return conceptProps.slice(0, 8)
 })
 
