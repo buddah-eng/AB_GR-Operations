@@ -55,8 +55,19 @@ const ontologyStore = useOntologyStore()
 const loading = ref(false)
 const records = ref<Record<string, unknown>[]>([])
 
-/** Try both plural and singular forms of the domain key for ontology lookup */
+/** Map route domain keys to ontology concept keys */
+const DOMAIN_TO_CONCEPT: Record<string, string> = {
+  travel: 'transport',
+  'prep-tracker': 'prep_item',
+  accommodations: 'guest',
+  dietary: 'guest',
+  autographs: 'guest',
+}
+
 const conceptKey = computed(() => {
+  // Direct alias match
+  if (DOMAIN_TO_CONCEPT[props.domain]) return DOMAIN_TO_CONCEPT[props.domain]
+  // Exact match
   if (ontologyStore.getConceptByKey(props.domain)) return props.domain
   // Try removing trailing 's' for singular form
   const singular = props.domain.endsWith('s') ? props.domain.slice(0, -1) : props.domain
