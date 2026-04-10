@@ -11,6 +11,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import * as logger from "firebase-functions/logger";
+import { z } from "zod";
 import { requireAuth, requireRole } from "../auth/middleware";
 import { auditContextFromRequest, logAuditClaim } from "../audit/context";
 import {
@@ -18,6 +19,14 @@ import {
   getPublishStatus,
 } from "../services/guidebook-sync";
 import type { GuidebookSyncType } from "../services/guidebook-sync";
+
+// --- Validation schemas ---
+
+const publishSchema = z.object({
+  syncType: z.enum(["schedule", "guest_bios", "venue_info", "full"], {
+    message: "syncType must be one of: schedule, guest_bios, venue_info, full",
+  }),
+});
 
 // --- Router ---
 
@@ -44,34 +53,20 @@ guidebookSyncRouter.post(
   requireRole(10),
   async (req: Request, res: Response) => {
     try {
-      const { syncType } = req.body as { syncType?: GuidebookSyncType };
-
-      if (!syncType) {
+      const parsed = publishSchema.safeParse(req.body);
+      if (!parsed.success) {
         res.status(400).json({
           success: false,
-          error: "syncType is required (schedule, guest_bios, venue_info, or full)",
+          error: parsed.error.issues[0].message,
         });
         return;
       }
-
-      const validTypes: ReadonlyArray<string> = [
-        "schedule",
-        "guest_bios",
-        "venue_info",
-        "full",
-      ];
-      if (!validTypes.includes(syncType)) {
-        res.status(400).json({
-          success: false,
-          error: `Invalid syncType: ${syncType}. Must be one of: ${validTypes.join(", ")}`,
-        });
-        return;
-      }
+      const { syncType } = parsed.data;
 
       const auditCtx = auditContextFromRequest(req);
       await logAuditClaim(auditCtx, "POST /api/guidebook-sync/publish");
 
-      const result = await publishToGuidebook(syncType);
+      const result = await publishToGuidebook(syncType as GuidebookSyncType);
       res.json({ success: true, data: result });
     } catch (err: unknown) {
       handleError(res, err, "publishing to Guidebook");

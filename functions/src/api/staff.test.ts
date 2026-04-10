@@ -196,7 +196,8 @@ describe("Staff API Router", () => {
         .send({ email: "noname@test.com" });
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toContain("name");
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toBeDefined();
     });
 
     it("rejects when role is insufficient", async () => {

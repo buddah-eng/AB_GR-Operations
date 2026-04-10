@@ -1,7 +1,7 @@
 -- Migration 008: Staff, Volunteer, and Scheduling Infrastructure
 -- Adds volunteer-specific columns to staff table, creates shifts and
 -- shift_assignments tables, and adds guest_schedule_events linkage.
--- Run after 007-pipelines-observability.sql
+-- Run after 008a-shared-services.sql
 
 BEGIN;
 
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS shifts (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name            TEXT NOT NULL,
   description     TEXT,
-  venue_id        UUID,
+  venue_id        UUID REFERENCES venues(id),
   start_time      TIMESTAMPTZ NOT NULL,
   end_time        TIMESTAMPTZ NOT NULL,
   required_skills TEXT[] DEFAULT '{}',

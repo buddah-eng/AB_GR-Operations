@@ -15,6 +15,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import * as logger from "firebase-functions/logger";
+import { z } from "zod";
 import { requireAuth, requireRole } from "../auth/middleware";
 import { auditContextFromRequest, withAuditContext, logAuditClaim } from "../audit/context";
 import { emit, createDomainEvent } from "../events/bus";
@@ -26,6 +27,19 @@ import {
   assignToShift,
   getShiftCoverage,
 } from "../services/volunteers";
+
+// --- Validation schemas ---
+
+const updateTrainingSchema = z.object({
+  status: z.enum(["pending", "in_progress", "completed"], {
+    message: "Status must be one of: pending, in_progress, completed",
+  }),
+});
+
+const assignVolunteerSchema = z.object({
+  volunteer_id: z.string().min(1, "volunteer_id is required"),
+  shift_id: z.string().min(1, "shift_id is required"),
+});
 
 // --- Router ---
 
@@ -94,12 +108,12 @@ volunteerRouter.put(
   requireRole(20),
   async (req: Request, res: Response) => {
     try {
-      const { status } = req.body as { status?: string };
-
-      if (!status || typeof status !== "string") {
-        res.status(400).json({ success: false, error: 'Missing required field: "status".' });
+      const parsed = updateTrainingSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ success: false, error: parsed.error.issues[0].message });
         return;
       }
+      const { status } = parsed.data;
 
       const auditCtx = auditContextFromRequest(req);
 
@@ -157,18 +171,15 @@ volunteerRouter.post(
   requireRole(20),
   async (req: Request, res: Response) => {
     try {
-      const { volunteer_id, shift_id } = req.body as {
-        volunteer_id?: string;
-        shift_id?: string;
-      };
-
-      if (!volunteer_id || !shift_id) {
+      const parsed = assignVolunteerSchema.safeParse(req.body);
+      if (!parsed.success) {
         res.status(400).json({
           success: false,
-          error: 'Missing required fields: "volunteer_id", "shift_id".',
+          error: parsed.error.issues[0].message,
         });
         return;
       }
+      const { volunteer_id, shift_id } = parsed.data;
 
       const auditCtx = auditContextFromRequest(req);
 

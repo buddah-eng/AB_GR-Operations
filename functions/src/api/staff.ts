@@ -15,6 +15,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import * as logger from "firebase-functions/logger";
+import { z } from "zod";
 import { requireAuth, requireRole } from "../auth/middleware";
 import { auditContextFromRequest, withAuditContext, logAuditClaim } from "../audit/context";
 import { emit, createDomainEvent } from "../events/bus";
@@ -27,6 +28,24 @@ import {
   updateStaff,
   archiveStaff,
 } from "../services/staff";
+
+// --- Validation schemas ---
+
+const createStaffSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email format").optional(),
+  department: z.string().optional(),
+  role_key: z.string().optional(),
+  phone: z.string().optional(),
+  staff_type: z.string().optional(),
+  skills: z.array(z.string()).optional(),
+  training_status: z.string().optional(),
+  emergency_contact: z.string().optional(),
+  languages: z.array(z.string()).optional(),
+  properties: z.record(z.string(), z.unknown()).optional(),
+});
+
+const updateStaffSchema = createStaffSchema.partial();
 
 // --- Router ---
 
@@ -108,30 +127,30 @@ staffRouter.post(
   requireRole(20),
   async (req: Request, res: Response) => {
     try {
-      const { name, email, role_key, department, phone, staff_type,
-              skills, training_status, emergency_contact, languages, properties } = req.body as Record<string, unknown>;
-
-      if (!name || typeof name !== "string") {
-        res.status(400).json({ success: false, error: 'Missing required field: "name".' });
+      const parsed = createStaffSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ success: false, error: parsed.error.issues[0].message });
         return;
       }
+      const { name, email, role_key, department, phone, staff_type,
+              skills, training_status, emergency_contact, languages, properties } = parsed.data;
 
       const auditCtx = auditContextFromRequest(req);
 
       const staff = await withAuditContext(auditCtx, (client) =>
         createStaff(
           {
-            name: name as string,
-            email: email as string | undefined,
-            role_key: role_key as string | undefined,
-            department: department as string | undefined,
-            phone: phone as string | undefined,
-            staff_type: staff_type as string | undefined,
-            skills: skills as string[] | undefined,
-            training_status: training_status as string | undefined,
-            emergency_contact: emergency_contact as string | undefined,
-            languages: languages as string[] | undefined,
-            properties: properties as Record<string, unknown> | undefined,
+            name,
+            email,
+            role_key,
+            department,
+            phone,
+            staff_type,
+            skills,
+            training_status,
+            emergency_contact,
+            languages,
+            properties,
             created_by: req.user?.uid,
           },
           client
@@ -167,10 +186,16 @@ staffRouter.put(
   requireRole(20),
   async (req: Request, res: Response) => {
     try {
+      const parsed = updateStaffSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ success: false, error: parsed.error.issues[0].message });
+        return;
+      }
+
       const auditCtx = auditContextFromRequest(req);
 
       const staff = await withAuditContext(auditCtx, (client) =>
-        updateStaff(req.params.id, req.body as Record<string, unknown>, client)
+        updateStaff(req.params.id, parsed.data as Record<string, unknown>, client)
       );
 
       if (!staff) {

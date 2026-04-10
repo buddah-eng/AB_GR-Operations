@@ -14,6 +14,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import * as logger from "firebase-functions/logger";
+import { z } from "zod";
 import { requireAuth, requireRole } from "../auth/middleware";
 import { auditContextFromRequest, withAuditContext, logAuditClaim } from "../audit/context";
 import { emit, createDomainEvent } from "../events/bus";
@@ -24,6 +25,20 @@ import {
   createScheduleEvent,
   updateScheduleEvent,
 } from "../services/scheduling";
+
+// --- Validation schemas ---
+
+const createEventSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  event_type: z.string().optional(),
+  venue_id: z.string().uuid("venue_id must be a valid UUID").optional(),
+  start_time: z.string().datetime("start_time must be a valid ISO datetime"),
+  end_time: z.string().datetime("end_time must be a valid ISO datetime"),
+  status: z.string().optional(),
+  properties: z.record(z.string(), z.unknown()).optional(),
+});
+
+const updateEventSchema = createEventSchema.partial();
 
 // --- Router ---
 
@@ -130,20 +145,12 @@ schedulingRouter.post(
   requireRole(20),
   async (req: Request, res: Response) => {
     try {
-      const { name, event_type, venue_id, start_time, end_time, status, properties } = req.body as {
-        name?: string;
-        event_type?: string;
-        venue_id?: string;
-        start_time?: string;
-        end_time?: string;
-        status?: string;
-        properties?: Record<string, unknown>;
-      };
-
-      if (!name || typeof name !== "string") {
-        res.status(400).json({ success: false, error: 'Missing required field: "name".' });
+      const parsed = createEventSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ success: false, error: parsed.error.issues[0].message });
         return;
       }
+      const { name, event_type, venue_id, start_time, end_time, status, properties } = parsed.data;
 
       const auditCtx = auditContextFromRequest(req);
 
@@ -200,10 +207,16 @@ schedulingRouter.put(
   requireRole(20),
   async (req: Request, res: Response) => {
     try {
+      const parsed = updateEventSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ success: false, error: parsed.error.issues[0].message });
+        return;
+      }
+
       const auditCtx = auditContextFromRequest(req);
 
       const result = await withAuditContext(auditCtx, (client) =>
-        updateScheduleEvent(req.params.id, req.body as Record<string, unknown>, client)
+        updateScheduleEvent(req.params.id, parsed.data as Record<string, unknown>, client)
       );
 
       if (!result) {

@@ -11,6 +11,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import * as logger from "firebase-functions/logger";
+import { z } from "zod";
 import { requireAuth, requireRole } from "../auth/middleware";
 import {
   auditContextFromRequest,
@@ -25,6 +26,24 @@ import {
   checkCapacity,
 } from "../services/venues";
 import type { VenueFilters, VenueType } from "../services/venues";
+
+// --- Validation schemas ---
+
+const venueTypeEnum = z.enum([
+  "ballroom", "meeting_room", "outdoor", "theater", "breakout", "lobby", "other",
+]);
+
+const createVenueSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  type: venueTypeEnum,
+  capacity: z.number().int().nonnegative("Capacity must be a non-negative integer").optional(),
+  floor: z.string().optional(),
+  building: z.string().optional(),
+  equipment: z.array(z.string()).optional(),
+  notes: z.string().optional(),
+});
+
+const updateVenueSchema = createVenueSchema.partial();
 
 // --- Router ---
 
@@ -125,23 +144,15 @@ venueRouter.get("/:id/capacity", async (req: Request, res: Response) => {
 
 venueRouter.post("/", requireRole(10), async (req: Request, res: Response) => {
   try {
-    const { name, type, capacity, floor, building, equipment, notes } = req.body as {
-      name?: string;
-      type?: string;
-      capacity?: number;
-      floor?: string;
-      building?: string;
-      equipment?: string[];
-      notes?: string;
-    };
-
-    if (!name || !type) {
+    const parsed = createVenueSchema.safeParse(req.body);
+    if (!parsed.success) {
       res.status(400).json({
         success: false,
-        error: "name and type are required",
+        error: parsed.error.issues[0].message,
       });
       return;
     }
+    const { name, type, capacity, floor, building, equipment, notes } = parsed.data;
 
     const auditCtx = auditContextFromRequest(req);
 
@@ -188,7 +199,15 @@ venueRouter.post("/", requireRole(10), async (req: Request, res: Response) => {
 venueRouter.put("/:id", requireRole(10), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const updates = req.body as Record<string, unknown>;
+    const parsed = updateVenueSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        success: false,
+        error: parsed.error.issues[0].message,
+      });
+      return;
+    }
+    const updates = parsed.data as Record<string, unknown>;
 
     const auditCtx = auditContextFromRequest(req);
 

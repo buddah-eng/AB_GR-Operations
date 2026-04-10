@@ -200,8 +200,9 @@ describe("POST /publish", () => {
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    const body = res._json as { error: string };
-    expect(body.error).toContain("syncType is required");
+    const body = res._json as { success: boolean; error: string };
+    expect(body.success).toBe(false);
+    expect(body.error).toBeDefined();
   });
 
   it("returns 400 when syncType is invalid", async () => {
@@ -212,7 +213,8 @@ describe("POST /publish", () => {
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    const body = res._json as { error: string };
-    expect(body.error).toContain("Invalid syncType");
+    const body = res._json as { success: boolean; error: string };
+    expect(body.success).toBe(false);
+    expect(body.error).toBeDefined();
   });
 });

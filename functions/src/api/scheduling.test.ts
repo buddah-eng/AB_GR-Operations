@@ -226,7 +226,12 @@ describe("Scheduling API Router", () => {
 
       const res = await request(app)
         .post("/api/scheduling")
-        .send({ name: "New Session", venue_id: "v1", start_time: "2024-06-15T09:00:00Z", end_time: "2024-06-15T11:00:00Z" });
+        .send({
+          name: "New Session",
+          venue_id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+          start_time: "2024-06-15T09:00:00Z",
+          end_time: "2024-06-15T11:00:00Z",
+        });
 
       expect(res.status).toBe(201);
       expect(res.body.data.name).toBe("New Session");
@@ -243,7 +248,12 @@ describe("Scheduling API Router", () => {
 
       const res = await request(app)
         .post("/api/scheduling")
-        .send({ name: "Overlap Session", venue_id: "v1", start_time: "2024-06-15T09:00:00Z", end_time: "2024-06-15T11:00:00Z" });
+        .send({
+          name: "Overlap Session",
+          venue_id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+          start_time: "2024-06-15T09:00:00Z",
+          end_time: "2024-06-15T11:00:00Z",
+        });
 
       expect(res.status).toBe(201);
       expect(res.body.conflicts).toHaveLength(1);

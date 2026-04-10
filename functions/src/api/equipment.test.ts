@@ -229,7 +229,13 @@ describe("POST /checkout", () => {
     expect(res.status).toHaveBeenCalledWith(400);
   });
 
-  it("returns 400 when dueBackAt is missing", async () => {
+  it("succeeds when dueBackAt is omitted (optional)", async () => {
+    const checkoutResult = {
+      success: true,
+      equipment: { id: "eq-1", name: "Projector", status: "checked_out" },
+    };
+    mockCheckoutEquipment.mockResolvedValueOnce(checkoutResult);
+
     const handler = findHandler("post", "/checkout");
     const req = mockReq({
       body: { equipmentId: "eq-1", staffId: "staff-1" },
@@ -238,7 +244,8 @@ describe("POST /checkout", () => {
 
     await handler(req, res);
 
-    expect(res.status).toHaveBeenCalledWith(400);
+    const body = res._json as { success: boolean };
+    expect(body.success).toBe(true);
   });
 });
 

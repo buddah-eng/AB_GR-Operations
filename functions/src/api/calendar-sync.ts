@@ -11,6 +11,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import * as logger from "firebase-functions/logger";
+import { z } from "zod";
 import { requireAuth, requireRole } from "../auth/middleware";
 import { auditContextFromRequest, logAuditClaim } from "../audit/context";
 import {
@@ -18,6 +19,12 @@ import {
   syncFromGoogleCalendar,
   getSyncState,
 } from "../services/calendar-sync";
+
+// --- Validation schemas ---
+
+const calendarSyncSchema = z.object({
+  department: z.string().min(1, "department is required"),
+});
 
 // --- Router ---
 
@@ -59,15 +66,15 @@ calendarSyncRouter.post(
   requireRole(10),
   async (req: Request, res: Response) => {
     try {
-      const { department } = req.body as { department?: string };
-
-      if (!department) {
+      const parsed = calendarSyncSchema.safeParse(req.body);
+      if (!parsed.success) {
         res.status(400).json({
           success: false,
-          error: "department is required",
+          error: parsed.error.issues[0].message,
         });
         return;
       }
+      const { department } = parsed.data;
 
       const auditCtx = auditContextFromRequest(req);
       await logAuditClaim(auditCtx, "POST /api/calendar-sync/push");
@@ -87,15 +94,15 @@ calendarSyncRouter.post(
   requireRole(10),
   async (req: Request, res: Response) => {
     try {
-      const { department } = req.body as { department?: string };
-
-      if (!department) {
+      const parsed = calendarSyncSchema.safeParse(req.body);
+      if (!parsed.success) {
         res.status(400).json({
           success: false,
-          error: "department is required",
+          error: parsed.error.issues[0].message,
         });
         return;
       }
+      const { department } = parsed.data;
 
       const auditCtx = auditContextFromRequest(req);
       await logAuditClaim(auditCtx, "POST /api/calendar-sync/pull");

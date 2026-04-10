@@ -177,8 +177,6 @@ describe("Volunteer API Router", () => {
     });
 
     it("returns 400 for invalid training status", async () => {
-      mockUpdateTrainingStatus.mockRejectedValueOnce(new Error('Invalid training status: "bogus"'));
-
       const res = await request(app)
         .put("/api/volunteers/v1/training")
         .send({ status: "bogus" });

@@ -11,6 +11,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import * as logger from "firebase-functions/logger";
+import { z } from "zod";
 import { requireAuth, requireRole } from "../auth/middleware";
 import {
   auditContextFromRequest,
@@ -24,6 +25,18 @@ import {
   getOverdueEquipment,
   listEquipmentByVenue,
 } from "../services/equipment";
+
+// --- Validation schemas ---
+
+const checkoutSchema = z.object({
+  equipmentId: z.string().min(1, "equipmentId is required"),
+  staffId: z.string().min(1, "staffId is required"),
+  dueBackAt: z.string().min(1, "dueBackAt is required").optional(),
+});
+
+const returnSchema = z.object({
+  equipmentId: z.string().min(1, "equipmentId is required"),
+});
 
 // --- Router ---
 
@@ -60,24 +73,20 @@ equipmentRouter.post(
   requireRole(10),
   async (req: Request, res: Response) => {
     try {
-      const { equipmentId, staffId, dueBackAt } = req.body as {
-        equipmentId?: string;
-        staffId?: string;
-        dueBackAt?: string;
-      };
-
-      if (!equipmentId || !staffId || !dueBackAt) {
+      const parsed = checkoutSchema.safeParse(req.body);
+      if (!parsed.success) {
         res.status(400).json({
           success: false,
-          error: "equipmentId, staffId, and dueBackAt are required",
+          error: parsed.error.issues[0].message,
         });
         return;
       }
+      const { equipmentId, staffId, dueBackAt } = parsed.data;
 
       const auditCtx = auditContextFromRequest(req);
 
       const result = await withAuditContext(auditCtx, async (client) =>
-        checkoutEquipment(equipmentId, staffId, dueBackAt, client)
+        checkoutEquipment(equipmentId, staffId, dueBackAt ?? new Date().toISOString(), client)
       );
 
       await logAuditClaim(auditCtx, "POST /api/equipment/checkout");
@@ -111,15 +120,15 @@ equipmentRouter.post(
   requireRole(10),
   async (req: Request, res: Response) => {
     try {
-      const { equipmentId } = req.body as { equipmentId?: string };
-
-      if (!equipmentId) {
+      const parsed = returnSchema.safeParse(req.body);
+      if (!parsed.success) {
         res.status(400).json({
           success: false,
-          error: "equipmentId is required",
+          error: parsed.error.issues[0].message,
         });
         return;
       }
+      const { equipmentId } = parsed.data;
 
       const auditCtx = auditContextFromRequest(req);
 
