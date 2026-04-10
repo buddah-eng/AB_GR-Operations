@@ -112,6 +112,13 @@ export function useDemoState() {
     return bookings.map((booking) => {
       const currentStatus = booking.status as string
       const mappedStatus = statusMap[currentStatus] ?? currentStatus
+
+      // Pre-event: show vendor name instead of driver (drivers aren't assigned yet)
+      if (currentTimeState.value === 'pre-event') {
+        const vendor = (booking.vendor as string) ?? 'Transport vendor TBD'
+        return { ...booking, status: mappedStatus, driver: vendor }
+      }
+
       return { ...booking, status: mappedStatus }
     })
   }
