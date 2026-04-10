@@ -1,0 +1,63 @@
+{
+  "departments": [
+    { "Department Name": "Anime" },
+    { "Department Name": "Music" },
+    { "Department Name": "Cosplay" },
+    { "Department Name": "Panels" },
+    { "Department Name": "Gaming" },
+    { "Department Name": "Artists" },
+    { "Department Name": "Industry" },
+    { "Department Name": "To Be Determined" }
+  ],
+  "roles": [
+    { "Role Name": "Main Liaison" },
+    { "Role Name": "Backup Liaison" },
+    { "Role Name": "Interpreter" },
+    { "Role Name": "Security Escort" },
+    { "Role Name": "Department Head" },
+    { "Role Name": "Volunteer" }
+  ],
+  "eventTypes": [
+    { "Type Name": "Panel" },
+    { "Type Name": "Autograph Session" },
+    { "Type Name": "Photo Op" },
+    { "Type Name": "Meal" },
+    { "Type Name": "Meet & Greet" },
+    { "Type Name": "Interview" },
+    { "Type Name": "Rehearsal" },
+    { "Type Name": "Photoshoot" },
+    { "Type Name": "Other" }
+  ],
+  "venues": [
+    { "Venue Name": "Main Events Hall A" },
+    { "Venue Name": "Main Events Hall B" },
+    { "Venue Name": "Panel Room 1" },
+    { "Venue Name": "Panel Room 2" },
+    { "Venue Name": "Autograph Hall" },
+    { "Venue Name": "Green Room" },
+    { "Venue Name": "Press Room" },
+    { "Venue Name": "Restaurant (Sheraton Hotel)" }
+  ],
+  "prepTemplates": [
+    { "Template Name": "JP Guest Standard", "items": 10 },
+    { "Template Name": "NA Guest Standard", "items": 8 },
+    { "Template Name": "Industry Guest", "items": 6 },
+    { "Template Name": "Performer", "items": 12 }
+  ],
+  "constraints": [
+    { "Constraint": "Max 2 panels per guest per day" },
+    { "Constraint": "30 min buffer between guest events" },
+    { "Constraint": "Interpreter cannot be double-booked" },
+    { "Constraint": "Meals must be scheduled for all guests" }
+  ],
+  "convention": {
+    "name": "Anime Boston 2026",
+    "startDate": "2026-04-03",
+    "endDate": "2026-04-05",
+    "venue": "Hynes Convention Center & Sheraton Boston Hotel",
+    "logoUrl": "/placeholder-logo.svg",
+    "city": "Boston, MA",
+    "website": "https://www.animeboston.com",
+    "year": 2026
+  }
+}

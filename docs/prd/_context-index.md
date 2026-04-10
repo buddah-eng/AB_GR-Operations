@@ -35,6 +35,9 @@ to decide if you need to load the full document.
 | Deferred Backlog | `process/deferred-backlog.md` | Living tracker for deferred acceptance criteria with gate conditions. Checked at every phase start. Met gates become requirements. | `process`, `deferred`, `gate`, `tracking` | living |
 | User Language Standard | `process/user-language-standard.md` | Property.label is single source of truth for user-facing text. Terminology translation table. Error message standards. Role-specific language. | `process`, `ux`, `language`, `terminology` | done |
 | UX Checklist | `process/ux-checklist.md` | Every screen: 4 questions, empty states, loading states, error handling, accessibility, feedback. Verified during acceptance gate. | `process`, `ux`, `accessibility`, `verification` | done |
+| Demo Data Integrity | `process/demo-data-integrity.md` | Zero orphan references across seed data. Forward/backward checks. Name/type/temporal consistency. | `process`, `demo`, `data-quality` | done |
+| Demo Narrative Quality | `process/demo-narrative-quality.md` | Pre/during/post-event stories coherent and emotionally resonant. Canvas "aha" moment. | `process`, `demo`, `narrative` | done |
+| Demo Visual Impact | `process/demo-visual-impact.md` | 30-second test, mobile, AB branding, navigation completeness, canvas wow. | `process`, `demo`, `visual`, `ux` | done |
 
 ### Platform
 

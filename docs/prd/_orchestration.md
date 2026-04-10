@@ -17,6 +17,9 @@ These are not features. They are mandatory verification procedures that run afte
 | `process/deferred-backlog.md` | Living tracker for deferred acceptance criteria. Each has a gate condition. Gates checked at phase start. Met gates become current-phase requirements. | At phase start and when deferring |
 | `process/user-language-standard.md` | Terminology translation table. Property.label is the single source of truth for user-facing text. No jargon. Referenced by all UI PRDs. | When implementing any user-facing text |
 | `process/ux-checklist.md` | Every screen answers 4 questions + empty states + loading + errors + a11y + feedback. Checked during acceptance gate. | When implementing any UI screen |
+| `process/demo-data-integrity.md` | Zero orphan references across seed data. Forward/backward reference checks. Name/type/temporal consistency. | Before shipping any demo build |
+| `process/demo-narrative-quality.md` | Pre/during/post-event stories are coherent and emotionally resonant. Canvas walkthrough produces "aha" moment. | Before shipping any demo build |
+| `process/demo-visual-impact.md` | 30-second test, mobile responsiveness, AB branding authenticity, navigation completeness, canvas "wow" moment. | Before shipping any demo build |
 
 **These are not optional.** A phase cannot be declared complete unless all 7 process PRDs are satisfied. The phase-completion protocol is the final gate — it runs in cycles until a complete cycle finds zero issues. Any deferred items must be in the backlog with gate conditions.
 
@@ -206,6 +209,7 @@ Depends on all above (reads everything to produce build plan + risk analysis).
 |-----|------|------------|
 | `rollout/roadmap.md` | Dependency-ordered build plan, parallel work streams, milestones | All PRDs |
 | `rollout/risk-register.md` | Threats, mitigations, contingencies | All PRDs |
+| `platform/demo-showcase.md` | GitHub Pages demo — actual app with mocked API, seeded AB data, 3 temporal views + canvas walkthrough | All implementation phases |
 
 ---
 

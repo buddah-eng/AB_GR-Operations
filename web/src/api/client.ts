@@ -1,5 +1,10 @@
-import { auth } from '@/firebase'
 import type { ApiResponse } from '@/types'
+
+/* ------------------------------------------------------------------ */
+/*  Demo mode detection                                                */
+/* ------------------------------------------------------------------ */
+
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true'
 
 /* ------------------------------------------------------------------ */
 /*  Concurrency-limited API client with Firebase Auth ID tokens        */
@@ -35,6 +40,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
     }
   }
 
+  const { auth } = await import('@/firebase')
   const currentUser = auth.currentUser
   if (!currentUser) {
     throw new Error('No authenticated user')
@@ -102,7 +108,7 @@ function enqueue<T>(
 }
 
 /* ------------------------------------------------------------------ */
-/*  Public API                                                         */
+/*  Real API (HTTP client)                                             */
 /* ------------------------------------------------------------------ */
 
 function get<T>(path: string): Promise<T> {
@@ -125,11 +131,15 @@ function del<T>(path: string): Promise<T> {
  * Legacy call method for backward compatibility with GAS-style endpoints.
  * Sends { action, params, email } as the request body.
  */
-function call<T>(
+async function call<T>(
   action: string,
   params?: Record<string, unknown>,
 ): Promise<T> {
-  const email = DEV_BYPASS ? 'dev@localhost' : (auth.currentUser?.email ?? '')
+  let email = 'dev@localhost'
+  if (!DEV_BYPASS) {
+    const { auth } = await import('@/firebase')
+    email = auth.currentUser?.email ?? ''
+  }
 
   return enqueue<T>('POST', '/api/action', {
     action,
@@ -142,7 +152,61 @@ function getActiveCount(): number {
   return activeCount
 }
 
-export const api = { get, post, put, del, call, getActiveCount }
+const realClient = { get, post, put, del, call, getActiveCount }
+
+/* ------------------------------------------------------------------ */
+/*  Export: demo client or real client based on env                     */
+/* ------------------------------------------------------------------ */
+
+async function loadDemoClient(): Promise<typeof realClient> {
+  const { demoClient } = await import('@/demo/demo-client')
+  return demoClient
+}
+
+/** Resolved client singleton — lazily loads demo client if needed */
+let resolvedClient: typeof realClient | null = null
+
+function getClient(): typeof realClient {
+  if (resolvedClient) return resolvedClient
+
+  // In demo mode, the demo client is loaded synchronously at init time
+  // (see initDemoClient below). Before that, return real client as fallback.
+  return realClient
+}
+
+/** Call once at app startup (in main.ts) to eagerly load the demo client */
+export async function initDemoClient(): Promise<void> {
+  if (DEMO_MODE) {
+    resolvedClient = await loadDemoClient()
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Public API — proxy through resolved client                         */
+/* ------------------------------------------------------------------ */
+
+export const api = {
+  get<T>(path: string): Promise<T> {
+    return getClient().get<T>(path)
+  },
+  post<T>(path: string, body?: unknown): Promise<T> {
+    return getClient().post<T>(path, body)
+  },
+  put<T>(path: string, body?: unknown): Promise<T> {
+    return getClient().put<T>(path, body)
+  },
+  del<T>(path: string): Promise<T> {
+    return getClient().del<T>(path)
+  },
+  call<T>(action: string, params?: Record<string, unknown>): Promise<T> {
+    return getClient().call<T>(action, params)
+  },
+  getActiveCount(): number {
+    return getClient().getActiveCount()
+  },
+}
+
+export const isDemoMode = DEMO_MODE
 
 /** @deprecated Use named import `api` instead */
-export const GrApi = { call, getActiveCount }
+export const GrApi = { call: api.call, getActiveCount: api.getActiveCount }
