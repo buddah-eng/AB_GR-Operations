@@ -1,11 +1,11 @@
 <template>
-  <div class="flex min-h-screen bg-ab-50">
+  <div class="flex min-h-screen bg-primary-50">
     <!-- Sidebar -->
     <aside
       :class="[
         'fixed left-0 top-0 h-full flex flex-col z-40',
         'transition-all duration-200 overflow-hidden',
-        'bg-gradient-to-b from-ab-600 to-ab-800 text-white',
+        'bg-gradient-to-b from-primary-600 to-primary-800 text-white',
         sidebarVisible ? 'w-60' : 'w-0',
         'lg:translate-x-0 lg:w-60',
       ]"
@@ -13,13 +13,13 @@
       <!-- Brand header with logo -->
       <div class="px-4 py-3 border-b border-white/15 flex items-center gap-3">
         <img
-          src="/ab-logo.jpg"
-          alt="Anime Boston 2026"
+          :src="appStore.conventionLogoUrl"
+          :alt="appStore.conventionName"
           class="w-10 h-10 rounded-lg object-cover shadow-md shrink-0"
         />
         <div>
           <div class="text-sm font-bold tracking-wide font-display text-white">GR-Ops</div>
-          <div class="text-[10px] text-accent-300 uppercase tracking-widest font-semibold">Anime Boston 2026</div>
+          <div class="text-[10px] text-accent-300 uppercase tracking-widest font-semibold">{{ appStore.conventionName }}</div>
         </div>
       </div>
 

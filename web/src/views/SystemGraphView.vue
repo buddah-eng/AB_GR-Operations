@@ -3,7 +3,7 @@
     <!-- Header row -->
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <i class="pi pi-share-alt text-xl text-ab-500" />
+        <i class="pi pi-share-alt text-xl text-primary-500" />
         <h1 class="font-display text-2xl font-bold tracking-tight text-surface-900">
           System Graph
         </h1>
@@ -17,7 +17,7 @@
             :class="[
               'px-3 py-1.5 text-xs font-medium transition-colors',
               canvasStore.zoomLevel === level.value
-                ? 'bg-ab-500 text-white'
+                ? 'bg-primary-500 text-white'
                 : 'bg-white text-surface-600 hover:bg-surface-50',
             ]"
             :title="level.label"

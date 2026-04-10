@@ -3,7 +3,7 @@
     :class="[
       'action-node rounded-lg border-2 shadow-sm px-4 py-3 min-w-[200px] cursor-pointer bg-white',
       'transition-all duration-150 hover:shadow-md relative',
-      selected ? 'ring-2 ring-ab-200' : '',
+      selected ? 'ring-2 ring-primary-200' : '',
     ]"
     :style="{ borderColor: borderColor }"
   >

@@ -6,7 +6,7 @@
         :class="[
           'px-3 py-1.5 text-xs font-medium transition-colors',
           canvasStore.mode === 'view'
-            ? 'bg-ab-500 text-white'
+            ? 'bg-primary-500 text-white'
             : 'bg-white text-surface-600 hover:bg-surface-50',
         ]"
         title="View mode"
@@ -20,7 +20,7 @@
         :class="[
           'px-3 py-1.5 text-xs font-medium transition-colors',
           canvasStore.mode === 'edit'
-            ? 'bg-ab-500 text-white'
+            ? 'bg-primary-500 text-white'
             : 'bg-white text-surface-600 hover:bg-surface-50',
         ]"
         title="Edit mode"
@@ -37,7 +37,7 @@
     <!-- Layout selector -->
     <select
       :value="canvasStore.layout"
-      class="text-xs border border-surface-200 rounded-md px-2 py-1.5 bg-white text-surface-700 focus:outline-none focus:ring-1 focus:ring-ab-400"
+      class="text-xs border border-surface-200 rounded-md px-2 py-1.5 bg-white text-surface-700 focus:outline-none focus:ring-1 focus:ring-primary-400"
       @change="handleLayoutChange"
     >
       <option value="force-directed">Force Directed</option>
@@ -89,7 +89,7 @@
         :value="canvasStore.searchQuery"
         type="text"
         placeholder="Search nodes..."
-        class="text-xs border border-surface-200 rounded-md pl-7 pr-3 py-1.5 bg-white text-surface-700 w-40 focus:outline-none focus:ring-1 focus:ring-ab-400"
+        class="text-xs border border-surface-200 rounded-md pl-7 pr-3 py-1.5 bg-white text-surface-700 w-40 focus:outline-none focus:ring-1 focus:ring-primary-400"
         @input="handleSearch"
       />
     </div>

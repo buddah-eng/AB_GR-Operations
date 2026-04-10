@@ -8,36 +8,36 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Source Sans 3"', 'system-ui', 'sans-serif'],
-        display: ['"Nunito"', 'system-ui', 'sans-serif'],
+        sans: ['"Lato"', 'system-ui', 'sans-serif'],
+        display: ['"M PLUS 1"', 'system-ui', 'sans-serif'],
       },
       colors: {
-        /* AB steel-blue brand scale (extracted from Koinobori poster + logo) */
-        ab: {
-          950: '#1A3A5C',  /* --ab-ink: deepest text */
-          900: '#234B72',
-          800: '#2D6A9F',  /* --ab-deep */
-          700: '#3A7DB5',
-          600: '#4A90C4',  /* --ab-blue: primary brand */
-          500: '#5BA8D9',  /* --ab-sky */
-          400: '#7ABDE3',
-          300: '#9BD0EC',
-          200: '#B8DFF0',  /* --ab-ice */
-          100: '#D6EDF7',
-          50: '#F0F5FA',   /* --ab-cloud: page bg */
+        /* Primary — slate blue (neutral default, overridden by .theme-ab) */
+        primary: {
+          950: process.env.VITE_PRIMARY_950 ?? '#020617',
+          900: process.env.VITE_PRIMARY_900 ?? '#0f172a',
+          800: process.env.VITE_PRIMARY_800 ?? '#1e293b',
+          700: process.env.VITE_PRIMARY_700 ?? '#334155',
+          600: process.env.VITE_PRIMARY_600 ?? '#475569',
+          500: process.env.VITE_PRIMARY_500 ?? '#64748b',
+          400: process.env.VITE_PRIMARY_400 ?? '#94a3b8',
+          300: process.env.VITE_PRIMARY_300 ?? '#cbd5e1',
+          200: process.env.VITE_PRIMARY_200 ?? '#e2e8f0',
+          100: process.env.VITE_PRIMARY_100 ?? '#f1f5f9',
+          50: process.env.VITE_PRIMARY_50 ?? '#f8fafc',
         },
-        /* Orange/amber accent (koinobori fish + logo O-eyes) */
+        /* Accent — warm amber (neutral default, overridden by .theme-ab) */
         accent: {
-          50: '#FFF8ED',
-          100: '#FFEFD4',
-          200: '#FFD9A0',
-          300: '#F0AC40',  /* --ab-amber */
-          400: '#E8962D',  /* --ab-orange: primary accent */
-          500: '#D4820F',
-          600: '#B86D08',
-          700: '#9A5A06',
-          800: '#7C4805',
-          900: '#5E3604',
+          50: process.env.VITE_ACCENT_50 ?? '#fffbeb',
+          100: process.env.VITE_ACCENT_100 ?? '#fef3c7',
+          200: process.env.VITE_ACCENT_200 ?? '#fde68a',
+          300: process.env.VITE_ACCENT_300 ?? '#fcd34d',
+          400: process.env.VITE_ACCENT_400 ?? '#fbbf24',
+          500: process.env.VITE_ACCENT_500 ?? '#f59e0b',
+          600: process.env.VITE_ACCENT_600 ?? '#d97706',
+          700: process.env.VITE_ACCENT_700 ?? '#b45309',
+          800: process.env.VITE_ACCENT_800 ?? '#92400e',
+          900: process.env.VITE_ACCENT_900 ?? '#78350f',
         },
         /* Neutral surface — clean white/gray for a11y workspace areas */
         surface: {

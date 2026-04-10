@@ -3,7 +3,7 @@
     <!-- Toolbar -->
     <div class="shrink-0 flex items-center justify-between px-4 py-3 border-b border-surface-200 bg-white">
       <div class="flex items-center gap-3">
-        <i class="pi pi-sitemap text-ab-500" />
+        <i class="pi pi-sitemap text-primary-500" />
         <InputText
           v-model="workflowName"
           placeholder="Workflow name"
@@ -115,7 +115,7 @@
               :class="[
                 'flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors border',
                 selectedTriggerType === triggerInfo.type
-                  ? 'border-ab-500 bg-ab-50'
+                  ? 'border-primary-500 bg-primary-50'
                   : 'border-surface-200 bg-white hover:border-surface-300',
               ]"
               :aria-label="`Select trigger: ${triggerInfo.label}`"
@@ -265,7 +265,7 @@
             :class="[
               'flex items-center gap-3 px-4 py-3 rounded-lg border-2 cursor-pointer transition-all',
               selectedActionIdx === idx
-                ? 'border-ab-500 bg-white ring-1 ring-ab-200'
+                ? 'border-primary-500 bg-white ring-1 ring-primary-200'
                 : 'border-surface-200 bg-white hover:border-surface-300',
             ]"
             draggable="true"

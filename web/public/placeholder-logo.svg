@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <rect width="200" height="200" rx="24" fill="#475569"/>
+  <text x="100" y="90" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="800" font-size="48" fill="#f8fafc">GR</text>
+  <text x="100" y="130" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="600" font-size="28" fill="#fbbf24">OPS</text>
+</svg>

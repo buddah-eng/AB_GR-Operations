@@ -3,7 +3,7 @@
     <!-- Header row -->
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <i class="pi pi-arrows-h text-xl text-ab-500" />
+        <i class="pi pi-arrows-h text-xl text-primary-500" />
         <h1 class="font-display text-2xl font-bold tracking-tight text-surface-900">
           Data Flow Canvas
         </h1>

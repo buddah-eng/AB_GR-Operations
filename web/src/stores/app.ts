@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { api } from '@/api/client'
 import type { Toast, ConfigData } from '@/types'
 
@@ -52,10 +52,11 @@ const DEFAULT_CONFIG: ConfigData = {
   prepTemplates: [],
   constraints: [],
   convention: {
-    name: 'Anime Boston 2026',
-    startDate: '2026-03-20',
-    endDate: '2026-03-22',
-    venue: 'Hynes Convention Center',
+    name: 'Convention',
+    startDate: '',
+    endDate: '',
+    venue: '',
+    logoUrl: '/placeholder-logo.svg',
   },
 }
 
@@ -72,6 +73,16 @@ export const useAppStore = defineStore('app', () => {
 
   let toastId = 0
   const toastTimers = new Map<number, ReturnType<typeof setTimeout>>()
+
+  /* ---- derived ---- */
+
+  const conventionName = computed(() =>
+    String(config.value.convention['name'] ?? 'Convention'),
+  )
+
+  const conventionLogoUrl = computed(() =>
+    String(config.value.convention['logoUrl'] ?? '/placeholder-logo.svg'),
+  )
 
   /* ---- actions ---- */
 
@@ -130,6 +141,8 @@ export const useAppStore = defineStore('app', () => {
     loading,
     sidebarOpen,
     toasts,
+    conventionName,
+    conventionLogoUrl,
     loadConfig,
     saveConfig,
     addToast,

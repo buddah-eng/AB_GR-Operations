@@ -3,7 +3,7 @@
     :class="[
       'concept-node rounded-lg border-2 shadow-sm px-4 py-3 min-w-[160px] cursor-pointer',
       'transition-all duration-150 hover:shadow-md',
-      selected ? 'border-ab-500 ring-2 ring-ab-200' : 'border-surface-300',
+      selected ? 'border-primary-500 ring-2 ring-primary-200' : 'border-surface-300',
     ]"
     :style="{ borderLeftColor: data.departmentColor, borderLeftWidth: '4px' }"
   >

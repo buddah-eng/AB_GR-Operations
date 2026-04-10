@@ -2,7 +2,7 @@
   <Toast position="top-right" />
   <ConfirmDialog />
 
-  <div v-if="authStore.loading" class="flex items-center justify-center min-h-screen bg-ab-50">
+  <div v-if="authStore.loading" class="flex items-center justify-center min-h-screen bg-primary-50">
     <ProgressSpinner
       style="width: 50px; height: 50px"
       strokeWidth="4"

@@ -3,7 +3,7 @@
     <!-- Toolbar -->
     <div class="shrink-0 flex items-center justify-between px-4 py-3 border-b border-surface-200 bg-white">
       <div class="flex items-center gap-3">
-        <i class="pi pi-table text-ab-500" />
+        <i class="pi pi-table text-primary-500" />
         <InputText
           v-model="viewName"
           placeholder="View name"

@@ -3,7 +3,7 @@
     <!-- Toolbar -->
     <div class="shrink-0 flex items-center justify-between px-4 py-3 border-b border-surface-200 bg-white">
       <div class="flex items-center gap-3">
-        <i class="pi pi-pencil text-ab-500" />
+        <i class="pi pi-pencil text-primary-500" />
         <InputText
           v-model="formName"
           placeholder="Form name"
@@ -106,7 +106,7 @@
               'flex items-center gap-2 px-3 py-2 rounded-md text-sm cursor-grab transition-colors',
               isPropertyPlaced(prop.key)
                 ? 'bg-surface-100 text-surface-400'
-                : 'bg-white border border-surface-200 hover:border-ab-300 text-surface-700',
+                : 'bg-white border border-surface-200 hover:border-primary-300 text-surface-700',
             ]"
             draggable="true"
             :aria-label="`Drag ${prop.label} to canvas`"
@@ -149,7 +149,7 @@
             :class="[
               'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm cursor-pointer transition-colors',
               activeSection === sIdx
-                ? 'bg-ab-500 text-white'
+                ? 'bg-primary-500 text-white'
                 : 'bg-surface-100 text-surface-600 hover:bg-surface-200',
             ]"
             @click="activeSection = sIdx"
@@ -201,7 +201,7 @@
             :class="[
               'min-h-[120px] rounded-lg border-2 border-dashed p-4 transition-colors',
               dragOverSection === sIdx
-                ? 'border-ab-400 bg-ab-50'
+                ? 'border-primary-400 bg-primary-50'
                 : 'border-surface-200 bg-white',
               selectedLayout === 'two-column'
                 ? 'grid grid-cols-1 md:grid-cols-2 gap-4'
@@ -218,7 +218,7 @@
               :class="[
                 'flex items-center gap-2 px-3 py-2.5 rounded-md border cursor-pointer transition-all',
                 selectedFieldKey === field.key
-                  ? 'border-ab-500 bg-ab-50 ring-1 ring-ab-200'
+                  ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-200'
                   : 'border-surface-200 bg-surface-50 hover:border-surface-300',
                 selectedLayout === 'two-column' && field.colSpan === 2
                   ? 'md:col-span-2'
