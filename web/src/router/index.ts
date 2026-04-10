@@ -103,6 +103,11 @@ const routes: RouteRecordRaw[] = [
     props: { domain: 'pairings' },
   },
   {
+    path: '/canvas',
+    name: 'canvas',
+    component: () => import('@/views/SystemGraphView.vue'),
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: '/dashboard',
   },

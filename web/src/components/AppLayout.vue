@@ -179,6 +179,7 @@ const navGroups: NavGroup[] = [
   {
     label: 'Platform',
     items: [
+      { label: 'System Graph', icon: 'pi pi-share-alt', to: '/canvas' },
       { label: 'Workflows', icon: 'pi pi-sitemap', to: '/workflows' },
       { label: 'Settings', icon: 'pi pi-cog', to: '/settings' },
     ],

@@ -1,0 +1,251 @@
+<template>
+  <div class="canvas-viewport relative w-full h-full">
+    <VueFlow
+      v-model:nodes="flowNodes"
+      v-model:edges="flowEdges"
+      :node-types="nodeTypes"
+      :edge-types="edgeTypes"
+      :default-viewport="{ x: 0, y: 0, zoom: 1 }"
+      :min-zoom="0.1"
+      :max-zoom="4"
+      :snap-to-grid="true"
+      :snap-grid="[16, 16]"
+      :nodes-draggable="canvasStore.mode === 'edit'"
+      :nodes-connectable="canvasStore.mode === 'edit'"
+      fit-view-on-init
+      @node-click="handleNodeClick"
+      @node-context-menu="handleNodeContextMenu"
+      @pane-click="handlePaneClick"
+    >
+      <!-- Background pattern -->
+      <Background :gap="20" :size="1" pattern-color="#e2e8f0" />
+
+      <!-- Minimap -->
+      <MiniMap
+        :node-color="getMinimapNodeColor"
+        :pannable="true"
+        :zoomable="true"
+        class="!bottom-4 !right-4"
+      />
+
+      <!-- Zoom controls (built-in) -->
+      <Controls :show-interactive="false" class="!bottom-4 !left-4" />
+    </VueFlow>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, watch, markRaw } from 'vue'
+import { VueFlow } from '@vue-flow/core'
+import { Background } from '@vue-flow/background'
+import { Controls } from '@vue-flow/controls'
+import { MiniMap } from '@vue-flow/minimap'
+import type {
+  Node,
+  Edge,
+  NodeMouseEvent,
+  NodeTypesObject,
+  EdgeTypesObject,
+} from '@vue-flow/core'
+
+import { useCanvasStore } from '@/stores/canvas'
+import type {
+  VisualizationNode,
+  VisualizationEdge,
+} from '@/types/canvas'
+
+import ConceptNode from './nodes/ConceptNode.vue'
+import WorkflowNode from './nodes/WorkflowNode.vue'
+import IntegrationNode from './nodes/IntegrationNode.vue'
+import DepartmentRegion from './nodes/DepartmentRegion.vue'
+import RelationshipEdge from './edges/RelationshipEdge.vue'
+import DataFlowEdge from './edges/DataFlowEdge.vue'
+import WorkflowEdge from './edges/WorkflowEdge.vue'
+
+/* ---- Emits ---- */
+
+const emit = defineEmits<{
+  'node-click': [nodeId: string]
+  'node-context-menu': [event: MouseEvent, nodeId: string]
+  'pane-click': []
+}>()
+
+/* ---- Store ---- */
+
+const canvasStore = useCanvasStore()
+
+/* ---- Node & Edge type registration ---- */
+/* Cast via unknown — Vue Flow injects NodeProps at runtime via slots */
+
+const nodeTypes: NodeTypesObject = {
+  concept: markRaw(ConceptNode) as unknown as NodeTypesObject[string],
+  workflow: markRaw(WorkflowNode) as unknown as NodeTypesObject[string],
+  integration: markRaw(IntegrationNode) as unknown as NodeTypesObject[string],
+  department: markRaw(DepartmentRegion) as unknown as NodeTypesObject[string],
+}
+
+const edgeTypes: EdgeTypesObject = {
+  relationship: markRaw(RelationshipEdge) as unknown as EdgeTypesObject[string],
+  data_flow: markRaw(DataFlowEdge) as unknown as EdgeTypesObject[string],
+  workflow: markRaw(WorkflowEdge) as unknown as EdgeTypesObject[string],
+}
+
+/* ---- Flow state ---- */
+
+const flowNodes = ref<Node[]>([])
+const flowEdges = ref<Edge[]>([])
+
+/* ---- Department color palette ---- */
+
+const DEPARTMENT_COLORS: Readonly<Record<string, string>> = {
+  Anime: '#3b82f6',
+  Gaming: '#10b981',
+  Music: '#8b5cf6',
+  Cosplay: '#ec4899',
+  Panels: '#f59e0b',
+  Artists: '#ef4444',
+  Industry: '#6366f1',
+  'To Be Determined': '#94a3b8',
+}
+
+function getDepartmentColor(region?: string): string {
+  if (!region) return '#64748b'
+  return DEPARTMENT_COLORS[region] ?? '#64748b'
+}
+
+/* ---- Auto-layout: simple grid ---- */
+
+function computeGridPosition(index: number): { x: number; y: number } {
+  const cols = 4
+  const gapX = 280
+  const gapY = 180
+  return {
+    x: (index % cols) * gapX + 40,
+    y: Math.floor(index / cols) * gapY + 40,
+  }
+}
+
+/* ---- Transform visualization data to Vue Flow nodes/edges ---- */
+
+function toFlowNode(vNode: VisualizationNode, index: number): Node {
+  const pos = vNode.position ?? computeGridPosition(index)
+  const departmentColor = getDepartmentColor(vNode.region)
+
+  const dataMap: Record<string, unknown> = {
+    concept: {
+      label: vNode.label,
+      icon: String(vNode.properties.icon ?? 'pi pi-circle'),
+      propertyCount: Number(vNode.properties.propertyCount ?? 0),
+      departmentColor,
+      sourceId: vNode.sourceId,
+      sourceTable: vNode.sourceTable,
+      properties: vNode.properties,
+    },
+    workflow: {
+      label: vNode.label,
+      sourceId: vNode.sourceId,
+      sourceTable: vNode.sourceTable,
+      properties: vNode.properties,
+    },
+    integration: {
+      label: vNode.label,
+      sourceId: vNode.sourceId,
+      sourceTable: vNode.sourceTable,
+      properties: vNode.properties,
+    },
+    department: {
+      label: vNode.label,
+      color: departmentColor,
+      nodeIds: [],
+    },
+  }
+
+  return {
+    id: vNode.id,
+    type: vNode.type,
+    position: pos,
+    data: dataMap[vNode.type] ?? { label: vNode.label },
+  }
+}
+
+function toFlowEdge(vEdge: VisualizationEdge): Edge {
+  const dataMap: Record<string, unknown> = {
+    relationship: {
+      label: vEdge.label ?? '',
+      cardinality: String(vEdge.properties.cardinality ?? ''),
+      properties: vEdge.properties,
+    },
+    data_flow: {
+      label: vEdge.label ?? '',
+      hasPii: Boolean(vEdge.properties.hasPii),
+      properties: vEdge.properties,
+    },
+    workflow: {
+      label: vEdge.label ?? '',
+      properties: vEdge.properties,
+    },
+  }
+
+  return {
+    id: vEdge.id,
+    type: vEdge.type,
+    source: vEdge.sourceNodeId,
+    target: vEdge.targetNodeId,
+    animated: vEdge.animated ?? vEdge.type === 'data_flow',
+    data: dataMap[vEdge.type] ?? { label: vEdge.label ?? '' },
+  }
+}
+
+/* ---- Watch for graph data changes ---- */
+
+watch(
+  () => canvasStore.visibleEdges,
+  (edges) => {
+    flowEdges.value = edges.map(toFlowEdge)
+  },
+  { immediate: true },
+)
+
+watch(
+  () => canvasStore.filteredNodes,
+  (nodes) => {
+    flowNodes.value = nodes.map(toFlowNode)
+  },
+  { immediate: true },
+)
+
+/* ---- Event handlers ---- */
+
+function handleNodeClick(event: NodeMouseEvent): void {
+  canvasStore.selectNode(event.node.id)
+  emit('node-click', event.node.id)
+}
+
+function handleNodeContextMenu(event: NodeMouseEvent): void {
+  emit('node-context-menu', event.event as MouseEvent, event.node.id)
+}
+
+function handlePaneClick(): void {
+  canvasStore.selectNode(null)
+  emit('pane-click')
+}
+
+/* ---- Minimap helpers ---- */
+
+function getMinimapNodeColor(node: Node): string {
+  if (node.type === 'concept') {
+    return (node.data as { departmentColor?: string }).departmentColor ?? '#64748b'
+  }
+  if (node.type === 'workflow') return '#a855f7'
+  if (node.type === 'integration') return '#0ea5e9'
+  if (node.type === 'department') return '#94a3b8'
+  return '#64748b'
+}
+</script>
+
+<style>
+@import '@vue-flow/core/dist/style.css';
+@import '@vue-flow/core/dist/theme-default.css';
+@import '@vue-flow/controls/dist/style.css';
+@import '@vue-flow/minimap/dist/style.css';
+</style>

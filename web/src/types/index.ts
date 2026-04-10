@@ -240,3 +240,26 @@ export interface NavItem {
   to: string
   badge?: string | number
 }
+
+// ---- Canvas (re-exported from canvas.ts) ----
+
+export type {
+  VisualizationNode,
+  VisualizationEdge,
+  VisualizationRegion,
+  VisualizationGraph,
+  VisualizationGraphMetadata,
+  VisualizationNodeType,
+  VisualizationEdgeType,
+  CanvasMode,
+  CanvasLayoutAlgorithm,
+  ZoomLevel,
+  OverlayType,
+  CanvasState,
+  ConceptNodeData,
+  WorkflowNodeData,
+  IntegrationNodeData,
+  DepartmentRegionData,
+  ContextMenuAction,
+  ContextMenuState,
+} from './canvas'
