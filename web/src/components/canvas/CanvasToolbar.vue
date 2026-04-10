@@ -16,6 +16,7 @@
         View
       </button>
       <button
+        v-if="!isReadOnly"
         :class="[
           'px-3 py-1.5 text-xs font-medium transition-colors',
           canvasStore.mode === 'edit'
@@ -48,8 +49,9 @@
     <!-- Separator -->
     <div class="w-px h-6 bg-surface-200" />
 
-    <!-- Overlay toggles -->
+    <!-- Overlay toggles (gated by RBAC) -->
     <button
+      v-if="visibleOverlays.includes('data_flows')"
       :class="[
         'px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors',
         canvasStore.isOverlayActive('data_flows')
@@ -63,6 +65,7 @@
       Data Flows
     </button>
     <button
+      v-if="visibleOverlays.includes('workflows')"
       :class="[
         'px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors',
         canvasStore.isOverlayActive('workflows')
@@ -135,9 +138,11 @@
 
 <script setup lang="ts">
 import { useCanvasStore } from '@/stores/canvas'
+import { useCanvasRBAC } from '@/composables/useCanvasRBAC'
 import type { CanvasLayoutAlgorithm } from '@/types/canvas'
 
 const canvasStore = useCanvasStore()
+const { isReadOnly, visibleOverlays } = useCanvasRBAC()
 
 defineEmits<{
   'zoom-in': []

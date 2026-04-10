@@ -342,199 +342,12 @@
 
       <!-- Right: Selected action config -->
       <div class="w-80 shrink-0 border-l border-surface-200 bg-white overflow-y-auto">
-        <div v-if="selectedAction" class="p-4 space-y-4">
-          <div class="text-sm font-semibold text-surface-800 pb-2 border-b border-surface-100">
-            {{ getActionTypeLabel(selectedAction.type) }} Configuration
-          </div>
-
-          <!-- Action label -->
-          <div>
-            <label class="text-xs font-medium text-surface-500 block mb-1">
-              Label
-            </label>
-            <InputText
-              v-model="selectedAction.label"
-              :placeholder="getActionTypeLabel(selectedAction.type)"
-              class="w-full"
-            />
-          </div>
-
-          <!-- create_record / update_record -->
-          <template v-if="selectedAction.type === 'create_record' || selectedAction.type === 'update_record'">
-            <div>
-              <label class="text-xs font-medium text-surface-500 block mb-1">
-                Target Concept
-              </label>
-              <Select
-                :model-value="(selectedAction.config['targetConcept'] as string) ?? ''"
-                :options="ontologyStore.concepts"
-                option-label="label"
-                option-value="key"
-                placeholder="Select concept"
-                class="w-full"
-                @update:model-value="(v) => updateActionConfig('targetConcept', v)"
-              />
-            </div>
-          </template>
-
-          <!-- create_records -->
-          <template v-if="selectedAction.type === 'create_records'">
-            <div>
-              <label class="text-xs font-medium text-surface-500 block mb-1">
-                Target Concept
-              </label>
-              <Select
-                :model-value="(selectedAction.config['targetConcept'] as string) ?? ''"
-                :options="ontologyStore.concepts"
-                option-label="label"
-                option-value="key"
-                placeholder="Select concept"
-                class="w-full"
-                @update:model-value="(v) => updateActionConfig('targetConcept', v)"
-              />
-            </div>
-            <div>
-              <label class="text-xs font-medium text-surface-500 block mb-1">
-                Template
-              </label>
-              <InputText
-                :model-value="(selectedAction.config['templateName'] as string) ?? ''"
-                placeholder="Template name"
-                class="w-full"
-                @update:model-value="(v) => updateActionConfig('templateName', v)"
-              />
-            </div>
-          </template>
-
-          <!-- notify -->
-          <template v-if="selectedAction.type === 'notify'">
-            <div>
-              <label class="text-xs font-medium text-surface-500 block mb-1">
-                Recipients (role)
-              </label>
-              <InputText
-                :model-value="(selectedAction.config['recipientRole'] as string) ?? ''"
-                placeholder="e.g. liaison"
-                class="w-full"
-                @update:model-value="(v) => updateActionConfig('recipientRole', v)"
-              />
-            </div>
-            <div>
-              <label class="text-xs font-medium text-surface-500 block mb-1">
-                Template
-              </label>
-              <InputText
-                :model-value="(selectedAction.config['templateName'] as string) ?? ''"
-                placeholder="Notification template name"
-                class="w-full"
-                @update:model-value="(v) => updateActionConfig('templateName', v)"
-              />
-            </div>
-          </template>
-
-          <!-- call_api -->
-          <template v-if="selectedAction.type === 'call_api'">
-            <div>
-              <label class="text-xs font-medium text-surface-500 block mb-1">
-                Integration
-              </label>
-              <InputText
-                :model-value="(selectedAction.config['integrationName'] as string) ?? ''"
-                placeholder="Integration name"
-                class="w-full"
-                @update:model-value="(v) => updateActionConfig('integrationName', v)"
-              />
-            </div>
-          </template>
-
-          <!-- generate_doc -->
-          <template v-if="selectedAction.type === 'generate_doc'">
-            <div>
-              <label class="text-xs font-medium text-surface-500 block mb-1">
-                Template
-              </label>
-              <InputText
-                :model-value="(selectedAction.config['templateName'] as string) ?? ''"
-                placeholder="Document template"
-                class="w-full"
-                @update:model-value="(v) => updateActionConfig('templateName', v)"
-              />
-            </div>
-          </template>
-
-          <!-- sync_calendar -->
-          <template v-if="selectedAction.type === 'sync_calendar'">
-            <div>
-              <label class="text-xs font-medium text-surface-500 block mb-1">
-                Calendar Integration
-              </label>
-              <InputText
-                :model-value="(selectedAction.config['calendarId'] as string) ?? ''"
-                placeholder="Calendar ID"
-                class="w-full"
-                @update:model-value="(v) => updateActionConfig('calendarId', v)"
-              />
-            </div>
-          </template>
-
-          <!-- lookup_registry -->
-          <template v-if="selectedAction.type === 'lookup_registry'">
-            <div>
-              <label class="text-xs font-medium text-surface-500 block mb-1">
-                Source Concept
-              </label>
-              <Select
-                :model-value="(selectedAction.config['sourceConcept'] as string) ?? ''"
-                :options="ontologyStore.concepts"
-                option-label="label"
-                option-value="key"
-                placeholder="Select concept"
-                class="w-full"
-                @update:model-value="(v) => updateActionConfig('sourceConcept', v)"
-              />
-            </div>
-            <div>
-              <label class="text-xs font-medium text-surface-500 block mb-1">
-                Match Field
-              </label>
-              <InputText
-                :model-value="(selectedAction.config['matchField'] as string) ?? ''"
-                placeholder="Field to match on"
-                class="w-full"
-                @update:model-value="(v) => updateActionConfig('matchField', v)"
-              />
-            </div>
-          </template>
-
-          <!-- delete_record -->
-          <template v-if="selectedAction.type === 'delete_record'">
-            <div>
-              <label class="text-xs font-medium text-surface-500 block mb-1">
-                Target Concept
-              </label>
-              <Select
-                :model-value="(selectedAction.config['targetConcept'] as string) ?? ''"
-                :options="ontologyStore.concepts"
-                option-label="label"
-                option-value="key"
-                placeholder="Select concept"
-                class="w-full"
-                @update:model-value="(v) => updateActionConfig('targetConcept', v)"
-              />
-            </div>
-          </template>
-        </div>
-
-        <!-- No action selected -->
-        <div
-          v-else
-          class="flex flex-col items-center justify-center h-full text-surface-400 p-4"
-        >
-          <i class="pi pi-arrow-left text-2xl mb-2" />
-          <p class="text-sm text-center">
-            Click an action in the chain to configure it
-          </p>
-        </div>
+        <ActionConfigPanel
+          :action="selectedAction"
+          :concepts="ontologyStore.concepts"
+          @update:label="(v) => updateActionLabel(v)"
+          @update:config="(k, v) => updateActionConfig(k, v)"
+        />
       </div>
     </div>
   </div>
@@ -562,6 +375,7 @@ import {
 import { useOntologyStore } from '@/stores/ontology'
 import { api } from '@/api/client'
 import ConditionBuilder from '@/components/conditions/ConditionBuilder.vue'
+import ActionConfigPanel from '@/components/builders/ActionConfigPanel.vue'
 
 /* ---- Route & Store ---- */
 
@@ -735,6 +549,17 @@ function updateActionConfig(key: string, value: unknown): void {
   actions.value = actions.value.map((a, i) =>
     i === selectedActionIdx.value
       ? { ...a, config: { ...a.config, [key]: value } }
+      : a,
+  )
+}
+
+function updateActionLabel(value: string): void {
+  if (selectedActionIdx.value === null) return
+  const action = actions.value[selectedActionIdx.value]
+  if (!action) return
+  actions.value = actions.value.map((a, i) =>
+    i === selectedActionIdx.value
+      ? { ...a, label: value }
       : a,
   )
 }

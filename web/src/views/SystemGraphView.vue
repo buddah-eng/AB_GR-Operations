@@ -27,6 +27,33 @@
           </button>
         </div>
 
+        <!-- Undo / Redo -->
+        <Button
+          icon="pi pi-undo"
+          severity="secondary"
+          size="small"
+          :disabled="!canUndo"
+          title="Undo (Ctrl+Z)"
+          @click="undo"
+        />
+        <Button
+          icon="pi pi-replay"
+          severity="secondary"
+          size="small"
+          :disabled="!canRedo"
+          title="Redo (Ctrl+Shift+Z)"
+          @click="redo"
+        />
+
+        <!-- SSE connection indicator -->
+        <span
+          :class="[
+            'inline-block w-2 h-2 rounded-full',
+            sseConnected ? 'bg-green-400' : 'bg-red-400',
+          ]"
+          :title="sseConnected ? 'Live connection active' : 'Disconnected'"
+        />
+
         <Button
           label="Refresh"
           icon="pi pi-refresh"
@@ -181,12 +208,28 @@ import ProgressSpinner from 'primevue/progressspinner'
 
 import CanvasProvider from '@/components/canvas/CanvasProvider.vue'
 import { useCanvasStore } from '@/stores/canvas'
+import { useCanvasConfigBridge } from '@/composables/useCanvasConfigBridge'
 import type { ZoomLevel } from '@/types/canvas'
 
 /* ---- Store & Router ---- */
 
 const canvasStore = useCanvasStore()
 const router = useRouter()
+
+/* ---- Config bridge (SSE + undo/redo) ---- */
+
+const {
+  connectSSE,
+  disconnectSSE,
+  submitEdit,
+  bindKeyboardShortcuts,
+  unbindKeyboardShortcuts,
+  canUndo,
+  canRedo,
+  undo,
+  redo,
+  connected: sseConnected,
+} = useCanvasConfigBridge()
 
 /* ---- Zoom levels ---- */
 
@@ -247,7 +290,23 @@ const contextMenuItems = computed(() => [
     class: 'text-red-600',
     disabled: canvasStore.mode !== 'edit',
     command: () => {
-      // Placeholder: delete node action would go here
+      if (!contextNodeId.value) return
+      const node = canvasStore.graph.nodes.find(
+        (n) => n.id === contextNodeId.value,
+      )
+      if (!node) return
+
+      submitEdit({
+        node: {
+          id: node.id,
+          type: node.sourceTable,
+          department: node.region,
+        },
+        method: 'DELETE',
+        path: `/api/${node.sourceTable}/${node.sourceId}`,
+        optimisticId: crypto.randomUUID(),
+        optimisticData: null,
+      })
     },
   },
 ])
@@ -328,10 +387,14 @@ function handleKeyDown(event: KeyboardEvent): void {
 
 onMounted(() => {
   canvasStore.loadGraph()
+  connectSSE()
+  bindKeyboardShortcuts()
   window.addEventListener('keydown', handleKeyDown)
 })
 
 onUnmounted(() => {
+  disconnectSSE()
+  unbindKeyboardShortcuts()
   window.removeEventListener('keydown', handleKeyDown)
   canvasStore.reset()
 })

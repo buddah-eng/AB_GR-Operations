@@ -30,9 +30,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, provide, watchEffect } from 'vue'
 import { useVueFlow } from '@vue-flow/core'
 import { useCanvasStore } from '@/stores/canvas'
+import { useCanvasRBAC, type CanvasPermissions } from '@/composables/useCanvasRBAC'
 import CanvasToolbar from './CanvasToolbar.vue'
 import CanvasViewport from './CanvasViewport.vue'
 
@@ -47,8 +48,21 @@ const emit = defineEmits<{
 /* ---- Store & Flow ---- */
 
 const canvasStore = useCanvasStore()
+const rbac = useCanvasRBAC()
 const { zoomIn, zoomOut, fitView } = useVueFlow()
 const containerRef = ref<HTMLElement | null>(null)
+
+/* ---- Provide RBAC to children (e.g. CanvasViewport nodes) ---- */
+
+provide<CanvasPermissions>('canvasRBAC', rbac)
+
+/* ---- Enforce read-only: if RBAC says read-only, force view mode ---- */
+
+watchEffect(() => {
+  if (rbac.isReadOnly.value && canvasStore.mode === 'edit') {
+    canvasStore.setMode('view')
+  }
+})
 
 /* ---- Zoom handlers ---- */
 
