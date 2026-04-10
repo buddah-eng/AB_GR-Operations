@@ -128,8 +128,8 @@ function computeDagreLayout(
   g.setDefaultEdgeLabel(() => ({}))
   g.setGraph({
     rankdir: 'TB',
-    nodesep: 80,
-    ranksep: 120,
+    nodesep: 120,
+    ranksep: 160,
     edgesep: 40,
     marginx: 60,
     marginy: 60,

@@ -1,4 +1,11 @@
 <template>
+  <!-- Animated flow path (behind the main edge) -->
+  <path
+    :d="path"
+    class="dataflow-edge__flow-dots"
+    :class="{ 'dataflow-edge__flow-dots--pii': hasPii }"
+    fill="none"
+  />
   <BaseEdge
     :id="id"
     :path="path"
@@ -15,6 +22,9 @@
       }"
       :class="['dataflow-edge-label', hasPii ? 'dataflow-edge-label--pii' : 'dataflow-edge-label--normal']"
     >
+      <span v-if="hasPii" class="dataflow-edge-label__lock">
+        <i class="pi pi-lock" />
+      </span>
       <span v-if="hasPii" class="dataflow-edge-label__shield">
         <i class="pi pi-shield" />
       </span>
@@ -66,13 +76,39 @@ const labelText = computed(() => props.data?.label ?? '')
 const hasPii = computed(() => props.data?.hasPii ?? false)
 
 const edgeStyle = computed(() => ({
-  stroke: hasPii.value ? 'var(--color-error)' : 'var(--accent-500)',
+  stroke: hasPii.value ? 'var(--color-error)' : 'var(--accent-600)',
   strokeWidth: 2,
   strokeDasharray: '6 4',
+  opacity: 0.85,
 }))
 </script>
 
 <style scoped>
+/* Flowing dots animation along the edge path */
+.dataflow-edge__flow-dots {
+  stroke: var(--accent-400);
+  stroke-width: 3;
+  stroke-dasharray: 4 12;
+  stroke-dashoffset: 0;
+  stroke-linecap: round;
+  opacity: 0.5;
+  animation: dataflow-pulse 1.8s linear infinite;
+}
+
+.dataflow-edge__flow-dots--pii {
+  stroke: var(--color-error);
+  opacity: 0.4;
+}
+
+@keyframes dataflow-pulse {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
 .dataflow-edge-label {
   border-radius: var(--radius-md);
   padding: 2px var(--space-2);
@@ -102,6 +138,13 @@ const edgeStyle = computed(() => ({
 .dataflow-edge-label--pii {
   background: var(--color-error-bg);
   border: var(--border-thin) solid var(--color-error-border-accent);
+  color: var(--color-error-text-dark);
+}
+
+.dataflow-edge-label__lock {
+  font-size: 9px;
+  display: flex;
+  align-items: center;
   color: var(--color-error-text-dark);
 }
 

@@ -1,29 +1,32 @@
 <template>
   <div
     :class="['concept-node', 'canvas-node', selected ? 'selected' : '']"
-    :style="{ '--node-accent': data.departmentColor }"
+    :style="nodeStyle"
   >
     <!-- Accent left bar -->
     <div class="concept-node__accent" />
 
     <!-- Header row -->
     <div class="concept-node__header">
-      <i
-        :class="[data.icon || 'pi pi-circle']"
-        class="concept-node__icon"
-      />
+      <div class="concept-node__icon-wrapper">
+        <i
+          :class="[data.icon || 'pi pi-circle']"
+          class="concept-node__icon"
+        />
+      </div>
       <span class="concept-node__label">
         {{ data.label }}
       </span>
     </div>
 
-    <!-- Property count badge -->
+    <!-- Record count badge -->
     <div
       v-if="data.propertyCount > 0"
       class="concept-node__badge-row"
     >
+      <i class="pi pi-database concept-node__badge-icon" />
       <span class="concept-node__badge">
-        {{ data.propertyCount }} {{ data.propertyCount === 1 ? 'property' : 'properties' }}
+        {{ data.propertyCount }} {{ data.propertyCount === 1 ? 'record' : 'records' }}
       </span>
     </div>
 
@@ -38,23 +41,47 @@ import { computed } from 'vue'
 import { Handle, Position, useNode } from '@vue-flow/core'
 import type { ConceptNodeData } from '@/types/canvas'
 
-defineProps<{
+const props = defineProps<{
   data: ConceptNodeData
 }>()
 
 const { node } = useNode()
 const selected = computed(() => node.selected)
+
+const nodeStyle = computed(() => ({
+  '--node-accent': props.data.departmentColor,
+  '--node-accent-light': `${props.data.departmentColor}14`,
+  '--node-accent-gradient': `${props.data.departmentColor}0a`,
+}))
 </script>
 
 <style scoped>
 .concept-node {
   position: relative;
-  background: var(--bg-card);
-  min-width: 180px;
-  padding: var(--space-3) var(--space-4);
-  padding-left: calc(var(--space-4) + 4px);
+  background:
+    linear-gradient(
+      135deg,
+      var(--node-accent-light, rgba(100, 116, 139, 0.08)) 0%,
+      var(--node-accent-gradient, rgba(100, 116, 139, 0.04)) 40%,
+      var(--bg-card) 100%
+    );
+  min-width: 210px;
+  padding: var(--space-4) var(--space-5);
+  padding-left: calc(var(--space-5) + 4px);
+  border-radius: 12px;
   cursor: pointer;
   overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition:
+    box-shadow var(--duration-normal) var(--ease-default),
+    transform var(--duration-normal) var(--ease-default);
+}
+
+.concept-node:hover {
+  box-shadow:
+    0 10px 25px rgba(0, 0, 0, 0.08),
+    0 4px 10px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
 }
 
 .concept-node__accent {
@@ -64,7 +91,7 @@ const selected = computed(() => node.selected)
   bottom: 0;
   width: 4px;
   background: var(--node-accent, var(--primary-400));
-  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  border-radius: 12px 0 0 12px;
   transition: width var(--duration-fast) var(--ease-default);
 }
 
@@ -75,14 +102,24 @@ const selected = computed(() => node.selected)
 .concept-node__header {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-1);
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.concept-node__icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--node-accent-light, rgba(100, 116, 139, 0.1));
+  flex-shrink: 0;
 }
 
 .concept-node__icon {
   font-size: var(--text-sm);
   color: var(--node-accent, var(--primary-400));
-  flex-shrink: 0;
 }
 
 .concept-node__label {
@@ -94,6 +131,7 @@ const selected = computed(() => node.selected)
   text-overflow: ellipsis;
   white-space: nowrap;
   letter-spacing: var(--tracking-tight);
+  line-height: 1.3;
 }
 
 .concept-node__badge-row {
@@ -101,6 +139,12 @@ const selected = computed(() => node.selected)
   align-items: center;
   gap: var(--space-1);
   margin-top: var(--space-1);
+}
+
+.concept-node__badge-icon {
+  font-size: 9px;
+  color: var(--text-muted);
+  opacity: 0.7;
 }
 
 .concept-node__badge {
