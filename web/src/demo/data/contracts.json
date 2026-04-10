@@ -127,5 +127,81 @@
       "merchandiseSplit": "70/30 artist/convention"
     },
     "notes": "Sony Music Japan legal approved. Technical rider attached."
+  },
+  {
+    "contractId": "c-008",
+    "guestId": "g-007-lee",
+    "guestName": "Jordan Lee",
+    "type": "appearance_agreement",
+    "status": "signed",
+    "sentDate": "2026-02-01",
+    "signedDate": "2026-02-15",
+    "expiryDate": "2026-04-30",
+    "terms": {
+      "compensation": "Appearance fee + travel + accommodation",
+      "panels": 3,
+      "autographSessions": 1,
+      "photoOps": 1,
+      "exclusivity": "None"
+    },
+    "notes": "Crunchyroll talent management co-signed."
+  },
+  {
+    "contractId": "c-009",
+    "guestId": "g-009-mori",
+    "guestName": "Takeshi Mori",
+    "type": "industry_agreement",
+    "status": "signed",
+    "sentDate": "2026-01-10",
+    "signedDate": "2026-01-25",
+    "expiryDate": "2026-04-30",
+    "terms": {
+      "compensation": "Travel + accommodation + demo booth",
+      "panels": 1,
+      "autographSessions": 0,
+      "photoOps": 0,
+      "exclusivity": "None",
+      "demoEquipment": "Provided by Bandai Namco"
+    },
+    "notes": "Bandai Namco legal reviewed. Demo equipment shipped separately."
+  },
+  {
+    "contractId": "c-010",
+    "guestId": "g-010-park",
+    "guestName": "Emily Park",
+    "type": "appearance_agreement",
+    "status": "signed",
+    "sentDate": "2026-02-10",
+    "signedDate": "2026-02-28",
+    "expiryDate": "2026-04-30",
+    "terms": {
+      "compensation": "Travel + accommodation",
+      "panels": 0,
+      "autographSessions": 0,
+      "photoOps": 0,
+      "exclusivity": "None",
+      "rehearsalSpace": "Included per technical rider"
+    },
+    "notes": "Choreography workshop contract. Rehearsal space confirmed."
+  },
+  {
+    "contractId": "c-011",
+    "guestId": "g-012-martinez",
+    "guestName": "Luna Martinez",
+    "type": "performance_agreement",
+    "status": "signed",
+    "sentDate": "2026-01-20",
+    "signedDate": "2026-02-05",
+    "expiryDate": "2026-04-30",
+    "terms": {
+      "compensation": "Performance fee + travel + accommodation",
+      "panels": 0,
+      "autographSessions": 0,
+      "photoOps": 0,
+      "exclusivity": "None",
+      "technicalRider": "Grand piano or quality keyboard required",
+      "merchandiseSplit": "80/20 artist/convention"
+    },
+    "notes": "Independent artist, straightforward contract. Technical rider attached."
   }
 ]
