@@ -33,8 +33,8 @@ export interface TransformResult {
 
 /**
  * Applies a sequence of transforms to a record. Each step receives the
- * output of the previous step. If a step fails, the error is logged and
- * the record passes through unchanged.
+ * output of the previous step. If any step fails, the chain halts
+ * immediately and throws — no partial results are produced.
  */
 export function executeTransformChain(
   chain: ReadonlyArray<TransformStep>,
@@ -55,7 +55,7 @@ export function executeTransformChain(
     } catch (err: unknown) {
       const error = err instanceof Error ? err.message : String(err);
       steps.push({ type: step.type, success: false, error });
-      // Record passes through unchanged on error
+      throw new Error(`Transform chain halted at step "${step.type}": ${error}`);
     }
   }
 

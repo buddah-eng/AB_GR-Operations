@@ -42,6 +42,7 @@ import { pipelinesRouter } from "./api/pipelines";
 import { externalConnectionsRouter } from "./api/external-connections";
 import { observabilityRouter } from "./api/observability";
 import { registerPipelineEngine } from "./pipelines/service";
+import { searchRouter } from "./api/search";
 
 // --- Initialize Firebase Admin ---
 
@@ -128,29 +129,7 @@ app.use("/api/pipelines", pipelinesRouter);
 app.use("/api/external-connections", externalConnectionsRouter);
 app.use("/api/observability", observabilityRouter);
 app.get("/api/stream", createSSEHandler());
-app.get("/api/search", async (req, res) => {
-  try {
-    const { search } = await import("./search/service");
-    const q = (req.query.q as string) ?? "";
-    const concepts = req.query.concepts
-      ? (req.query.concepts as string).split(",").map((c) => c.trim())
-      : undefined;
-    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
-    const roleKey = req.role?.roleKey ?? "viewer";
-
-    const result = await search(q, roleKey, concepts, undefined, undefined, limit);
-
-    if (!result.success) {
-      res.status(500).json({ success: false, error: result.error });
-      return;
-    }
-
-    res.json({ success: true, data: result.data });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    res.status(500).json({ success: false, error: `Search failed: ${message}` });
-  }
-});
+app.use("/api/search", searchRouter);
 
 // --- Webhook delivery & workflow engine ---
 

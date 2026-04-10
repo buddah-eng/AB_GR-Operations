@@ -12,6 +12,8 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import * as logger from "firebase-functions/logger";
 import { requireAuth, requireRole } from "../auth/middleware";
+import { auditContextFromRequest, logAuditClaim } from "../audit/context";
+import { emit, createDomainEvent } from "../events/bus";
 import {
   listRules,
   createRule,
@@ -55,6 +57,8 @@ dataQualityRouter.post(
         return;
       }
 
+      const auditCtx = auditContextFromRequest(req);
+
       const rule = await createRule({
         name,
         concept_key,
@@ -62,6 +66,19 @@ dataQualityRouter.post(
         condition,
         severity,
       });
+
+      await logAuditClaim(auditCtx, "POST /api/quality/rules");
+
+      const event = createDomainEvent({
+        eventName: "quality_rule.created",
+        domain: "quality_rule",
+        action: "created",
+        recordId: rule.id,
+        newValues: { name, concept_key, rule_type, severity },
+        triggeredBy: req.user?.email ?? "system",
+        changeSet: auditCtx.changeSet,
+      });
+      await emit(event);
 
       res.status(201).json({ success: true, data: rule });
     } catch (err: unknown) {
@@ -92,6 +109,8 @@ dataQualityRouter.put(
   "/violations/:id/resolve",
   async (req: Request, res: Response) => {
     try {
+      const auditCtx = auditContextFromRequest(req);
+
       const violation = await resolveViolation(req.params.id);
 
       if (!violation) {
@@ -101,6 +120,19 @@ dataQualityRouter.put(
         });
         return;
       }
+
+      await logAuditClaim(auditCtx, `PUT /api/quality/violations/${req.params.id}/resolve`);
+
+      const event = createDomainEvent({
+        eventName: "quality_violation.resolved",
+        domain: "quality_violation",
+        action: "updated",
+        recordId: req.params.id,
+        newValues: { resolved: true },
+        triggeredBy: req.user?.email ?? "system",
+        changeSet: auditCtx.changeSet,
+      });
+      await emit(event);
 
       res.json({ success: true, data: violation });
     } catch (err: unknown) {

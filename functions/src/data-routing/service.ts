@@ -111,10 +111,13 @@ export async function executeRoute(
   // 1. Build source record from event data
   const sourceRecord = buildSourceRecord(event);
 
-  // 2. Apply field mappings
-  const mapped = applyFieldMappings(sourceRecord, route.field_mappings);
+  // 2. Apply PII filtering (before transforms to ensure transforms never see PII in strip mode)
+  const filtered = applyPiiMode(sourceRecord, route.pii_mode);
 
-  // 3. Load and apply transform chain if transform_id is set
+  // 3. Apply field mappings
+  const mapped = applyFieldMappings(filtered, route.field_mappings);
+
+  // 4. Load and apply transform chain if transform_id is set
   let transformed = mapped;
   if (route.transform_id) {
     const transform = await getTransformById(route.transform_id);
@@ -124,12 +127,9 @@ export async function executeRoute(
     }
   }
 
-  // 4. Apply PII filtering
-  const filtered = applyPiiMode(transformed, route.pii_mode);
-
   // 5. Write projection record to destination
   const projection = {
-    ...filtered,
+    ...transformed,
     _source_concept: route.source_concept,
     _source_record_id: event.recordId,
     _route_id: route.id,
@@ -370,7 +370,7 @@ export async function updateRoute(
  */
 export async function deleteRoute(id: string): Promise<boolean> {
   const result = await query(
-    "DELETE FROM data_routes WHERE id = $1",
+    "UPDATE data_routes SET active = false, updated_at = now() WHERE id = $1",
     [id]
   );
 

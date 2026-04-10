@@ -289,17 +289,28 @@ describe("aggregate", () => {
 // ============================================================
 
 describe("error handling", () => {
-  it("passes record through on unknown transform type", () => {
+  it("throws and halts on unknown transform type", () => {
     const chain: TransformStep[] = [
       { type: "nonexistent" as string, config: {} },
     ];
     const record = { name: "Alice" };
 
-    const result = executeTransformChain(chain, record);
+    expect(() => executeTransformChain(chain, record)).toThrow(
+      'Transform chain halted at step "nonexistent"'
+    );
+  });
 
-    expect(result.record).toEqual({ name: "Alice" });
-    expect(result.steps[0].success).toBe(false);
-    expect(result.steps[0].error).toContain("Unknown transform type");
+  it("halts chain on first error without processing subsequent steps", () => {
+    const chain: TransformStep[] = [
+      { type: "static", config: { fields: { added: true } } },
+      { type: "nonexistent" as string, config: {} },
+      { type: "static", config: { fields: { should_not_appear: true } } },
+    ];
+    const record = { name: "Alice" };
+
+    expect(() => executeTransformChain(chain, record)).toThrow(
+      "Transform chain halted"
+    );
   });
 });
 

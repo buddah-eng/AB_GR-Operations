@@ -11,6 +11,8 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import * as logger from "firebase-functions/logger";
 import { requireAuth, requireRole } from "../auth/middleware";
+import { auditContextFromRequest, logAuditClaim } from "../audit/context";
+import { emit, createDomainEvent } from "../events/bus";
 import {
   getAccessLog,
   detectAnomalousAccess,
@@ -57,7 +59,26 @@ dataSecurityRouter.post(
   "/anonymize/:concept/:id",
   async (req: Request, res: Response) => {
     try {
+      const auditCtx = auditContextFromRequest(req);
+
       const result = await anonymizeRecord(req.params.concept, req.params.id);
+
+      await logAuditClaim(
+        auditCtx,
+        `POST /api/security/anonymize/${req.params.concept}/${req.params.id}`
+      );
+
+      const event = createDomainEvent({
+        eventName: "security.record_anonymized",
+        domain: "security",
+        action: "updated",
+        recordId: req.params.id,
+        newValues: { concept: req.params.concept, ...result },
+        triggeredBy: req.user?.email ?? "system",
+        changeSet: auditCtx.changeSet,
+      });
+      await emit(event);
+
       res.json({ success: true, data: result });
     } catch (err: unknown) {
       handleError(res, err, "anonymizing record");
