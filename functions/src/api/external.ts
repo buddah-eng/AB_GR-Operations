@@ -9,7 +9,7 @@
  *   POST   /api/external/driver/pickup/transition — status transition
  *
  * Auth: X-Guest-Token / X-Driver-Token headers, SHA-256 hash lookup.
- * Rate limit: 30 req/min per IP.
+ * Rate limit: 10 req/min per token (falls back to per-IP when no token).
  */
 
 import { Router } from "express";
@@ -75,16 +75,22 @@ interface RateLimitEntry {
 }
 
 const rateLimitStore = new Map<string, RateLimitEntry>();
-const RATE_LIMIT_MAX = 30;
+const RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_WINDOW_MS = 60_000;
 
 function rateLimit(req: Request, res: Response, next: NextFunction): void {
-  const ip = req.ip ?? req.socket.remoteAddress ?? "unknown";
+  // Use token hash as the rate-limit key when a token is present, otherwise fall back to IP
+  const guestToken = req.headers["x-guest-token"] as string | undefined;
+  const driverToken = req.headers["x-driver-token"] as string | undefined;
+  const token = guestToken ?? driverToken;
+  const key = token
+    ? hashToken(token)
+    : (req.ip ?? req.socket.remoteAddress ?? "unknown");
   const now = Date.now();
-  const existing = rateLimitStore.get(ip);
+  const existing = rateLimitStore.get(key);
 
   if (!existing || now - existing.windowStart > RATE_LIMIT_WINDOW_MS) {
-    rateLimitStore.set(ip, { count: 1, windowStart: now });
+    rateLimitStore.set(key, { count: 1, windowStart: now });
     next();
     return;
   }
@@ -94,7 +100,7 @@ function rateLimit(req: Request, res: Response, next: NextFunction): void {
     return;
   }
 
-  rateLimitStore.set(ip, {
+  rateLimitStore.set(key, {
     count: existing.count + 1,
     windowStart: existing.windowStart,
   });
@@ -514,6 +520,10 @@ externalRouter.post(
 // Shared Helpers
 // ============================================================================
 
+// Status names differ from PRD (booked->confirmed, driver_en_route->dispatched)
+// per implementation decision — clearer naming
+// Full chain: requested -> confirmed -> dispatched -> waiting -> picked_up -> dropped_off
+// Driver endpoints only expose the waiting -> picked_up -> dropped_off portion
 const VALID_TRANSITIONS: Readonly<Record<string, string>> = {
   waiting: "picked_up",
   picked_up: "dropped_off",
@@ -529,7 +539,7 @@ async function resolveGuestSession(
 ): Promise<GuestFormSession | null> {
   const token = req.headers["x-guest-token"] as string | undefined;
   if (!token) {
-    res.status(401).json({ error: "unauthorized" });
+    res.status(403).json({ error: "forbidden" });
     return null;
   }
 
@@ -540,7 +550,7 @@ async function resolveGuestSession(
   );
 
   if (result.rows.length === 0) {
-    res.status(401).json({ error: "unauthorized" });
+    res.status(403).json({ error: "forbidden" });
     return null;
   }
 
@@ -561,7 +571,7 @@ async function resolveDriverSession(
 ): Promise<DriverSession | null> {
   const token = req.headers["x-driver-token"] as string | undefined;
   if (!token) {
-    res.status(401).json({ error: "unauthorized" });
+    res.status(403).json({ error: "forbidden" });
     return null;
   }
 
@@ -572,7 +582,7 @@ async function resolveDriverSession(
   );
 
   if (result.rows.length === 0) {
-    res.status(401).json({ error: "unauthorized" });
+    res.status(403).json({ error: "forbidden" });
     return null;
   }
 

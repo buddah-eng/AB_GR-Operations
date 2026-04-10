@@ -5,7 +5,7 @@
  * - Guest form: GET prefill, PUT partial save, POST submit
  * - Driver pickup: GET bookings, POST status transitions
  * - Token auth: valid, invalid, expired tokens
- * - Rate limiting: 30 req/min threshold
+ * - Rate limiting: 10 req/min threshold
  * - Edge cases: already submitted, missing fields, unassigned booking
  */
 
@@ -253,7 +253,7 @@ describe("GET /guest-form", () => {
     expect(body.data.prefill.airline).toBe("Delta");
   });
 
-  it("returns 401 with invalid token", async () => {
+  it("returns 403 with invalid token", async () => {
     mockQuery.mockResolvedValueOnce({ rows: [] });
 
     const req = mockReq({ headers: { "x-guest-token": "bad-token" } });
@@ -261,23 +261,23 @@ describe("GET /guest-form", () => {
 
     await handler(req, res);
 
-    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.status).toHaveBeenCalledWith(403);
     const body = res._json as { error: string };
-    expect(body.error).toBe("unauthorized");
+    expect(body.error).toBe("forbidden");
   });
 
-  it("returns 401 with no token header", async () => {
+  it("returns 403 with no token header", async () => {
     const req = mockReq({ headers: {} });
     const res = mockRes();
 
     await handler(req, res);
 
-    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.status).toHaveBeenCalledWith(403);
     const body = res._json as { error: string };
-    expect(body.error).toBe("unauthorized");
+    expect(body.error).toBe("forbidden");
   });
 
-  it("returns 401 for expired token (no rows returned by query)", async () => {
+  it("returns 403 for expired token (no rows returned by query)", async () => {
     // The query filters expires_at > now(), so expired tokens return 0 rows
     mockQuery.mockResolvedValueOnce({ rows: [] });
 
@@ -286,9 +286,9 @@ describe("GET /guest-form", () => {
 
     await handler(req, res);
 
-    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.status).toHaveBeenCalledWith(403);
     const body = res._json as { error: string };
-    expect(body.error).toBe("unauthorized");
+    expect(body.error).toBe("forbidden");
   });
 });
 
@@ -503,7 +503,7 @@ describe("GET /driver/pickup", () => {
     }
   });
 
-  it("returns 401 with invalid driver token", async () => {
+  it("returns 403 with invalid driver token", async () => {
     mockQuery.mockResolvedValueOnce({ rows: [] });
 
     const req = mockReq({ headers: { "x-driver-token": "bad-driver-token" } });
@@ -511,18 +511,18 @@ describe("GET /driver/pickup", () => {
 
     await handler(req, res);
 
-    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.status).toHaveBeenCalledWith(403);
     const body = res._json as { error: string };
-    expect(body.error).toBe("unauthorized");
+    expect(body.error).toBe("forbidden");
   });
 
-  it("returns 401 when no driver token header is present", async () => {
+  it("returns 403 when no driver token header is present", async () => {
     const req = mockReq({ headers: {} });
     const res = mockRes();
 
     await handler(req, res);
 
-    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.status).toHaveBeenCalledWith(403);
   });
 
   it("returns empty array when driver has no assigned bookings", async () => {
@@ -658,7 +658,7 @@ describe("POST /driver/pickup/transition", () => {
     expect(body.error).toContain("not assigned");
   });
 
-  it("returns 401 with invalid driver token", async () => {
+  it("returns 403 with invalid driver token", async () => {
     mockQuery.mockResolvedValueOnce({ rows: [] });
 
     const req = mockReq({
@@ -669,7 +669,7 @@ describe("POST /driver/pickup/transition", () => {
 
     await handler(req, res);
 
-    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.status).toHaveBeenCalledWith(403);
   });
 });
 
@@ -683,8 +683,8 @@ describe("Rate limiting", () => {
     resetRateLimits();
   });
 
-  it("returns 429 after 30 requests in a 1-minute window", async () => {
-    // Make 30 successful requests (all will return 401 because of bad token, but pass rate limit)
+  it("returns 429 after 10 requests in a 1-minute window", async () => {
+    // Make 10 successful requests (all will return 403 because of bad token, but pass rate limit)
     mockQuery.mockResolvedValue({ rows: [] });
 
     // Find rate limit middleware
@@ -694,8 +694,8 @@ describe("Rate limiting", () => {
       (layer: { name?: string; route?: unknown }) => !layer.route
     );
 
-    // Send 30 requests — all should pass rate limit
-    for (let i = 0; i < 30; i++) {
+    // Send 10 requests — all should pass rate limit
+    for (let i = 0; i < 10; i++) {
       const req = mockReq({
         headers: { "x-guest-token": "test-token" },
         ip: "192.168.1.100",
@@ -707,7 +707,7 @@ describe("Rate limiting", () => {
       expect(passed).toBe(true);
     }
 
-    // 31st request should be rate-limited
+    // 11th request should be rate-limited
     const req = mockReq({
       headers: { "x-guest-token": "test-token" },
       ip: "192.168.1.100",

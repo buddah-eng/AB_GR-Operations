@@ -36,8 +36,17 @@ const generateContractSchema = z.object({
 });
 
 const updateStatusSchema = z.object({
-  status: z.enum(["draft", "sent", "signed", "expired"]),
+  status: z.enum(["draft", "sent", "signed", "countersigned", "expired"]),
 });
+
+// --- Status transition map ---
+
+const CONTRACT_TRANSITIONS: Record<string, string[]> = {
+  draft: ["sent"],
+  sent: ["signed", "expired"],
+  signed: ["countersigned"],
+  // No transitions from expired or countersigned (terminal states)
+};
 
 // --- Router ---
 
@@ -183,6 +192,18 @@ contractsRouter.put(
       }
 
       const previousStatus = currentResult.rows[0].status as string;
+
+      // Validate status transition
+      const allowedNextStatuses = CONTRACT_TRANSITIONS[previousStatus] ?? [];
+      if (!allowedNextStatuses.includes(newStatus)) {
+        res.status(400).json({
+          success: false,
+          error: `Invalid status transition: "${previousStatus}" -> "${newStatus}".`,
+          currentStatus: previousStatus,
+          validTransitions: allowedNextStatuses,
+        });
+        return;
+      }
 
       await withAuditContext(auditCtx, async (client) => {
         const updateFields = newStatus === "signed"

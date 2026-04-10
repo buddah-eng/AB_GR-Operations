@@ -355,6 +355,38 @@ describe("PUT /:id/status", () => {
     expect(res.status).toHaveBeenCalledWith(400);
   });
 
+  it("rejects invalid transition (draft -> signed) with 400", async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: "c-1", status: "draft", guest_id: "g-1" }] });
+
+    const req = mockReq({
+      params: { id: "c-1" },
+      body: { status: "signed" },
+    });
+    const res = mockRes();
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    const body = res._json as { success: boolean; error: string; validTransitions: string[] };
+    expect(body.success).toBe(false);
+    expect(body.error).toContain("Invalid status transition");
+    expect(body.validTransitions).toEqual(["sent"]);
+  });
+
+  it("rejects transition from terminal state (expired) with 400", async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: "c-1", status: "expired", guest_id: "g-1" }] });
+
+    const req = mockReq({
+      params: { id: "c-1" },
+      body: { status: "sent" },
+    });
+    const res = mockRes();
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    const body = res._json as { success: boolean; validTransitions: string[] };
+    expect(body.validTransitions).toEqual([]);
+  });
+
   it("sets signed_at when transitioning to signed", async () => {
     mockQuery
       .mockResolvedValueOnce({ rows: [{ id: "c-1", status: "sent", guest_id: "g-1" }] })

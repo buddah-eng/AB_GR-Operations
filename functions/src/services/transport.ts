@@ -53,6 +53,8 @@ export type BookingStatus =
 
 // --- Status machine ---
 
+// Status names differ from PRD (booked->confirmed, driver_en_route->dispatched)
+// per implementation decision — clearer naming
 const VALID_TRANSITIONS: Readonly<Record<string, ReadonlyArray<string>>> = {
   requested: ["confirmed", "cancelled"],
   confirmed: ["dispatched", "cancelled"],

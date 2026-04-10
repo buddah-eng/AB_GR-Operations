@@ -33,8 +33,8 @@ import type { GuestStatus } from "../services/guest-lifecycle";
 
 const createGuestSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  type: z.enum(["JP", "NA", "other"]).optional(),
-  department: z.string().optional(),
+  type: z.enum(["JP", "NA", "other"]),
+  department: z.string().min(1, "Department is required"),
   company: z.string().optional(),
   properties: z.record(z.string(), z.unknown()).optional(),
 });

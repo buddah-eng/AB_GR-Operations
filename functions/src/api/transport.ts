@@ -39,7 +39,7 @@ const createBookingSchema = z.object({
   booking_type: z.enum(["arrival", "departure", "inter_venue"]),
   pickup_location: z.string().optional(),
   dropoff_location: z.string().optional(),
-  scheduled_time: z.string().optional(),
+  scheduled_time: z.string().datetime().optional(),
   driver_name: z.string().optional(),
   vehicle_info: z.string().optional(),
   flight_number: z.string().optional(),
