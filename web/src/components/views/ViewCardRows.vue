@@ -37,7 +37,7 @@
       <div
         v-for="record in data"
         :key="getRecordId(record)"
-        class="vcr-card"
+        :class="['vcr-card', isRecordOverdue(record) ? 'vcr-card--overdue' : '']"
         role="button"
         tabindex="0"
         :aria-label="getPrimaryValue(record)"
@@ -61,6 +61,12 @@
           </div>
 
           <div class="vcr-card-badges">
+            <Tag
+              v-if="isRecordOverdue(record)"
+              value="Overdue"
+              severity="danger"
+              class="vcr-badge"
+            />
             <Tag
               v-for="badge in getBadgeColumns(record)"
               :key="badge.key"
@@ -133,6 +139,32 @@ import ProgressBar from 'primevue/progressbar'
 import Paginator from 'primevue/paginator'
 
 import type { ViewConfig, ViewColumn, ViewSort } from '@/types/views'
+
+/* ------------------------------------------------------------------ */
+/*  Overdue detection                                                  */
+/* ------------------------------------------------------------------ */
+
+function isRecordOverdue(record: Record<string, unknown>): boolean {
+  const props = record.properties as Record<string, unknown> | undefined
+  const status = (record.status ?? props?.status ?? '') as string
+  const normalizedStatus = status.toLowerCase().trim()
+
+  // Explicit overdue status
+  if (normalizedStatus === 'overdue') return true
+
+  // Due date in the past and not completed
+  if (normalizedStatus === 'complete' || normalizedStatus === 'completed' || normalizedStatus === 'done') {
+    return false
+  }
+
+  const dueDate = (record.due_date ?? record.dueDate ?? props?.due_date ?? props?.dueDate) as string | undefined
+  if (!dueDate) return false
+
+  const due = new Date(dueDate)
+  if (isNaN(due.getTime())) return false
+
+  return due.getTime() < Date.now()
+}
 
 /* ------------------------------------------------------------------ */
 /*  Props & Emits — identical interface to ViewTable                  */
@@ -551,6 +583,15 @@ function handleRelationClick(
   box-shadow: var(--shadow-md);
   border-color: var(--primary-300);
   transform: translateY(-1px);
+}
+
+.vcr-card--overdue {
+  border-left: 3px solid var(--red-500, #ef4444);
+  border-color: var(--red-300, #fca5a5);
+}
+
+.vcr-card--overdue:hover {
+  border-color: var(--red-400, #f87171);
 }
 
 .vcr-card:focus-visible {

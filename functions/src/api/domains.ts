@@ -27,6 +27,31 @@ import { validateCondition } from "../conditions/evaluator";
 import { checkBulkLimit, sendBulkConfirmationRequired } from "./bulk-limit";
 import type { ApiResponse, DomainRecord, Property } from "../ontology/types";
 
+// --- Status transition validation ---
+
+const STATUS_TRANSITIONS: Record<string, Record<string, string[]>> = {
+  guest: {
+    draft: ['invited', 'canceled'],
+    invited: ['confirmed', 'declined', 'canceled'],
+    confirmed: ['travel_arranged', 'canceled'],
+    travel_arranged: ['arrived', 'canceled'],
+    arrived: ['attending', 'canceled'],
+    attending: ['departed'],
+    departed: [],
+    canceled: ['draft'],
+    declined: ['draft'],
+  },
+};
+
+function validateStatusTransition(conceptKey: string, oldStatus: string, newStatus: string): string | null {
+  const transitions = STATUS_TRANSITIONS[conceptKey];
+  if (!transitions) return null; // No validation for concepts without defined transitions
+  const allowed = transitions[oldStatus];
+  if (!allowed) return `Unknown status: "${oldStatus}"`;
+  if (!allowed.includes(newStatus)) return `Cannot transition from "${oldStatus}" to "${newStatus}". Allowed: ${allowed.join(', ')}`;
+  return null;
+}
+
 // --- Router ---
 
 export const domainRouter = Router();
@@ -331,6 +356,17 @@ domainRouter.put("/:concept/:id", async (req: Request, res: Response) => {
     }
     const rawPayload = req.body as Record<string, unknown>;
     const filteredPayload = await roleEngine.filterWritePayload(roleKey, conceptKey, rawPayload);
+
+    // Validate status transitions before allowing update
+    if (typeof filteredPayload.status === "string") {
+      const existingProps = (existingRow.properties ?? {}) as Record<string, unknown>;
+      const oldStatus = (existingRow.status ?? existingProps.status ?? "") as string;
+      const transitionError = validateStatusTransition(conceptKey, oldStatus, filteredPayload.status as string);
+      if (transitionError) {
+        sendError(res, 400, transitionError);
+        return;
+      }
+    }
 
     // W-2: Validate condition field if present
     if (filteredPayload.condition && typeof filteredPayload.condition === "object") {
@@ -677,6 +713,8 @@ export {
   buildWhereClause,
   buildOrderBy,
   rowToDomainRecord,
+  validateStatusTransition,
+  STATUS_TRANSITIONS,
 };
 
 // C-7: Re-export bulk-limit utilities for future batch endpoints (Phase 3+).

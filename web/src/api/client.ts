@@ -67,7 +67,12 @@ async function request<T>(
   const result: ApiResponse<T> = await response.json()
 
   if (result.success) {
-    return result.data as T
+    const data = result.data as T
+    // Attach meta (pagination info) to the returned data when present
+    if (result.meta && typeof data === 'object' && data !== null) {
+      (data as Record<string, unknown>).__meta = result.meta
+    }
+    return data
   }
 
   throw new Error(result.error ?? 'Unknown server error')

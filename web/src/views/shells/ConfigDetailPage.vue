@@ -14,22 +14,38 @@
         <h1 class="font-display text-2xl font-bold tracking-tight text-surface-900">
           {{ recordTitle }}
         </h1>
-        <!-- Status badge + change dropdown -->
+        <!-- Status badge + change dropdown (RBAC: director/coordinator only) -->
         <Select
-          v-if="currentStatus"
+          v-if="currentStatus && canEdit"
           v-model="currentStatus"
           :options="statusOptions"
           placeholder="Status"
           class="w-40"
           @change="handleStatusChange"
         />
+        <span
+          v-else-if="currentStatus"
+          class="inline-flex items-center rounded-full bg-surface-100 px-3 py-1 text-sm font-medium text-surface-700"
+        >
+          {{ currentStatus }}
+        </span>
       </div>
       <div class="flex items-center gap-2">
         <Button
+          v-if="canEdit"
           label="Edit"
           icon="pi pi-pencil"
           severity="secondary"
           @click="navigateToEdit"
+        />
+        <Button
+          v-if="isDirectorOrAbove"
+          icon="pi pi-cog"
+          severity="secondary"
+          text
+          rounded
+          aria-label="Customize view"
+          @click="router.push({ name: 'view-builder', params: { conceptKey: conceptKey } })"
         />
       </div>
     </div>
@@ -83,14 +99,18 @@ import Button from 'primevue/button'
 import Select from 'primevue/select'
 import TabView from 'primevue/tabview'
 import TabPanel from 'primevue/tabpanel'
+import { useToast } from 'primevue/usetoast'
 import DynamicView from '@/components/views/DynamicView.vue'
 import ConfigListEmbed from './ConfigListEmbed.vue'
 import { useViewConfig } from '@/composables/useViewConfig'
+import { useAuthStore } from '@/stores/auth'
 import { api } from '@/api/client'
 import type { ViewTab } from '@/types/views'
 
 const route = useRoute()
 const router = useRouter()
+const toast = useToast()
+const authStore = useAuthStore()
 
 const conceptKey = computed(() => (route.meta.conceptKey as string) ?? '')
 const viewName = computed(() => (route.meta.viewName as string) ?? 'detail-view')
@@ -103,7 +123,26 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const currentStatus = ref<string | null>(null)
 
-const statusOptions = ['draft', 'invited', 'confirmed', 'travel_arranged', 'arrived', 'attending', 'departed', 'canceled']
+const canEdit = computed(() =>
+  ['director', 'coordinator', 'department_head'].includes(authStore.role as string ?? '')
+)
+
+const isDirectorOrAbove = computed(() =>
+  ['director', 'admin'].includes(authStore.role ?? '')
+)
+
+const STATUS_TRANSITIONS: Record<string, string[]> = {
+  draft: ['invited', 'canceled'],
+  invited: ['confirmed', 'declined', 'canceled'],
+  confirmed: ['travel_arranged', 'canceled'],
+  travel_arranged: ['arrived', 'canceled'],
+  arrived: ['attending', 'canceled'],
+  attending: ['departed'],
+  departed: [],
+  canceled: ['draft'],
+  declined: ['draft'],
+}
+const statusOptions = computed(() => STATUS_TRANSITIONS[currentStatus.value ?? ''] ?? [])
 
 const recordTitle = computed(() => {
   if (!record.value) return 'Loading...'
@@ -122,7 +161,9 @@ function resolveTabFilter(filter: Record<string, string>): Record<string, string
 }
 
 function navigateToEdit(): void {
-  router.push(`/${conceptKey.value}s/${recordId.value}/edit`)
+  // Derive edit path from current detail route: /guests/123 -> /guests/123/edit
+  const currentPath = route.path.replace(/\/$/, '')
+  router.push(`${currentPath}/edit`)
 }
 
 async function handleStatusChange(): Promise<void> {
@@ -131,10 +172,14 @@ async function handleStatusChange(): Promise<void> {
     await api.put(`/api/domains/${conceptKey.value}/${recordId.value}`, {
       status: currentStatus.value,
     })
+    toast.add({ severity: 'success', summary: 'Status Updated', detail: `Status changed to "${currentStatus.value}"`, life: 3000 })
     // Reload record to get fresh data + trigger any workflow side effects
     await loadRecord()
   } catch (err) {
-    console.error('Status change failed:', err)
+    const message = err instanceof Error ? err.message : 'Status change failed'
+    toast.add({ severity: 'error', summary: 'Error', detail: message, life: 5000 })
+    // Reload to revert to actual status
+    await loadRecord()
   }
 }
 
@@ -147,7 +192,9 @@ async function loadRecord(): Promise<void> {
     const props = (data.properties ?? {}) as Record<string, unknown>
     currentStatus.value = (props.status ?? data.status ?? null) as string | null
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to load record'
+    const message = err instanceof Error ? err.message : 'Failed to load record'
+    error.value = message
+    toast.add({ severity: 'error', summary: 'Error', detail: message, life: 5000 })
   } finally {
     loading.value = false
   }

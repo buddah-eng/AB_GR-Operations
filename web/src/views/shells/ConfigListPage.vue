@@ -42,6 +42,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
+import { useToast } from 'primevue/usetoast'
 import DynamicView from '@/components/views/DynamicView.vue'
 import { useViewConfig } from '@/composables/useViewConfig'
 import { useConceptData } from '@/composables/useConceptData'
@@ -51,6 +52,7 @@ import type { ViewSort, ViewFilter } from '@/types/views'
 
 const route = useRoute()
 const router = useRouter()
+const toast = useToast()
 const ontologyStore = useOntologyStore()
 
 const conceptKey = computed(() => (route.meta.conceptKey as string) ?? '')
@@ -70,17 +72,10 @@ const pageTitle = computed(() => {
 const canCreate = computed(() => !!concept.value)
 
 function navigateToForm(): void {
-  // Concept-aware: navigate to the create form for THIS concept, not hardcoded to guest
-  const formRoutes: Record<string, string> = {
-    guest: 'new-guest',
-  }
-  const routeName = formRoutes[conceptKey.value]
-  if (routeName) {
-    router.push({ name: routeName })
-  } else {
-    // Generic: navigate to /:conceptKey/new if route exists
-    router.push(`/${conceptKey.value}s/new`)
-  }
+  // Derive the create route from the current list route's path
+  // e.g. /guests -> /guests/new, /staff -> /staff/new, /prep-tracker -> /prep-tracker/new
+  const basePath = route.path.replace(/\/$/, '')
+  router.push(`${basePath}/new`)
 }
 
 function handleSort(_sort: ViewSort): void {
@@ -122,7 +117,8 @@ async function handleCardMove(event: { recordId: string; fromGroup: string; toGr
     })
     reload()
   } catch (err) {
-    console.error('Failed to update record:', err)
+    const message = err instanceof Error ? err.message : 'Failed to update record'
+    toast.add({ severity: 'error', summary: 'Error', detail: message, life: 5000 })
     reload() // Reload to revert visual state
   }
 }

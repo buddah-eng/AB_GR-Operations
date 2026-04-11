@@ -4,10 +4,18 @@
 
 // ---- API layer ----
 
+export interface ApiResponseMeta {
+  total: number
+  page: number
+  limit: number
+  hasMore?: boolean
+}
+
 export interface ApiResponse<T> {
   success: boolean
   data: T | null
   error: string | null
+  meta?: ApiResponseMeta
 }
 
 // ---- Toast ----

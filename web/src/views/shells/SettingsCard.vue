@@ -1,5 +1,10 @@
 <template>
-  <div class="rounded-lg border border-surface-200 bg-surface-0 p-5 hover:shadow-md transition-shadow">
+  <div
+    :class="[
+      'rounded-lg border border-surface-200 bg-surface-0 p-5 transition-shadow',
+      editRoute ? 'hover:shadow-md' : 'opacity-60',
+    ]"
+  >
     <div class="flex items-start gap-4">
       <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 text-primary-600">
         <i :class="icon" />
@@ -15,6 +20,12 @@
       >
         Edit
       </router-link>
+      <span
+        v-else
+        class="text-xs text-surface-400 bg-surface-100 px-2 py-1 rounded-full font-medium whitespace-nowrap"
+      >
+        Coming Soon
+      </span>
     </div>
   </div>
 </template>

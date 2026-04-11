@@ -154,14 +154,11 @@ const navGroups: NavGroup[] = [
       { label: 'Schedule', icon: 'pi pi-calendar', to: '/schedule' },
       { label: 'Prep Tracker', icon: 'pi pi-check-square', to: '/prep-tracker' },
       { label: 'Travel', icon: 'pi pi-car', to: '/travel' },
-      { label: 'Accommodations', icon: 'pi pi-building', to: '/accommodations' },
     ],
   },
   {
     label: 'Guest Services',
     items: [
-      { label: 'Dietary', icon: 'pi pi-heart', to: '/dietary' },
-      { label: 'Autographs', icon: 'pi pi-pencil', to: '/autographs' },
       { label: 'Venues', icon: 'pi pi-map', to: '/venues' },
     ],
   },

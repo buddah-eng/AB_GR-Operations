@@ -172,3 +172,47 @@ VALUES (
     {"widgetId": "activity", "type": "activity_feed", "title": "Recent Activity"}
   ]'::jsonb
 );
+
+-- ============================================================
+-- ONTOLOGY PROPERTY VALIDATION RULES
+-- ============================================================
+
+-- Guest name: min 1, max 200
+UPDATE ontology_properties SET validation_rules = '{"minLength": 1, "maxLength": 200}'::jsonb
+WHERE concept_key = 'guest' AND key = 'name';
+
+-- Guest bio: max 2000
+UPDATE ontology_properties SET validation_rules = '{"maxLength": 2000}'::jsonb
+WHERE concept_key = 'guest' AND key = 'bio';
+
+-- Guest pronouns: max 50
+UPDATE ontology_properties SET validation_rules = '{"maxLength": 50}'::jsonb
+WHERE concept_key = 'guest' AND key = 'pronouns';
+
+-- Guest company: max 200
+UPDATE ontology_properties SET validation_rules = '{"maxLength": 200}'::jsonb
+WHERE concept_key = 'guest' AND key = 'company';
+
+-- Staff email: email pattern
+UPDATE ontology_properties SET validation_rules = '{"maxLength": 254, "pattern": "^[^@]+@[^@]+\\.[^@]+$"}'::jsonb
+WHERE concept_key = 'staff' AND key = 'email';
+
+-- Staff name: min 1, max 200
+UPDATE ontology_properties SET validation_rules = '{"minLength": 1, "maxLength": 200}'::jsonb
+WHERE concept_key = 'staff' AND key = 'name';
+
+-- Prep item name: min 1, max 200
+UPDATE ontology_properties SET validation_rules = '{"minLength": 1, "maxLength": 200}'::jsonb
+WHERE concept_key = 'prep_item' AND key = 'name';
+
+-- Venue name: min 1, max 200
+UPDATE ontology_properties SET validation_rules = '{"minLength": 1, "maxLength": 200}'::jsonb
+WHERE concept_key = 'venue' AND key = 'name';
+
+-- Venue capacity: min 1, max 50000
+UPDATE ontology_properties SET validation_rules = '{"min": 1, "max": 50000}'::jsonb
+WHERE concept_key = 'venue' AND key = 'capacity';
+
+-- Schedule event name: min 1, max 200
+UPDATE ontology_properties SET validation_rules = '{"minLength": 1, "maxLength": 200}'::jsonb
+WHERE concept_key = 'schedule' AND key = 'name';

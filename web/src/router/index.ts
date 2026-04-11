@@ -65,10 +65,23 @@ const routes: RouteRecordRaw[] = [
     meta: { conceptKey: 'staff', viewName: 'default-list' },
   },
   {
+    path: '/staff/new',
+    name: 'new-staff',
+    component: () => import('@/views/shells/ConfigFormPage.vue'),
+    meta: { conceptKey: 'staff', formName: 'default' },
+  },
+  {
     path: '/staff/:id',
     name: 'staff-detail',
     component: () => import('@/views/shells/ConfigDetailPage.vue'),
     meta: { conceptKey: 'staff', viewName: 'detail-view' },
+    props: true,
+  },
+  {
+    path: '/staff/:id/edit',
+    name: 'edit-staff',
+    component: () => import('@/views/shells/ConfigFormPage.vue'),
+    meta: { conceptKey: 'staff', formName: 'quick-edit' },
     props: true,
   },
 
@@ -88,10 +101,23 @@ const routes: RouteRecordRaw[] = [
     meta: { conceptKey: 'schedule', viewName: 'timeline-view' },
   },
   {
+    path: '/schedule/new',
+    name: 'new-schedule',
+    component: () => import('@/views/shells/ConfigFormPage.vue'),
+    meta: { conceptKey: 'schedule', formName: 'default' },
+  },
+  {
     path: '/schedule/:id',
     name: 'schedule-detail',
     component: () => import('@/views/shells/ConfigDetailPage.vue'),
     meta: { conceptKey: 'schedule', viewName: 'detail-view' },
+    props: true,
+  },
+  {
+    path: '/schedule/:id/edit',
+    name: 'edit-schedule',
+    component: () => import('@/views/shells/ConfigFormPage.vue'),
+    meta: { conceptKey: 'schedule', formName: 'quick-edit' },
     props: true,
   },
 
@@ -103,10 +129,23 @@ const routes: RouteRecordRaw[] = [
     meta: { conceptKey: 'prep_item', viewName: 'kanban-tracker' },
   },
   {
+    path: '/prep-tracker/new',
+    name: 'new-prep',
+    component: () => import('@/views/shells/ConfigFormPage.vue'),
+    meta: { conceptKey: 'prep_item', formName: 'default' },
+  },
+  {
     path: '/prep-tracker/:id',
     name: 'prep-detail',
     component: () => import('@/views/shells/ConfigDetailPage.vue'),
     meta: { conceptKey: 'prep_item', viewName: 'detail-view' },
+    props: true,
+  },
+  {
+    path: '/prep-tracker/:id/edit',
+    name: 'edit-prep',
+    component: () => import('@/views/shells/ConfigFormPage.vue'),
+    meta: { conceptKey: 'prep_item', formName: 'quick-edit' },
     props: true,
   },
 

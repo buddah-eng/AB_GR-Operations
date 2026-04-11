@@ -43,6 +43,7 @@
 import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
+import { useToast } from 'primevue/usetoast'
 import DynamicForm from '@/components/forms/DynamicForm.vue'
 import { useFormConfig } from '@/composables/useFormConfig'
 import { useOntologyStore } from '@/stores/ontology'
@@ -50,6 +51,7 @@ import { api } from '@/api/client'
 
 const route = useRoute()
 const router = useRouter()
+const toast = useToast()
 const ontologyStore = useOntologyStore()
 
 const conceptKey = computed(() => (route.meta.conceptKey as string) ?? '')
@@ -83,7 +85,8 @@ onMounted(async () => {
       const props = (record.properties ?? {}) as Record<string, unknown>
       initialValues.value = { ...record, ...props }
     } catch (err) {
-      console.error('Failed to load record for editing:', err)
+      const message = err instanceof Error ? err.message : 'Failed to load record'
+      toast.add({ severity: 'error', summary: 'Error', detail: message, life: 5000 })
     } finally {
       loadingRecord.value = false
     }
@@ -96,23 +99,31 @@ async function handleSubmit(values: Record<string, unknown>): Promise<void> {
     if (isEditMode.value && recordId.value) {
       // Edit: PUT to existing record
       await api.put(`/api/domains/${conceptKey.value}/${recordId.value}`, values)
-      router.push(`/${conceptKey.value}s/${recordId.value}`)
+      toast.add({ severity: 'success', summary: 'Saved', detail: 'Record updated', life: 3000 })
+      // Navigate back to the detail page: strip /edit from current path
+      const detailPath = route.path.replace(/\/edit$/, '')
+      router.push(detailPath)
     } else {
       // Create: POST new record, redirect to detail
       const result = await api.post<Record<string, unknown>>(
         `/api/domains/${conceptKey.value}`,
         values
       )
+      toast.add({ severity: 'success', summary: 'Created', detail: 'Record created', life: 3000 })
       const newId = (result as Record<string, unknown>).id as string
       if (newId) {
-        router.push(`/${conceptKey.value}s/${newId}`)
+        // Navigate to detail: strip /new from current path, append /{id}
+        const basePath = route.path.replace(/\/new$/, '')
+        router.push(`${basePath}/${newId}`)
       } else {
-        router.push(`/${conceptKey.value}s`)
+        // Fall back to list page
+        const basePath = route.path.replace(/\/new$/, '')
+        router.push(basePath)
       }
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to save'
-    console.error('Form submission failed:', message)
+    toast.add({ severity: 'error', summary: 'Error', detail: message, life: 5000 })
   } finally {
     submitting.value = false
   }

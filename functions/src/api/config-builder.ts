@@ -39,6 +39,19 @@ viewRouter.use(requireAuth);
 
 // --- Helpers ---
 
+/**
+ * Resolves a safe `changed_by` value for DB writes.
+ * In dev-bypass mode the uid is "dev-user" which is not a valid UUID,
+ * so we fall back to null to avoid a 500 from the DB constraint.
+ */
+function resolveChangedBy(req: Request): string | null {
+  const uid = req.user?.uid;
+  if (uid && uid !== "dev-user") {
+    return uid;
+  }
+  return null;
+}
+
 function sendError(res: Response, status: number, message: string): void {
   res.status(status).json({ success: false, error: message } as ApiResponse<never>);
 }
@@ -94,6 +107,10 @@ function adaptViewPayloadToDB(payload: Readonly<Record<string, unknown>>): Recor
   if ("conceptKey" in adapted) {
     adapted.concept_key = adapted.conceptKey;
     delete adapted.conceptKey;
+  }
+  if ("filterCondition" in adapted) {
+    adapted.filters = adapted.filterCondition;
+    delete adapted.filterCondition;
   }
 
   return adapted;
@@ -191,7 +208,7 @@ formRouter.post("/", requireRole(DIRECTOR_PRIORITY), async (req: Request, res: R
           steps ? JSON.stringify(steps) : null,
           ownerScope,
           ownerDepartment,
-          req.user?.uid ?? null,
+          resolveChangedBy(req),
         ]
       );
       return result.rows[0];
@@ -273,7 +290,7 @@ formRouter.put("/:id", requireRole(DIRECTOR_PRIORITY), async (req: Request, res:
           currentVersion + 1,
           ownerScope,
           ownerDepartment,
-          req.user?.uid ?? null,
+          resolveChangedBy(req),
         ]
       );
 
@@ -417,7 +434,7 @@ viewRouter.post("/", requireRole(DIRECTOR_PRIORITY), async (req: Request, res: R
           presets ? JSON.stringify(presets) : null,
           ownerScope,
           ownerDepartment,
-          req.user?.uid ?? null,
+          resolveChangedBy(req),
         ]
       );
       return result.rows[0];
@@ -524,7 +541,7 @@ viewRouter.put("/:id", requireRole(DIRECTOR_PRIORITY), async (req: Request, res:
           currentVersion + 1,
           ownerScope,
           ownerDepartment,
-          req.user?.uid ?? null,
+          resolveChangedBy(req),
         ]
       );
 
