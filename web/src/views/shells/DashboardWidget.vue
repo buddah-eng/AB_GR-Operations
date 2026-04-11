@@ -87,9 +87,20 @@ async function loadData(): Promise<void> {
     const path = `/api/domains/${props.widget.conceptKey}${qs ? `?${qs}` : ''}`
     const data = await api.get<Record<string, unknown>>(path)
 
-    const rawRecords = (data as Record<string, unknown>).records as Record<string, unknown>[] | undefined
-    records.value = rawRecords ?? (Array.isArray(data) ? data : [])
-    count.value = (data as Record<string, unknown>).total as number ?? records.value.length
+    // Handle both response formats:
+    // Real backend: data is array (ApiResponse.data unwrapped by client), meta.total in separate field
+    // Shim: data is { records: [...], total: N }
+    const dataObj = data as Record<string, unknown>
+    if (Array.isArray(data)) {
+      records.value = data as Record<string, unknown>[]
+      count.value = records.value.length
+    } else if (dataObj.records) {
+      records.value = dataObj.records as Record<string, unknown>[]
+      count.value = (dataObj.total as number) ?? records.value.length
+    } else {
+      records.value = []
+      count.value = 0
+    }
 
     // Calculate progress for prep_progress type
     if (props.widget.type === 'prep_progress' && records.value.length > 0) {

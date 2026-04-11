@@ -42,14 +42,14 @@
       <!-- Roles & Permissions -->
       <SettingsCard
         title="Permissions"
-        description="Who can see and edit what"
+        description="Who can see and edit what — coming soon"
         icon="pi pi-lock"
       />
 
       <!-- Integrations -->
       <SettingsCard
         title="Integrations"
-        description="Connected external services"
+        description="Connected external services — coming soon"
         icon="pi pi-link"
       />
     </div>

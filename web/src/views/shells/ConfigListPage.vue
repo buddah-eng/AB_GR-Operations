@@ -99,17 +99,18 @@ function handleRowClick(record: Record<string, unknown>): void {
   const id = record.id as string
   if (!id) return
 
-  // Concept-aware routing: use known detail routes or generic pattern
+  // Concept-aware routing: map concept keys to named detail routes
   const detailRoutes: Record<string, string> = {
     guest: 'guest-detail',
+    staff: 'staff-detail',
+    schedule_event: 'schedule-detail',
+    prep_item: 'prep-detail',
   }
   const routeName = detailRoutes[conceptKey.value]
   if (routeName) {
     router.push({ name: routeName, params: { id } })
-  } else {
-    // Try the generic pattern — the route may or may not exist
-    router.push(`/${conceptKey.value}s/${id}`)
   }
+  // If no detail route exists for this concept, do nothing (don't navigate to 404)
 }
 
 async function handleCardMove(event: { recordId: string; fromGroup: string; toGroup: string }): Promise<void> {

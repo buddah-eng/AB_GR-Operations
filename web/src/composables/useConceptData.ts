@@ -51,13 +51,20 @@ export function useConceptData(
 
       const qs = params.toString()
       const path = `/api/domains/${key}${qs ? `?${qs}` : ''}`
-      const result = await api.get<{
-        records: Record<string, unknown>[]
-        total: number
-      }>(path)
+      const result = await api.get<unknown>(path)
 
-      records.value = result.records ?? result as unknown as Record<string, unknown>[]
-      total.value = result.total ?? records.value.length
+      // Handle both response formats:
+      // Real backend: data is array (unwrapped from ApiResponse), meta in response
+      // Shim: data is { records: [...], total: N }
+      if (Array.isArray(result)) {
+        records.value = result as Record<string, unknown>[]
+      } else {
+        const obj = result as Record<string, unknown>
+        records.value = (obj.records as Record<string, unknown>[]) ?? []
+      }
+      total.value = Array.isArray(result)
+        ? records.value.length
+        : ((result as Record<string, unknown>).total as number) ?? records.value.length
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to load data'
       records.value = []

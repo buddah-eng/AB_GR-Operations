@@ -67,13 +67,16 @@ export const useOntologyStore = defineStore('ontology', () => {
         pluralLabel: (c.pluralLabel ?? c.pluralName ?? c.plural_name ?? `${c.label ?? c.name ?? key}s`) as string,
         icon: (c.icon ?? 'pi pi-box') as string,
         properties: (c.properties as OntologyProperty[]) ?? rawProperties[key] ?? [],
-        relationships: ((c.relationships as OntologyRelationship[]) ?? rawRelationships[key] ?? []).map(
-          (r: Record<string, unknown>) => ({
-            key: r.key as string,
-            label: r.label as string,
-            targetConcept: (r.targetConcept ?? r.target ?? r.target_concept_key) as string,
-            cardinality: (r.cardinality ?? 'has-many') as OntologyRelationship['cardinality'],
-          })
+        relationships: ((c.relationships as unknown[] | undefined) ?? (rawRelationships[key] as unknown[]) ?? []).map(
+          (r) => {
+            const rel = r as Record<string, unknown>
+            return {
+              key: rel.key as string,
+              label: rel.label as string,
+              targetConcept: (rel.targetConcept ?? rel.target ?? rel.target_concept_key) as string,
+              cardinality: (rel.cardinality ?? 'has-many') as OntologyRelationship['cardinality'],
+            }
+          }
         ),
       }))
 
