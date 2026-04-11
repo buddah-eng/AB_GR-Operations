@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { api } from '@/api/client'
 import type {
-  OntologyData,
   OntologyConcept,
   OntologyProperty,
   OntologyRelationship,
@@ -59,7 +58,7 @@ export const useOntologyStore = defineStore('ontology', () => {
       // Handle both array (from Vercel shim) and object (from real backend) formats
       const conceptEntries: Array<[string, Record<string, unknown>]> = Array.isArray(rawConcepts)
         ? rawConcepts.map((c: OntologyConcept) => [c.key, c as unknown as Record<string, unknown>])
-        : Object.entries(rawConcepts)
+        : Object.entries(rawConcepts as Record<string, Record<string, unknown>>)
 
       concepts.value = conceptEntries.map(([key, c]) => ({
         key,

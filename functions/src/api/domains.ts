@@ -52,9 +52,13 @@ function conceptToTable(conceptKey: string): string {
     shift: "shifts",
     shift_assignment: "shift_assignments",
     equipment: "equipment",
+    transport: "transport_bookings",
     transport_booking: "transport_bookings",
+    workflow: "workflow_configs",
+    workflow_config: "workflow_configs",
     contract_template: "contract_templates",
     contract_clause: "contract_clauses",
+    guest_contract: "guest_contracts",
     guest_contract: "guest_contracts",
   };
   const table = tableMap[conceptKey];
