@@ -58,6 +58,21 @@ function buildValidation(
     rules.push('number')
   }
 
+  // Apply validationRules from ontology property
+  const vr = property?.validationRules
+  if (vr) {
+    if (vr.minLength !== undefined && vr.maxLength !== undefined) {
+      rules.push(`length:${vr.minLength},${vr.maxLength}`)
+    } else if (vr.minLength !== undefined) {
+      rules.push(`length:${vr.minLength}`)
+    } else if (vr.maxLength !== undefined) {
+      rules.push(`length:0,${vr.maxLength}`)
+    }
+    if (vr.min !== undefined) rules.push(`min:${vr.min}`)
+    if (vr.max !== undefined) rules.push(`max:${vr.max}`)
+    if (vr.pattern) rules.push(`matches:/${vr.pattern}/`)
+  }
+
   return rules.join('|')
 }
 

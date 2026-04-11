@@ -62,22 +62,22 @@ export async function loadActiveWorkflows(): Promise<ReadonlyArray<WorkflowConfi
         id: string;
         name: string;
         description: string | null;
-        trigger_config: WorkflowTrigger;
-        condition_config: ConditionExpression | null;
-        actions_config: ReadonlyArray<WorkflowAction>;
+        trigger: WorkflowTrigger;
+        condition: ConditionExpression | null;
+        actions: ReadonlyArray<WorkflowAction>;
         enabled: boolean;
       }>(
-        `SELECT id, name, description, trigger_config, condition_config, actions_config, enabled
-         FROM workflows WHERE enabled = true`
+        `SELECT id, name, description, trigger, condition, actions, enabled
+         FROM workflow_configs WHERE enabled = true AND status = 'active'`
       );
 
       return result.rows.map((row) => ({
         id: row.id,
         name: row.name,
         description: row.description ?? undefined,
-        trigger: row.trigger_config,
-        condition: row.condition_config ?? undefined,
-        actions: row.actions_config,
+        trigger: row.trigger,
+        condition: row.condition ?? undefined,
+        actions: row.actions,
         enabled: row.enabled,
       }));
     },

@@ -1,18 +1,37 @@
 <template>
   <div class="space-y-6">
-    <!-- Back button + title -->
-    <div class="flex items-center gap-4">
-      <Button
-        icon="pi pi-arrow-left"
-        severity="secondary"
-        text
-        rounded
-        @click="router.back()"
-        aria-label="Go back"
-      />
-      <h1 class="font-display text-2xl font-bold tracking-tight text-surface-900">
-        {{ recordTitle }}
-      </h1>
+    <!-- Back button + title + actions -->
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <Button
+          icon="pi pi-arrow-left"
+          severity="secondary"
+          text
+          rounded
+          @click="router.back()"
+          aria-label="Go back"
+        />
+        <h1 class="font-display text-2xl font-bold tracking-tight text-surface-900">
+          {{ recordTitle }}
+        </h1>
+        <!-- Status badge + change dropdown -->
+        <Select
+          v-if="currentStatus"
+          v-model="currentStatus"
+          :options="statusOptions"
+          placeholder="Status"
+          class="w-40"
+          @change="handleStatusChange"
+        />
+      </div>
+      <div class="flex items-center gap-2">
+        <Button
+          label="Edit"
+          icon="pi pi-pencil"
+          severity="secondary"
+          @click="navigateToEdit"
+        />
+      </div>
     </div>
 
     <!-- Loading state -->
@@ -61,6 +80,7 @@
 import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
+import Select from 'primevue/select'
 import TabView from 'primevue/tabview'
 import TabPanel from 'primevue/tabpanel'
 import DynamicView from '@/components/views/DynamicView.vue'
@@ -81,10 +101,14 @@ const { config: viewConfig, error: _configError } = useViewConfig(conceptKey, vi
 const record = ref<Record<string, unknown> | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
+const currentStatus = ref<string | null>(null)
+
+const statusOptions = ['draft', 'invited', 'confirmed', 'travel_arranged', 'arrived', 'attending', 'departed', 'canceled']
 
 const recordTitle = computed(() => {
   if (!record.value) return 'Loading...'
-  return (record.value.name as string) ?? (record.value.title as string) ?? recordId.value
+  const props = (record.value.properties ?? {}) as Record<string, unknown>
+  return (props.name ?? record.value.name ?? record.value.title ?? recordId.value) as string
 })
 
 const tabs = computed<ViewTab[]>(() => viewConfig.value?.tabs ?? [])
@@ -97,16 +121,37 @@ function resolveTabFilter(filter: Record<string, string>): Record<string, string
   return resolved
 }
 
-onMounted(async () => {
+function navigateToEdit(): void {
+  router.push(`/${conceptKey.value}s/${recordId.value}/edit`)
+}
+
+async function handleStatusChange(): Promise<void> {
+  if (!currentStatus.value || !recordId.value) return
+  try {
+    await api.put(`/api/domains/${conceptKey.value}/${recordId.value}`, {
+      status: currentStatus.value,
+    })
+    // Reload record to get fresh data + trigger any workflow side effects
+    await loadRecord()
+  } catch (err) {
+    console.error('Status change failed:', err)
+  }
+}
+
+async function loadRecord(): Promise<void> {
   try {
     const data = await api.get<Record<string, unknown>>(
       `/api/domains/${conceptKey.value}/${recordId.value}`
     )
     record.value = data
+    const props = (data.properties ?? {}) as Record<string, unknown>
+    currentStatus.value = (props.status ?? data.status ?? null) as string | null
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to load record'
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(loadRecord)
 </script>

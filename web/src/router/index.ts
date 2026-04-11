@@ -46,6 +46,13 @@ const routes: RouteRecordRaw[] = [
     props: true,
   },
   {
+    path: '/guests/:id/edit',
+    name: 'edit-guest',
+    component: () => import('@/views/shells/ConfigFormPage.vue'),
+    meta: { conceptKey: 'guest', formName: 'quick-edit' },
+    props: true,
+  },
+  {
     path: '/staff',
     name: 'staff',
     component: () => import('@/views/shells/ConfigListPage.vue'),

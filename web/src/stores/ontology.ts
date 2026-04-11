@@ -48,9 +48,36 @@ export const useOntologyStore = defineStore('ontology', () => {
     error.value = null
 
     try {
-      const data = await api.get<OntologyData>('/api/ontology')
-      concepts.value = data.concepts
-      version.value = data.version
+      const raw = await api.get<Record<string, unknown>>('/api/ontology')
+
+      // The API returns concepts as an object or array, properties/relationships as separate maps.
+      // Merge them into the frontend's OntologyConcept[] shape.
+      const rawConcepts = raw.concepts as Record<string, unknown> | OntologyConcept[]
+      const rawProperties = (raw.properties ?? {}) as Record<string, OntologyProperty[]>
+      const rawRelationships = (raw.relationships ?? {}) as Record<string, OntologyRelationship[]>
+
+      // Handle both array (from Vercel shim) and object (from real backend) formats
+      const conceptEntries: Array<[string, Record<string, unknown>]> = Array.isArray(rawConcepts)
+        ? rawConcepts.map((c: OntologyConcept) => [c.key, c as unknown as Record<string, unknown>])
+        : Object.entries(rawConcepts)
+
+      concepts.value = conceptEntries.map(([key, c]) => ({
+        key,
+        label: (c.label ?? c.name ?? key) as string,
+        pluralLabel: (c.pluralLabel ?? c.pluralName ?? c.plural_name ?? `${c.label ?? c.name ?? key}s`) as string,
+        icon: (c.icon ?? 'pi pi-box') as string,
+        properties: (c.properties as OntologyProperty[]) ?? rawProperties[key] ?? [],
+        relationships: ((c.relationships as OntologyRelationship[]) ?? rawRelationships[key] ?? []).map(
+          (r: Record<string, unknown>) => ({
+            key: r.key as string,
+            label: r.label as string,
+            targetConcept: (r.targetConcept ?? r.target ?? r.target_concept_key) as string,
+            cardinality: (r.cardinality ?? 'has-many') as OntologyRelationship['cardinality'],
+          })
+        ),
+      }))
+
+      version.value = (raw.version ?? raw.loadedAt ?? '') as string
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to load ontology'

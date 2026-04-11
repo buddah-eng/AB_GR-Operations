@@ -61,6 +61,19 @@ function adaptFormFields(
   }))
 }
 
+/**
+ * Step fields can be strings (property keys) or objects (full FormFieldConfig).
+ * The seed migration uses strings: ["name", "type", "company"]
+ * The builder uses objects: [{propertyKey: "name"}, {propertyKey: "type"}]
+ */
+function adaptStepFields(raw: unknown): FormFieldConfig[] | undefined {
+  if (!raw || !Array.isArray(raw)) return undefined
+  return raw.map((f: unknown) => {
+    if (typeof f === 'string') return { key: f }
+    return adaptFormFields([f as Record<string, unknown>])?.[0] ?? { key: '' }
+  })
+}
+
 function adaptFormSteps(
   raw: Record<string, unknown>[] | undefined
 ): FormStep[] | undefined {
@@ -70,7 +83,7 @@ function adaptFormSteps(
     label: s.label as string,
     description: s.description as string | undefined,
     icon: s.icon as string | undefined,
-    fields: adaptFormFields(s.fields as Record<string, unknown>[] | undefined) ?? [],
+    fields: adaptStepFields(s.fields) ?? [],
   }))
 }
 

@@ -56,6 +56,13 @@ export interface OntologyProperty {
   hidden?: boolean
   readOnly?: boolean
   description?: string
+  validationRules?: {
+    minLength?: number
+    maxLength?: number
+    min?: number
+    max?: number
+    pattern?: string
+  }
 }
 
 export interface OntologyRelationship {
