@@ -59,7 +59,6 @@ function conceptToTable(conceptKey: string): string {
     contract_template: "contract_templates",
     contract_clause: "contract_clauses",
     guest_contract: "guest_contracts",
-    guest_contract: "guest_contracts",
   };
   const table = tableMap[conceptKey];
   if (!table) {
@@ -122,8 +121,8 @@ domainRouter.get("/:concept", async (req: Request, res: Response) => {
     const combinedParams = [...filterParams, ...dataScopeParams];
     const combinedWhereClause = whereClause + dataScopeClause;
 
-    // Build ORDER BY
-    const orderBy = buildOrderBy(req.query, properties);
+    // Build ORDER BY — config tables use changed_at, domain tables use created_at
+    const orderBy = buildOrderBy(req.query, properties, concept.isConfig);
 
     // Config tables (workflow_configs, etc.) may not have an 'archived' column
     const archivedFilter = concept.isConfig ? "" : "NOT archived AND";
@@ -135,13 +134,9 @@ domainRouter.get("/:concept", async (req: Request, res: Response) => {
     );
     const total = parseInt(countResult.rows[0].count as string, 10);
 
-    // Config tables use changed_at, domain tables use created_at
-    const defaultSort = concept.isConfig ? "ORDER BY changed_at DESC" : "ORDER BY created_at DESC";
-    const effectiveOrderBy = orderBy || defaultSort;
-
     // Fetch page
     const dataResult = await query(
-      `SELECT * FROM ${table} WHERE ${archivedFilter} true ${combinedWhereClause} ${effectiveOrderBy} LIMIT $${combinedParams.length + 1} OFFSET $${combinedParams.length + 2}`,
+      `SELECT * FROM ${table} WHERE ${archivedFilter} true ${combinedWhereClause} ${orderBy} LIMIT $${combinedParams.length + 1} OFFSET $${combinedParams.length + 2}`,
       [...combinedParams, limit, offset]
     );
 
@@ -188,6 +183,7 @@ domainRouter.get("/:concept/:id", async (req: Request, res: Response) => {
       return;
     }
 
+    const { concept } = conceptResult;
     const table = conceptToTable(conceptKey);
     const archivedCheck = concept.isConfig ? "" : " AND NOT archived";
     const result = await query(
@@ -635,13 +631,15 @@ function buildWhereClause(
 
 function buildOrderBy(
   queryParams: Record<string, unknown>,
-  properties: ReadonlyArray<Property>
+  properties: ReadonlyArray<Property>,
+  isConfig = false
 ): string {
+  const defaultCol = isConfig ? "changed_at" : "created_at";
   const sortKey = queryParams.sort as string | undefined;
-  if (!sortKey) return "ORDER BY created_at DESC";
+  if (!sortKey) return `ORDER BY ${defaultCol} DESC`;
 
   const prop = properties.find((p) => p.key === sortKey);
-  if (!prop) return "ORDER BY created_at DESC";
+  if (!prop) return `ORDER BY ${defaultCol} DESC`;
 
   const direction = (queryParams.direction as string) === "desc" ? "DESC" : "ASC";
 
@@ -651,7 +649,7 @@ function buildOrderBy(
   if (isSafeIdentifier(sortKey)) {
     return `ORDER BY properties->>'${sortKey}' ${direction}`;
   }
-  return "ORDER BY created_at DESC";
+  return `ORDER BY ${defaultCol} DESC`;
 }
 
 function clampInt(value: unknown, min: number, max: number, defaultVal: number): number {
