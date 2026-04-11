@@ -25,6 +25,8 @@ Deferring without documentation is a shortcut. Deferring without a gate conditio
 |----|------|-----------|---------|----------------|--------|
 | D-001 | Redis cross-instance cache invalidation for ontology | core/ontology-engine.md | §3 Caching | Cloud Run migration (platform/scaling.md) is implemented — multi-instance deployment requires shared cache | DEFERRED |
 | D-002 | Frontend component testing infrastructure (Vitest + Vue Test Utils) | Phase 4.5 (all frontend PRDs) | Frontend test infrastructure established (vitest config, vue-test-utils installed, test patterns defined) | DEFERRED |
+| D-003 | SSE connection timeout on Vercel (300s max) | ui/operational-ux-gaps.md | §13 Vercel Considerations | Vercel migrates to dedicated compute (Fluid Compute long-running), OR canvas real-time polling replaces SSE, OR platform deploys to Cloud Run | DEFERRED |
+| D-004 | Relation-based data scoping for liaison role (join-through pairings) | core/rbac-completion.md | §4 Data Scope Extension | RBAC engine's `buildDataScopeFilter` extended to support subquery-based scoping (`AND id IN (SELECT guest_id FROM pairings WHERE staff_id = $uid)`) | DEFERRED |
 
 ---
 

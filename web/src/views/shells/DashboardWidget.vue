@@ -39,8 +39,22 @@
     </div>
 
     <!-- Activity feed -->
-    <div v-else-if="widget.type === 'activity_feed'" class="text-sm text-surface-400">
-      Recent activity
+    <div v-else-if="widget.type === 'activity_feed'" class="space-y-2">
+      <div v-if="loading" class="space-y-2">
+        <div class="h-4 bg-surface-200 rounded animate-pulse" v-for="n in 4" :key="n" />
+      </div>
+      <div v-else-if="activityItems.length === 0" class="text-sm text-surface-400">
+        No recent activity
+      </div>
+      <div
+        v-for="item in activityItems"
+        :key="item.id"
+        class="flex items-center gap-2 text-sm"
+      >
+        <i class="pi pi-circle-fill text-primary-400" style="font-size: 6px" />
+        <span class="text-surface-700">{{ item.summary }}</span>
+        <span class="text-surface-400 ml-auto text-xs">{{ item.timeAgo }}</span>
+      </div>
     </div>
 
     <!-- Fallback -->
@@ -65,8 +79,43 @@ const count = ref(0)
 const records = ref<Record<string, unknown>[]>([])
 const loading = ref(true)
 const progressPct = ref(0)
+const activityItems = ref<Array<{ id: string; summary: string; timeAgo: string }>>([])
+
+function formatTimeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
+}
 
 async function loadData(): Promise<void> {
+  // Activity feed loads from event_log instead of domains
+  if (props.widget.type === 'activity_feed') {
+    loading.value = true
+    try {
+      const data = await api.get<unknown>('/api/domains/guest?limit=10&sort=updated_at&direction=desc')
+      const items = Array.isArray(data) ? data : ((data as Record<string, unknown>).records as Record<string, unknown>[] ?? [])
+      activityItems.value = items.slice(0, 8).map((r) => {
+        const p = (r.properties ?? {}) as Record<string, unknown>
+        const name = (p.name ?? r.name ?? 'Record') as string
+        const status = (p.status ?? r.status ?? '') as string
+        return {
+          id: r.id as string,
+          summary: `${name} — ${status}`,
+          timeAgo: formatTimeAgo((r.updatedAt ?? r.updated_at ?? new Date().toISOString()) as string),
+        }
+      })
+    } catch {
+      activityItems.value = []
+    } finally {
+      loading.value = false
+    }
+    return
+  }
+
   if (!props.widget.conceptKey) {
     loading.value = false
     return
