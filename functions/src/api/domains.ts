@@ -135,9 +135,13 @@ domainRouter.get("/:concept", async (req: Request, res: Response) => {
     );
     const total = parseInt(countResult.rows[0].count as string, 10);
 
+    // Config tables use changed_at, domain tables use created_at
+    const defaultSort = concept.isConfig ? "ORDER BY changed_at DESC" : "ORDER BY created_at DESC";
+    const effectiveOrderBy = orderBy || defaultSort;
+
     // Fetch page
     const dataResult = await query(
-      `SELECT * FROM ${table} WHERE ${archivedFilter} true ${combinedWhereClause} ${orderBy} LIMIT $${combinedParams.length + 1} OFFSET $${combinedParams.length + 2}`,
+      `SELECT * FROM ${table} WHERE ${archivedFilter} true ${combinedWhereClause} ${effectiveOrderBy} LIMIT $${combinedParams.length + 1} OFFSET $${combinedParams.length + 2}`,
       [...combinedParams, limit, offset]
     );
 
