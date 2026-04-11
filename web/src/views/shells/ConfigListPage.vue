@@ -103,7 +103,7 @@ function handleRowClick(record: Record<string, unknown>): void {
   const detailRoutes: Record<string, string> = {
     guest: 'guest-detail',
     staff: 'staff-detail',
-    schedule_event: 'schedule-detail',
+    schedule: 'schedule-detail',
     prep_item: 'prep-detail',
   }
   const routeName = detailRoutes[conceptKey.value]

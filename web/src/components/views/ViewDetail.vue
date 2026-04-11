@@ -73,10 +73,17 @@ interface DisplayField {
 
 const title = computed(() => {
   if (!props.data) return props.config.title ?? 'Detail'
+  const p = (props.data.properties ?? {}) as Record<string, unknown>
   return String(
-    props.data.name ?? props.data.title ?? props.data.label ?? props.config.title ?? 'Detail',
+    p.name ?? props.data.name ?? p.title ?? props.data.title ?? props.config.title ?? 'Detail',
   )
 })
+
+/** Resolve a field value from record — check properties first, then top-level */
+function resolveValue(data: Record<string, unknown>, key: string): unknown {
+  const props = (data.properties ?? {}) as Record<string, unknown>
+  return props[key] ?? data[key]
+}
 
 const displayFields = computed<DisplayField[]>(() => {
   if (!props.data) return []
@@ -88,7 +95,7 @@ const displayFields = computed<DisplayField[]>(() => {
       .map((col) => ({
         key: col.key ?? col.propertyKey ?? '',
         label: col.label ?? col.key ?? '',
-        value: props.data?.[col.key ?? col.propertyKey ?? ''],
+        value: resolveValue(props.data!, col.key ?? col.propertyKey ?? ''),
         type: col.type,
       }))
   }

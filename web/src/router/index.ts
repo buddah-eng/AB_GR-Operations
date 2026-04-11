@@ -85,13 +85,13 @@ const routes: RouteRecordRaw[] = [
     path: '/schedule',
     name: 'schedule',
     component: () => import('@/views/shells/ConfigListPage.vue'),
-    meta: { conceptKey: 'schedule_event', viewName: 'timeline-view' },
+    meta: { conceptKey: 'schedule', viewName: 'timeline-view' },
   },
   {
     path: '/schedule/:id',
     name: 'schedule-detail',
     component: () => import('@/views/shells/ConfigDetailPage.vue'),
-    meta: { conceptKey: 'schedule_event', viewName: 'detail-view' },
+    meta: { conceptKey: 'schedule', viewName: 'detail-view' },
     props: true,
   },
 
@@ -115,7 +115,7 @@ const routes: RouteRecordRaw[] = [
     path: '/travel',
     name: 'travel',
     component: () => import('@/views/shells/ConfigListPage.vue'),
-    meta: { conceptKey: 'transport_booking', viewName: 'default-list' },
+    meta: { conceptKey: 'transport', viewName: 'default-list' },
   },
 
   // --- Venues (config-driven) ---
@@ -152,7 +152,7 @@ const routes: RouteRecordRaw[] = [
     path: '/workflows',
     name: 'workflows',
     component: () => import('@/views/shells/ConfigListPage.vue'),
-    meta: { conceptKey: 'workflow_config', viewName: 'default-list' },
+    meta: { conceptKey: 'workflow', viewName: 'default-list' },
   },
 
   // --- Settings ---
