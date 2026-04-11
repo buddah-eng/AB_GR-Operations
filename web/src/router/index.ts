@@ -127,25 +127,10 @@ const routes: RouteRecordRaw[] = [
   },
 
   // --- Guest services: these are guest properties, not separate concepts ---
-  // Show as filtered guest list views
-  {
-    path: '/accommodations',
-    name: 'accommodations',
-    component: () => import('@/views/shells/ConfigListPage.vue'),
-    meta: { conceptKey: 'guest', viewName: 'default-list' },
-  },
-  {
-    path: '/dietary',
-    name: 'dietary',
-    component: () => import('@/views/shells/ConfigListPage.vue'),
-    meta: { conceptKey: 'guest', viewName: 'default-list' },
-  },
-  {
-    path: '/autographs',
-    name: 'autographs',
-    component: () => import('@/views/shells/ConfigListPage.vue'),
-    meta: { conceptKey: 'guest', viewName: 'default-list' },
-  },
+  // Redirect to guest list (accommodations, dietary, autographs are fields on the guest record)
+  { path: '/accommodations', redirect: '/guests' },
+  { path: '/dietary', redirect: '/guests' },
+  { path: '/autographs', redirect: '/guests' },
 
   // --- Workflows ---
   {

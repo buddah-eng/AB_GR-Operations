@@ -536,6 +536,7 @@ function parseViewConfig(row: Record<string, unknown>): ViewConfig {
     timelineEnd: (row.timeline_end as string) ?? undefined,
     rowAction: (row.row_action as ViewConfig["rowAction"]) ?? undefined,
     presets: (row.presets as ViewPreset[]) ?? undefined,
+    tabs: (row.tabs as ViewConfig["tabs"]) ?? undefined,
   };
 }
 

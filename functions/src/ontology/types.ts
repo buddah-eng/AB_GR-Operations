@@ -199,6 +199,12 @@ export interface ViewConfig {
   readonly timelineEnd?: string
   readonly rowAction?: 'navigate_to_detail' | 'inline_edit' | 'none'
   readonly presets?: ReadonlyArray<ViewPreset>
+  readonly tabs?: ReadonlyArray<{
+    readonly label: string
+    readonly conceptKey: string
+    readonly filter: Readonly<Record<string, string>>
+    readonly viewName: string
+  }>
 }
 
 export interface ViewColumn {
