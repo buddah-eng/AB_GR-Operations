@@ -271,7 +271,9 @@ domainRouter.post("/:concept", async (req: Request, res: Response) => {
     const table = conceptToTable(conceptKey);
 
     const { coreColumns, jsonbProperties } = separateProperties(filteredPayload, properties);
-    coreColumns.created_by = req.user?.uid ?? null;
+    // Dev bypass sets uid to "dev-user" which is not a valid UUID for the FK column
+    const uid = req.user?.uid;
+    coreColumns.created_by = (uid && uid !== "dev-user") ? uid : null;
 
     // C-5: Compute HMAC blind index for email
     if (typeof filteredPayload.email === "string" && isEncryptionConfigured() && isHmacConfigured()) {
