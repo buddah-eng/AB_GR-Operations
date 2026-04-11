@@ -125,16 +125,19 @@ domainRouter.get("/:concept", async (req: Request, res: Response) => {
     // Build ORDER BY
     const orderBy = buildOrderBy(req.query, properties);
 
+    // Config tables (workflow_configs, etc.) may not have an 'archived' column
+    const archivedFilter = concept.isConfig ? "" : "NOT archived AND";
+
     // Count total
     const countResult = await query(
-      `SELECT COUNT(*) FROM ${table} WHERE NOT archived ${combinedWhereClause}`,
+      `SELECT COUNT(*) FROM ${table} WHERE ${archivedFilter} true ${combinedWhereClause}`,
       combinedParams
     );
     const total = parseInt(countResult.rows[0].count as string, 10);
 
     // Fetch page
     const dataResult = await query(
-      `SELECT * FROM ${table} WHERE NOT archived ${combinedWhereClause} ${orderBy} LIMIT $${combinedParams.length + 1} OFFSET $${combinedParams.length + 2}`,
+      `SELECT * FROM ${table} WHERE ${archivedFilter} true ${combinedWhereClause} ${orderBy} LIMIT $${combinedParams.length + 1} OFFSET $${combinedParams.length + 2}`,
       [...combinedParams, limit, offset]
     );
 
@@ -182,8 +185,9 @@ domainRouter.get("/:concept/:id", async (req: Request, res: Response) => {
     }
 
     const table = conceptToTable(conceptKey);
+    const archivedCheck = concept.isConfig ? "" : " AND NOT archived";
     const result = await query(
-      `SELECT * FROM ${table} WHERE id = $1 AND NOT archived`,
+      `SELECT * FROM ${table} WHERE id = $1${archivedCheck}`,
       [id]
     );
 
