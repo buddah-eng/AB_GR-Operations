@@ -499,11 +499,19 @@ domainRouter.delete("/:concept/:id", async (req: Request, res: Response) => {
 
 // --- Helpers ---
 
+/** Maps alternative concept key names to their canonical ontology keys */
+const CONCEPT_ALIASES: Readonly<Record<string, string>> = {
+  transport_booking: "transport",
+  schedule_event: "schedule",
+  workflow_config: "workflow",
+};
+
 async function validateConcept(
   conceptKey: string,
   res: Response
 ): Promise<{ concept: NonNullable<Awaited<ReturnType<typeof getConceptByKey>>> } | null> {
-  const concept = await getConceptByKey(conceptKey);
+  const resolved = CONCEPT_ALIASES[conceptKey] ?? conceptKey;
+  const concept = await getConceptByKey(resolved);
   if (!concept) {
     sendError(res, 404, `Unknown concept: "${conceptKey}". Check /api/ontology/concepts.`);
     return null;

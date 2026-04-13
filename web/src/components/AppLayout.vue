@@ -59,7 +59,7 @@
           <div class="al-avatar" aria-hidden="true">{{ avatarLabel }}</div>
           <div class="al-user-info">
             <div class="al-user-name">{{ authStore.displayName || authStore.userEmail }}</div>
-            <div class="al-user-role">{{ authStore.role ?? 'viewer' }}</div>
+            <div class="al-user-role">{{ formatRoleLabel(authStore.role ?? 'viewer') }}</div>
           </div>
           <button
             class="al-signout"
@@ -139,6 +139,10 @@ const avatarLabel = computed(() => {
   const name = authStore.displayName || authStore.userEmail
   return name ? name.charAt(0).toUpperCase() : '?'
 })
+
+function formatRoleLabel(role: string): string {
+  return role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
 
 const navGroups: NavGroup[] = [
   {

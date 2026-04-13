@@ -128,6 +128,10 @@ function formatCellValue(value: unknown, column: ViewColumn): string {
     case 'percentage':
       return typeof value === 'number' ? `${value}%` : strValue
     default:
+      // Format underscored values (e.g. "department_head" -> "Department Head")
+      if (strValue.includes('_')) {
+        return strValue.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+      }
       return strValue
   }
 }

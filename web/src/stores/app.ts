@@ -77,11 +77,11 @@ export const useAppStore = defineStore('app', () => {
   /* ---- derived ---- */
 
   const conventionName = computed(() =>
-    String(config.value.convention['name'] ?? 'Convention'),
+    String(config.value.convention?.['name'] ?? 'Convention'),
   )
 
   const conventionLogoUrl = computed(() =>
-    String(config.value.convention['logoUrl'] ?? '/placeholder-logo.svg'),
+    String(config.value.convention?.['logoUrl'] ?? '/placeholder-logo.svg'),
   )
 
   /* ---- actions ---- */
