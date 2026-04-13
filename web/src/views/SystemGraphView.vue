@@ -41,7 +41,7 @@
         <!-- SSE connection indicator -->
         <span
           :class="['view-sse-dot', sseConnected ? 'view-sse-dot--connected' : 'view-sse-dot--disconnected']"
-          :title="sseConnected ? 'Live connection active' : 'Disconnected'"
+          :title="sseConnected ? 'Live connection active' : 'Offline — data loaded via REST'"
         />
 
         <Button
@@ -453,8 +453,8 @@ onUnmounted(() => {
 }
 
 .view-sse-dot--disconnected {
-  background: var(--color-error);
-  box-shadow: 0 0 4px rgba(239, 68, 68, 0.4);
+  background: var(--surface-300);
+  box-shadow: none;
 }
 
 /* Error */

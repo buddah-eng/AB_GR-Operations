@@ -49,7 +49,7 @@ function adaptFormFields(
   if (!raw) return undefined
   return raw.map((f) => ({
     key: (f.key ?? f.propertyKey ?? f.property_key) as string,
-    label: f.label as string | undefined,
+    label: (f.label ?? f.overrideLabel ?? f.override_label) as string | undefined,
     placeholder: (f.placeholder ?? f.overridePlaceholder ?? f.override_placeholder) as string | undefined,
     required: f.required as boolean | undefined,
     readOnly: f.readOnly as boolean | undefined,

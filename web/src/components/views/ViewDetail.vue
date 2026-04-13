@@ -19,10 +19,6 @@
 
     <!-- Detail content -->
     <template v-else>
-      <div class="vd-header">
-        <h2 class="vd-title">{{ title }}</h2>
-      </div>
-
       <dl class="vd-fields">
         <div
           v-for="field in displayFields"
@@ -92,6 +88,7 @@ const displayFields = computed<DisplayField[]>(() => {
   if (props.config.columns && props.config.columns.length > 0) {
     return props.config.columns
       .filter((col) => col.visible !== false)
+      .filter((col) => col.section !== 'header')
       .map((col) => {
         const key = col.key ?? col.propertyKey ?? ''
         return {
@@ -228,22 +225,6 @@ function formatValue(value: unknown, type?: string): string {
   color: var(--text-muted);
   margin: 0;
   line-height: var(--leading-relaxed);
-}
-
-/* Header */
-.vd-header {
-  margin-bottom: var(--space-8);
-  padding-bottom: var(--space-4);
-  border-bottom: var(--border-medium) solid var(--primary-200);
-}
-
-.vd-title {
-  font-family: var(--font-display);
-  font-size: var(--text-xl);
-  font-weight: var(--weight-bold);
-  color: var(--text-primary);
-  letter-spacing: var(--tracking-display);
-  margin: 0;
 }
 
 /* Fields grid */
