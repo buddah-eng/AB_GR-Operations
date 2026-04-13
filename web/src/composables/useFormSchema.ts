@@ -130,6 +130,22 @@ function fieldToSchemaNode(
     node.min = '0'
   }
 
+  // PrimeVue DatePicker: enable time picker for datetime type
+  if (propType === 'datetime') {
+    node.attrs = { ...node.attrs, showTime: true }
+  }
+
+  // PrimeVue AutoComplete: pass options through attrs for relation type
+  if (propType === 'relation' && property?.options) {
+    node.attrs = {
+      ...node.attrs,
+      options: property.options.map((opt) => ({
+        value: opt.value,
+        label: opt.label,
+      })),
+    }
+  }
+
   return node
 }
 
