@@ -129,7 +129,8 @@ const groups = computed<KanbanGroup[]>(() => {
   const groupMap = new Map<string, Record<string, unknown>[]>()
 
   for (const record of props.data) {
-    const groupValue = String(record[field] ?? 'Uncategorized')
+    const p = (record.properties ?? {}) as Record<string, unknown>
+    const groupValue = String(p[field] ?? record[field] ?? 'Uncategorized')
     const existing = groupMap.get(groupValue)
     if (existing) {
       existing.push(record)
@@ -140,7 +141,7 @@ const groups = computed<KanbanGroup[]>(() => {
 
   return Array.from(groupMap.entries()).map(([key, items]) => ({
     key,
-    label: key,
+    label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
     items,
   }))
 })
@@ -150,11 +151,13 @@ function getItemId(item: Record<string, unknown>): string {
 }
 
 function getItemTitle(item: Record<string, unknown>): string {
-  return String(item.name ?? item.title ?? item.label ?? item.id ?? 'Untitled')
+  const p = (item.properties ?? {}) as Record<string, unknown>
+  return String(p.name ?? item.name ?? p.title ?? item.title ?? p.label ?? item.label ?? item.id ?? 'Untitled')
 }
 
 function getItemSubtitle(item: Record<string, unknown>): string | null {
-  const value = item.description ?? item.subtitle ?? null
+  const p = (item.properties ?? {}) as Record<string, unknown>
+  const value = p.description ?? item.description ?? p.guest_name ?? p.subtitle ?? item.subtitle ?? null
   return value ? String(value) : null
 }
 
