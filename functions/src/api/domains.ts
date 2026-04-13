@@ -29,6 +29,9 @@ import type { ApiResponse, DomainRecord, Property } from "../ontology/types";
 
 // --- Status transition validation ---
 
+// STATUS_TRANSITIONS defines the valid state machine for each concept.
+// Future: load transition rules from ontology metadata or workflow config.
+// For now, hardcoded per the guest-lifecycle PRD.
 const STATUS_TRANSITIONS: Record<string, Record<string, string[]>> = {
   guest: {
     draft: ['invited', 'canceled'],

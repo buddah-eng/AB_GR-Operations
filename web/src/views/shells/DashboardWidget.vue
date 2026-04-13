@@ -77,7 +77,7 @@ import type { PageWidget } from '@/composables/usePageConfig'
 
 const router = useRouter()
 
-type TimeScope = 'all' | 'today'
+type TimeScope = 'all' | 'today' | 'week'
 
 const props = defineProps<{
   widget: PageWidget
@@ -234,6 +234,15 @@ async function loadData(): Promise<void> {
       const todayStart = new Date()
       todayStart.setHours(0, 0, 0, 0)
       params.set('filter.updated_at_gte', todayStart.toISOString())
+    } else if (props.timeScope === 'week') {
+      // Calculate start of the current week (Monday)
+      const now = new Date()
+      const day = now.getDay()
+      const diffToMonday = day === 0 ? 6 : day - 1 // Sunday = 6 days back, else day-1
+      const weekStart = new Date(now)
+      weekStart.setDate(now.getDate() - diffToMonday)
+      weekStart.setHours(0, 0, 0, 0)
+      params.set('filter.updated_at_gte', weekStart.toISOString())
     }
 
     const qs = params.toString()

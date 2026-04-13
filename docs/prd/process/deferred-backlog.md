@@ -31,6 +31,10 @@ Deferring without documentation is a shortcut. Deferring without a gate conditio
 | D-006 | Dashboard time-scoping beyond All Time/Today | ui/operational-ux-gaps.md | §5 Time Scoping | Time-scope infrastructure tested and working for "Today" | DEFERRED |
 | D-007 | Schedule date picker and conflict detection | ui/operational-ux-gaps.md | §8 Timeline/Schedule | ViewTimeline component extended with date range filter and venue-based conflict query | DEFERRED |
 | D-008 | transport_drivers table and driver management UI | modules/guest-relations/transport-logistics.md | §1 Transport Booking Concept | Transport module requires driver entity management beyond text fields on bookings | DEFERRED |
+| D-009 | Frontend navigation filtered by screen_access per role | ui/operational-ux-gaps.md | §13 | screen_access API endpoint consumed by AppLayout to conditionally render nav items | DEFERRED |
+| D-010 | Horizontal Gantt-style timeline rendering | ui/operational-ux-gaps.md | §8 | ViewTimeline component rewritten with horizontal time axis, swim lanes, zoom levels | DEFERRED |
+| D-011 | Relation field name resolution (UUID to display name) | ui/operational-ux-gaps.md | §10 | Domain CRUD API supports `?expand=relations` param that JOINs related records | DEFERRED |
+| D-012 | Activity feed shows actor/user who made each change | ui/operational-ux-gaps.md | §6 | Activity feed queries audit_log or event_log with actor resolution | DEFERRED |
 
 ---
 

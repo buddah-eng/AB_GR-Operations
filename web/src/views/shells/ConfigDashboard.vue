@@ -57,13 +57,14 @@ import SelectButton from 'primevue/selectbutton'
 import DashboardWidget from './DashboardWidget.vue'
 import { usePageConfig } from '@/composables/usePageConfig'
 
-type TimeScope = 'all' | 'today'
+type TimeScope = 'all' | 'today' | 'week'
 
 const TIME_SCOPE_KEY = 'gr-ops:dashboard-time-scope'
 
 const timeScopeOptions = [
   { label: 'All Time', value: 'all' as TimeScope },
   { label: 'Today', value: 'today' as TimeScope },
+  { label: 'This Week', value: 'week' as TimeScope },
 ]
 
 const route = useRoute()
@@ -72,7 +73,10 @@ const slug = computed(() => (route.meta.pageConfig as string) ?? 'gr-dashboard')
 const { config: pageConfig, loading: configLoading, error: configError, reload } = usePageConfig(slug)
 
 const savedScope = localStorage.getItem(TIME_SCOPE_KEY) as TimeScope | null
-const timeScope = ref<TimeScope>(savedScope === 'today' ? 'today' : 'all')
+const validScopes: TimeScope[] = ['all', 'today', 'week']
+const timeScope = ref<TimeScope>(
+  savedScope && validScopes.includes(savedScope) ? savedScope : 'all'
+)
 
 watch(timeScope, (scope) => {
   localStorage.setItem(TIME_SCOPE_KEY, scope)
