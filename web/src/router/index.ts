@@ -92,6 +92,13 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/shells/ConfigListPage.vue'),
     meta: { conceptKey: 'pairing', viewName: 'default-list' },
   },
+  {
+    path: '/pairings/:id',
+    name: 'pairing-detail',
+    component: () => import('@/views/shells/ConfigDetailPage.vue'),
+    meta: { conceptKey: 'pairing', viewName: 'detail-view' },
+    props: true,
+  },
 
   // --- Schedule ---
   {

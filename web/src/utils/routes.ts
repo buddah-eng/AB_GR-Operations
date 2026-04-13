@@ -10,6 +10,7 @@ export const CONCEPT_DETAIL_ROUTES: Record<string, string> = {
   prep_item: 'prep-detail',
   transport: 'travel-detail',
   venue: 'venue-detail',
+  pairing: 'pairing-detail',
 }
 
 export const CONCEPT_LIST_ROUTES: Record<string, string> = {
