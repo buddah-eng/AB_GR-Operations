@@ -20,7 +20,7 @@ to decide if you need to load the full document.
 |-----|------|-----------|--------|
 | README | `README.md` | Navigation, principles, document format. Start here. | done |
 | Orchestration | `_orchestration.md` | Build phases (dependency-ordered), agent rules, prompt template, lessons learned. | done |
-| Context Index | `_context-index.md` | This file. 58 docs across 10 folders. Semantic tags + dependency graph. | living |
+| Context Index | `_context-index.md` | This file. 69 docs across 10 folders. Semantic tags + dependency graph. | living |
 
 ### Process (Evergreen — Apply to Every Phase)
 
@@ -55,6 +55,11 @@ to decide if you need to load the full document.
 | Demo Architecture | `platform/demo-architecture.md` | Hybrid read/write: real Postgres reads via Vercel Functions, localStorage write interception. Single demo-store.ts. Import/export/reset. No mock API layers. | `demo`, `architecture`, `localstorage`, `hybrid` | done |
 | Demo Deployment | `platform/demo-deployment.md` | Vercel hosting (free tier), demo branch strategy, Neon Postgres, auto-deploy on push. GitHub Pages disqualified. | `demo`, `deployment`, `vercel`, `neon` | done |
 | Demo Data Narrative | `platform/demo-data-narrative.md` | Seed data for pre/during/post event. Authentic AB data (Japanese names, Hynes venues). Driver name phase-awareness. Canvas walkthrough. | `demo`, `seed-data`, `narrative`, `temporal` | done |
+| Config Write Pipeline | `platform/config-write-pipeline.md` | POST/PUT endpoints for form_configs/view_configs. Payload adapters (frontend→DB shape). Versioning integration. Cache invalidation. Builder save/publish flow. | `config`, `write-pipeline`, `versioning`, `builders` | new |
+| Data Wiring | `platform/data-wiring.md` | Fix ontology store discarding properties. Workflow engine wrong table/columns. Validation rules not reaching frontend. Seed data type mismatches. Notification delivery gaps. | `wiring`, `ontology`, `workflow`, `validation`, `integration` | new |
+| Shared Services Setup | `platform/shared-services-setup.md` | Day Zero bootstrap wizard for non-developers. Org creation, department provisioning from templates, role hierarchy, user invitation, org-wide settings. Under 30 minutes. | `setup`, `wizard`, `bootstrap`, `onboarding`, `d0` | new |
+| Template Library | `platform/template-library.md` | Browsable catalog of department template packs (GR, Programming, Ops, Vendor Relations, Registration, A/V). Browse, preview, customize, apply. Extends template-infrastructure with content and UX. | `templates`, `library`, `packs`, `browsing`, `preview` | new |
+| Org Admin Dashboard | `platform/org-admin-dashboard.md` | Admin home page at /admin. Cross-department status, user management, template management, org-wide settings, audit overview, health metrics. PageConfig-driven, not hardcoded. | `admin`, `dashboard`, `cross-department`, `management` | new |
 
 ### Core Engine
 
@@ -69,6 +74,8 @@ to decide if you need to load the full document.
 | Auth System | `core/auth-system.md` | 4 auth methods: Firebase OAuth, API keys, token-scoped, MCP delegation. All resolve to same identity+role. Actor types for audit. Dev bypass for emulator. | `auth`, `firebase`, `api-keys`, `token-scoped`, `mcp-delegation` | done |
 | Event Bus | `core/event-bus.md` | Domain event pub/sub with glob patterns. Priority-ordered sequential execution. Error isolation. Event logging to Postgres. Scaling path to Pub/Sub for cross-service. | `events`, `pub-sub`, `pattern-matching`, `domain-events` | done |
 | Audit System | `core/audit-system.md` | 5 actor types. Dual audit tables (ontology + domain). Postgres triggers catch direct SQL. Change set grouping. Rogue actor detection via bidirectional mismatch. Forensics queries. | `audit`, `actor-types`, `postgres-triggers`, `forensics` | done |
+| RBAC Completion | `core/rbac-completion.md` | Seed full permission matrix for all 6 roles. Per-role visible/editable properties, data scopes, screen access. Contract tables for contract service. Fixes deny-by-default blocking non-director roles. | `rbac`, `permissions`, `seed-data`, `roles` | new |
+| Department as Concept | `core/department-as-concept.md` | Department as first-class ontology concept with own table, lifecycle, scoping rules, templates. Not a flat text field. Director/assistant director assignment. Department dashboard and settings as PageConfig. | `ontology`, `department`, `lifecycle`, `scoping`, `templates` | new |
 
 ### Data Layer
 
@@ -107,6 +114,9 @@ to decide if you need to load the full document.
 | Condition Builder UI | `ui/condition-builder-ui.md` | Shared ConditionExpression visual component. Field picker, operator filtering by type, compound and/or/not grouping, human-readable preview. Used in 5+ places. | `condition-ui`, `visual-logic`, `shared-component` | done |
 | In-App Documents | `ui/in-app-documents.md` | Contracts (conditional clause assembly, Handlebars, 14 clause inventory) and itineraries (per-guest schedule aggregation) as in-app views. PDF export via HTML→PDF. Template management via ontology. | `contracts`, `itineraries`, `in-app-views`, `pdf-export` | done |
 | Builder-to-Operator | `ui/builder-to-operator.md` | Property→input mapping (17 types), property→column mapping, default form/view/page auto-generation, ontology change impact on operators, builder guardrails. | `ux`, `translation`, `defaults`, `guardrails` | done |
+| Operational UX Gaps | `ui/operational-ux-gaps.md` | Fix 10 failed user journeys. Detail routes, domain route shells, dashboard widget interactivity, horizontal Gantt timeline, relation field name resolution. Closes every UX lifecycle gap. | `ux`, `journeys`, `detail-pages`, `navigation`, `gaps` | new |
+| Builder Guided Experience | `ui/builder-guided-experience.md` | Preview mode (operator view while editing), contextual help, default templates, undo history with visual timeline, validation warnings, first-time tutorial. Makes builders accessible to non-technical directors. | `ux`, `builders`, `preview`, `tutorial`, `guided`, `onboarding` | new |
+| Canvas as Onboarding | `ui/canvas-as-onboarding.md` | System graph as primary onboarding tool. Interactive tour of department data model. Quick actions from canvas nodes. Department-scoped view. Relationship drawing. "What if" mode for risk-free exploration. | `canvas`, `onboarding`, `tour`, `interactive`, `department` | new |
 
 ### Data Infrastructure
 
@@ -163,6 +173,7 @@ to decide if you need to load the full document.
 | Itineraries | `modules/guest-relations/itineraries.md` | Computed view aggregating schedule + transport + pairings per guest. Day-by-day agenda. Real-time (no regeneration). PDF export. Liaison combined copy. | `itineraries`, `per-guest-schedule`, `in-app-view`, `pdf-export` | done |
 | Transport & Logistics | `modules/guest-relations/transport-logistics.md` | Booking lifecycle (requested→dropped_off). FlightAware polling (15min). Blacklane/Karhoo ride booking. Driver token view. Live location sharing. Manager dashboard. | `transport`, `flights`, `drivers`, `live-location`, `blacklane`, `flightaware` | done |
 | Guest Self-Service | `modules/guest-relations/guest-self-service.md` | Tokenized forms. YoY pre-population. Save-and-resume (JSONB partial saves). Submit→event→prep auto-complete. PII encryption. Token expiration, no enumeration. | `self-service`, `external-forms`, `token-auth`, `yoy-prepopulation` | done |
+| Operational Writes | `modules/guest-relations/operational-writes.md` | Wire every operational write path. Edit routes, inline edit, status change UI, kanban card-move handler, form submission feedback. App is currently read-only; this makes it read-write. | `gr`, `writes`, `edit`, `status-change`, `kanban` | new |
 
 ### Rollout
 
@@ -177,8 +188,8 @@ to decide if you need to load the full document.
 
 | Tag | Documents |
 |-----|-----------|
-| `ontology` | core/ontology-engine, core/ontology-scoping, core/ontology-web-builder, core/ontology-ci-qa |
-| `rbac` | core/rbac-engine, api/domain-crud, api/external-surfaces, api/mcp-surface, platform/multi-tenancy |
+| `ontology` | core/ontology-engine, core/ontology-scoping, core/ontology-web-builder, core/ontology-ci-qa, core/department-as-concept |
+| `rbac` | core/rbac-engine, core/rbac-completion, api/domain-crud, api/external-surfaces, api/mcp-surface, platform/multi-tenancy |
 | `auth` | core/auth-system, api/integration-patterns, api/external-surfaces, api/mcp-surface |
 | `conditions` | core/condition-expression, ui/condition-builder-ui, automation/workflow-engine, modules/gr/contracts |
 | `postgres` | data/postgres-schema, data/integration-testing, data/versioning-backups, data/yoy-registry, data/encryption |
@@ -187,13 +198,13 @@ to decide if you need to load the full document.
 | `events` | core/event-bus, core/audit-system, automation/workflow-engine |
 | `workflows` | automation/workflow-engine, automation/workflow-actions, automation/workflow-builder |
 | `api` | api/domain-crud, api/integration-patterns, api/external-surfaces, api/mcp-surface |
-| `forms` | ui/dynamic-forms, ui/form-view-builder, core/ontology-web-builder |
-| `views` | ui/view-renderer, ui/form-view-builder, ui/in-app-documents |
+| `forms` | ui/dynamic-forms, ui/form-view-builder, ui/builder-guided-experience, core/ontology-web-builder |
+| `views` | ui/view-renderer, ui/form-view-builder, ui/in-app-documents, ui/operational-ux-gaps |
 | `scheduling` | shared-services/scheduling-calendar, shared-services/google-calendar-sync, shared-services/guidebook-integration, shared-services/volunteer-scheduling |
 | `external` | api/external-surfaces, modules/gr/guest-self-service, modules/gr/transport-logistics |
 | `audit` | core/audit-system, data/versioning-backups, data/encryption |
-| `platform` | platform/vision, platform/architecture, platform/multi-tenancy, platform/scaling, platform/oss-model, platform/branding |
-| `gr` | modules/guest-relations/* |
+| `platform` | platform/vision, platform/architecture, platform/multi-tenancy, platform/scaling, platform/oss-model, platform/branding, platform/config-write-pipeline, platform/data-wiring, platform/shared-services-setup, platform/template-library, platform/org-admin-dashboard |
+| `gr` | modules/guest-relations/*, modules/guest-relations/operational-writes |
 | `transport` | modules/gr/transport-logistics, shared-services/equipment-logistics |
 | `documents` | ui/in-app-documents, modules/gr/contracts, modules/gr/itineraries |
 | `shared-services` | shared-services/* |
@@ -202,6 +213,14 @@ to decide if you need to load the full document.
 | `branding` | platform/branding |
 | `encryption` | data/encryption |
 | `security` | data/encryption, core/audit-system, data/versioning-backups, rollout/risk-register |
+| `department` | core/department-as-concept, platform/multi-tenancy, platform/shared-services-setup, ui/canvas-as-onboarding |
+| `templates` | platform/template-infrastructure, platform/template-library |
+| `onboarding` | platform/shared-services-setup, ui/builder-guided-experience, ui/canvas-as-onboarding |
+| `admin` | platform/org-admin-dashboard, platform/shared-services-setup |
+| `wiring` | platform/data-wiring, process/wiring-audit |
+| `writes` | modules/guest-relations/operational-writes, platform/config-write-pipeline, process/write-pipeline |
+| `ux-gaps` | ui/operational-ux-gaps, ui/builder-guided-experience |
+| `canvas` | canvas/canvas-engine, canvas/system-visualization-architecture, canvas/system-graph, canvas/workflow-canvas, canvas/data-flow-canvas, canvas/canvas-config-bridge, canvas/canvas-rbac, ui/canvas-as-onboarding |
 
 ---
 
@@ -259,7 +278,8 @@ Phase E (Shared Services):               │
   cross-dept-collab ─────┘                │
                                           │
 Phase F (GR Module):                     │
-  gr/overview ───────────┐                │
+  gr/config-integration ─┐                │
+  gr/overview ───────────┤                │
   gr/guest-lifecycle ────┤                │
   gr/pairings-staffing ──┤                │
   gr/prep-tracking ──────┤                │
@@ -268,7 +288,28 @@ Phase F (GR Module):                     │
   gr/transport ──────────┤                │
   gr/guest-self-service ─┘                │
                                           │
-Phase G (Rollout):                       │
+Phase F.5 (Platform Completeness):       │
+  data-wiring ───────────┐                │
+  config-write-pipeline ─┤                │
+  rbac-completion ───────┤                │
+  operational-writes ────┤                │
+  operational-ux-gaps ───┘                │
+                                          │
+Phase G (Shared Services & Dept Setup):  │
+  department-as-concept ─┐                │
+  template-library ──────┤                │
+  shared-services-setup ─┤                │
+  org-admin-dashboard ───┤                │
+  builder-guided-exp ────┤                │
+  canvas-as-onboarding ──┘                │
+                                          │
+Phase H (Launch Infrastructure):         │
+  demo-architecture ─────┐                │
+  demo-deployment ───────┤                │
+  demo-data-narrative ───┤                │
+  demo-showcase ─────────┘                │
+                                          │
+Phase I (Rollout):                       │
   roadmap ───────────────┐                │
   risk-register ─────────┘────────────────┘
 ```

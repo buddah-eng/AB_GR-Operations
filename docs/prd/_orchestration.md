@@ -217,9 +217,69 @@ Depends on Phase 5 shared services (especially staff, scheduling, venues).
 - [ ] Behavioral verification: load guest list from DB config and render correctly end-to-end
 - [ ] The ontology thesis is demonstrably true: source code is engine, database is application
 
-### Phase 7 — Launch Infrastructure (Demo + Docs)
+### Phase 6.5 — Platform Completeness
 
-Depends on Phase 6 (GR Module must be config-driven before demo can showcase it).
+Depends on Phase 6 (fixes gaps discovered during Phase 6 implementation).
+
+**Purpose:** Phase 6 implementation revealed five categories of gaps: operational writes are missing, config builders can't save, data wiring is broken, RBAC permissions aren't seeded, and UX journeys fail. These must be fixed before moving to shared services setup or demo.
+
+| PRD | What | Depends On |
+|-----|------|------------|
+| `platform/data-wiring.md` | Fix ontology store discarding properties, workflow engine wrong table/columns, validation not reaching frontend, seed data type mismatches | All Phase 1-6 infrastructure |
+| `platform/config-write-pipeline.md` | POST/PUT endpoints for form_configs/view_configs, payload adapters, versioning, cache invalidation | ontology-engine, domain-crud, versioning-backups |
+| `core/rbac-completion.md` | Seed full permission matrix for all roles (coordinator, liaison, interpreter, volunteer, viewer), data scopes, screen access | rbac-engine, ontology-engine |
+| `modules/guest-relations/operational-writes.md` | Wire every operational write path: edit routes, inline edit, status change UI, kanban card-move, form submission feedback | config-integration, domain-crud, workflow-engine |
+| `ui/operational-ux-gaps.md` | Fix 10 failed user journeys: detail routes, domain route shells, dashboard widget interactivity, timeline rendering | view-renderer, dynamic-forms, config-integration |
+
+**Parallel tracks in Phase 6.5:**
+- data-wiring is foundational — should be first (fixes plumbing everything else depends on)
+- config-write-pipeline + rbac-completion can run in parallel (independent subsystems)
+- operational-writes + operational-ux-gaps can run in parallel after data-wiring (both need working plumbing)
+
+**Phase 6.5 Acceptance Criteria:**
+- [ ] Ontology store preserves properties map through load/cache cycle
+- [ ] Workflow engine queries correct tables with correct column names
+- [ ] POST/PUT endpoints exist for form_configs and view_configs with versioning
+- [ ] All 6 roles have seeded permissions; non-director roles can access appropriate endpoints
+- [ ] All 10 user journey scenarios complete end-to-end
+- [ ] Detail pages exist for all GR concepts
+- [ ] Dashboard widgets are clickable and navigate to filtered views
+
+### Phase 7 — Shared Services & Department Setup
+
+Depends on Phase 6.5 (platform completeness gaps must be closed before multi-department setup).
+
+**Purpose:** Elevate department from a string field to a first-class concept. Build the template library for department provisioning. Create the Day Zero setup wizard and admin dashboard. Make the canvas serve as an onboarding tool and builders accessible to non-technical directors.
+
+| PRD | What | Depends On |
+|-----|------|------------|
+| `core/department-as-concept.md` | Department as first-class ontology concept with table, lifecycle, scoping, templates | ontology-engine, multi-tenancy, rbac-engine |
+| `platform/template-library.md` | Browsable catalog of department template packs (GR, Programming, Ops, etc.), preview, apply | template-infrastructure, department-as-concept |
+| `platform/shared-services-setup.md` | Day Zero bootstrap wizard: org creation, dept provisioning from templates, role hierarchy, user invitation | department-as-concept, template-library, auth-system |
+| `platform/org-admin-dashboard.md` | Admin home page: cross-department status, user management, template management, audit overview | department-as-concept, view-renderer, rbac-engine |
+| `ui/builder-guided-experience.md` | Preview mode, contextual help, default templates, undo history, validation warnings, first-time tutorial | form-view-builder, builder-to-operator |
+| `ui/canvas-as-onboarding.md` | System graph as onboarding tool: interactive tour, quick actions from nodes, "what if" mode | canvas/system-graph, department-as-concept |
+
+**Parallel tracks in Phase 7:**
+- department-as-concept is foundational — must be first
+- template-library depends on department-as-concept
+- shared-services-setup depends on both department-as-concept and template-library (sequential)
+- org-admin-dashboard can start after department-as-concept (parallel with template work)
+- builder-guided-experience is independent of department work (parallel)
+- canvas-as-onboarding depends on department-as-concept + system-graph (parallel with template work)
+
+**Phase 7 Acceptance Criteria:**
+- [ ] `departments` table exists with lifecycle, director, settings
+- [ ] Template library has at least 3 department packs (GR, Programming, Operations)
+- [ ] D0 wizard completes org setup in under 30 minutes for non-developer
+- [ ] Admin dashboard renders from PageConfig, shows cross-department status
+- [ ] Builder preview mode shows operator view while editing
+- [ ] Canvas onboarding tour walks through department data model visually
+- [ ] All writes go through standard pipeline (auth, RBAC, audit, validation, events)
+
+### Phase 8 — Launch Infrastructure (Demo + Docs)
+
+Depends on Phase 7 (shared services and department setup must work before demo can showcase multi-department platform).
 
 **Purpose:** The demo IS the real app deployed with `VITE_DEMO_MODE=true`. Reads hit real Postgres (Neon on Vercel). Writes intercepted by localStorage adapter. Seeded with authentic AB data across three temporal views. All builder views functional. No mock HTTP layers. No separate codebase.
 
@@ -231,7 +291,7 @@ Depends on Phase 6 (GR Module must be config-driven before demo can showcase it)
 | `platform/demo-showcase.md` | Updated: references demo-architecture/deployment/narrative PRDs. Removed all GitHub Pages and static HTML references. | demo-architecture, demo-deployment, demo-data-narrative |
 | `docs/launch-guide/` series | Platform-agnostic primary path + Vercel-specific callouts. Environment setup, deployment, ontology seeding, demo mode, admin setup, first-run. | All implementation phases |
 
-**Phase 7 Acceptance Criteria:**
+**Phase 8 Acceptance Criteria:**
 - [ ] Demo deployed on Vercel from `demo` branch, publicly accessible without login
 - [ ] All views render data immediately on load (no blank states)
 - [ ] Canvas uses proper layout algorithm (force-directed or dagre), not raw grid
@@ -242,9 +302,9 @@ Depends on Phase 6 (GR Module must be config-driven before demo can showcase it)
 - [ ] Launch guide docs exist and are platform-agnostic with Vercel callouts
 - [ ] Driver names visible during/post-event only; pre-event shows company/vendor details only
 
-### Phase 8 — Rollout Planning
+### Phase 9 — Rollout Planning
 
-Depends on all above (reads everything to produce build plan + risk analysis). Renumbered from Phase 7.
+Depends on all above (reads everything to produce build plan + risk analysis).
 
 | PRD | What | Depends On |
 |-----|------|------------|
