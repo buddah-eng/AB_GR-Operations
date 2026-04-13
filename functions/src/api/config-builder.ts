@@ -26,6 +26,7 @@ import { requireAuth, requireRole } from "../auth/middleware";
 import { DIRECTOR_PRIORITY } from "../ontology/scoping";
 import { auditContextFromRequest, logAuditClaim, withAuditContext } from "../audit/context";
 import { cache } from "../cache";
+import { emit, createDomainEvent } from "../events/bus";
 import type { ApiResponse } from "../ontology/types";
 
 // --- Routers ---
@@ -218,6 +219,16 @@ formRouter.post("/", requireRole(DIRECTOR_PRIORITY), async (req: Request, res: R
 
     invalidateConfigCaches(conceptKey);
 
+    // Emit domain event for form config creation
+    const event = createDomainEvent({
+      eventName: "form_config.created",
+      domain: "form_config",
+      action: "created",
+      recordId: row.id as string,
+      triggeredBy: req.user?.email ?? "system",
+    });
+    await emit(event);
+
     logger.info("Form config created", {
       id: row.id,
       conceptKey,
@@ -307,6 +318,16 @@ formRouter.put("/:id", requireRole(DIRECTOR_PRIORITY), async (req: Request, res:
     await logAuditClaim(auditCtx, `PUT /api/form-configs/${id}`);
 
     invalidateConfigCaches(conceptKey);
+
+    // Emit domain event for form config update
+    const event = createDomainEvent({
+      eventName: "form_config.updated",
+      domain: "form_config",
+      action: "updated",
+      recordId: newRow.id as string,
+      triggeredBy: req.user?.email ?? "system",
+    });
+    await emit(event);
 
     logger.info("Form config versioned", {
       oldId: id,
@@ -444,6 +465,16 @@ viewRouter.post("/", requireRole(DIRECTOR_PRIORITY), async (req: Request, res: R
 
     invalidateConfigCaches(conceptKey);
 
+    // Emit domain event for view config creation
+    const vcEvent = createDomainEvent({
+      eventName: "view_config.created",
+      domain: "view_config",
+      action: "created",
+      recordId: row.id as string,
+      triggeredBy: req.user?.email ?? "system",
+    });
+    await emit(vcEvent);
+
     logger.info("View config created", {
       id: row.id,
       conceptKey,
@@ -558,6 +589,16 @@ viewRouter.put("/:id", requireRole(DIRECTOR_PRIORITY), async (req: Request, res:
     await logAuditClaim(auditCtx, `PUT /api/view-configs/${id}`);
 
     invalidateConfigCaches(conceptKey);
+
+    // Emit domain event for view config update
+    const vcEvent = createDomainEvent({
+      eventName: "view_config.updated",
+      domain: "view_config",
+      action: "updated",
+      recordId: newRow.id as string,
+      triggeredBy: req.user?.email ?? "system",
+    });
+    await emit(vcEvent);
 
     logger.info("View config versioned", {
       oldId: id,

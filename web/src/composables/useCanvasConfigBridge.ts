@@ -266,6 +266,7 @@ export function useCanvasConfigBridge(options?: BridgeOptions) {
         err instanceof Error ? err.message : 'Undo failed'
       // Restore action to undo stack since rollback failed
       undoStack.value = [...undoStack.value, action]
+      // Surface error for consuming component (lastError is exposed as readonly ref)
     }
   }
 
@@ -290,6 +291,7 @@ export function useCanvasConfigBridge(options?: BridgeOptions) {
       lastError.value =
         err instanceof Error ? err.message : 'Redo failed'
       redoStack.value = [...redoStack.value, action]
+      // Surface error for consuming component (lastError is exposed as readonly ref)
     }
   }
 

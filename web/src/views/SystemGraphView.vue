@@ -175,6 +175,7 @@ import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Sidebar from 'primevue/sidebar'
 import Menu from 'primevue/menu'
+import { useToast } from 'primevue/usetoast'
 import ProgressSpinner from 'primevue/progressspinner'
 
 import CanvasProvider from '@/components/canvas/CanvasProvider.vue'
@@ -186,6 +187,7 @@ import type { ZoomLevel } from '@/types/canvas'
 
 const canvasStore = useCanvasStore()
 const router = useRouter()
+const toast = useToast()
 
 /* ---- Config bridge (SSE + undo/redo) ---- */
 
@@ -200,7 +202,15 @@ const {
   undo,
   redo,
   connected: sseConnected,
+  lastError: bridgeError,
 } = useCanvasConfigBridge()
+
+// Surface undo/redo errors as toast notifications
+watch(bridgeError, (errorMsg) => {
+  if (errorMsg) {
+    toast.add({ severity: 'error', summary: 'Canvas Error', detail: errorMsg, life: 5000 })
+  }
+})
 
 /* ---- Zoom levels ---- */
 

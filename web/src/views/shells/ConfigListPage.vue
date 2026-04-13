@@ -12,6 +12,16 @@
           @click="navigateToForm"
         />
         <Button
+          v-if="isDirectorOrAbove"
+          icon="pi pi-file-edit"
+          severity="secondary"
+          text
+          rounded
+          aria-label="Customize form"
+          @click="router.push({ name: 'form-builder', params: { conceptKey } })"
+        />
+        <Button
+          v-if="isDirectorOrAbove"
           icon="pi pi-cog"
           severity="secondary"
           text
@@ -47,13 +57,20 @@ import DynamicView from '@/components/views/DynamicView.vue'
 import { useViewConfig } from '@/composables/useViewConfig'
 import { useConceptData } from '@/composables/useConceptData'
 import { useOntologyStore } from '@/stores/ontology'
+import { useAuthStore } from '@/stores/auth'
 import { api } from '@/api/client'
+import { CONCEPT_DETAIL_ROUTES } from '@/utils/routes'
 import type { ViewSort, ViewFilter } from '@/types/views'
 
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 const ontologyStore = useOntologyStore()
+const authStore = useAuthStore()
+
+const isDirectorOrAbove = computed(() =>
+  ['director', 'admin', 'department_head'].includes(authStore.role as string ?? '')
+)
 
 const conceptKey = computed(() => (route.meta.conceptKey as string) ?? '')
 const viewName = computed(() => (route.meta.viewName as string) ?? 'default-list')
@@ -94,14 +111,8 @@ function handleRowClick(record: Record<string, unknown>): void {
   const id = record.id as string
   if (!id) return
 
-  // Concept-aware routing: map concept keys to named detail routes
-  const detailRoutes: Record<string, string> = {
-    guest: 'guest-detail',
-    staff: 'staff-detail',
-    schedule: 'schedule-detail',
-    prep_item: 'prep-detail',
-  }
-  const routeName = detailRoutes[conceptKey.value]
+  // Concept-aware routing: use shared route map
+  const routeName = CONCEPT_DETAIL_ROUTES[conceptKey.value]
   if (routeName) {
     router.push({ name: routeName, params: { id } })
   }

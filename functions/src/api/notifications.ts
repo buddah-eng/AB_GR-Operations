@@ -34,7 +34,9 @@ notificationRouter.use(requireAuth);
 
 notificationRouter.get("/", async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.uid;
+    const rawUid = req.user!.uid;
+    // Sanitize dev-user UUID to avoid Postgres UUID cast errors
+    const userId = rawUid === "dev-user" ? "00000000-0000-0000-0000-000000000000" : rawUid;
     const filters: NotificationFilters = {
       status: req.query.status as string | undefined,
       limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
@@ -55,7 +57,8 @@ notificationRouter.get("/", async (req: Request, res: Response) => {
 
 notificationRouter.get("/unread-count", async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.uid;
+    const rawUid = req.user!.uid;
+    const userId = rawUid === "dev-user" ? "00000000-0000-0000-0000-000000000000" : rawUid;
     const result = await getUnreadCount(userId);
 
     res.json({ success: true, data: { count: result.data } });
@@ -89,7 +92,8 @@ notificationRouter.put("/:id/read", async (req: Request, res: Response) => {
 
 notificationRouter.get("/preferences", async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.uid;
+    const rawUid = req.user!.uid;
+    const userId = rawUid === "dev-user" ? "00000000-0000-0000-0000-000000000000" : rawUid;
     const result = await getPreferences(userId);
 
     res.json({ success: true, data: result.data });
@@ -104,7 +108,8 @@ notificationRouter.get("/preferences", async (req: Request, res: Response) => {
 
 notificationRouter.put("/preferences", async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.uid;
+    const rawUid = req.user!.uid;
+    const userId = rawUid === "dev-user" ? "00000000-0000-0000-0000-000000000000" : rawUid;
     const prefs = req.body as UpdatePreferencesData;
 
     const result = await updatePreferences(userId, prefs);

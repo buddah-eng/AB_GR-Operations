@@ -100,7 +100,11 @@
           text
           rounded
           aria-label="Notifications"
+          @click="toggleNotifications"
         />
+        <OverlayPanel ref="notifPanel">
+          <div class="p-3 text-sm text-surface-500">No new notifications</div>
+        </OverlayPanel>
       </header>
 
       <!-- Page content -->
@@ -112,9 +116,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
+import OverlayPanel from 'primevue/overlaypanel'
 import { useAuthStore } from '@/stores/auth'
 import { useAppStore } from '@/stores/app'
 
@@ -132,6 +137,12 @@ interface NavGroup {
 const router = useRouter()
 const authStore = useAuthStore()
 const appStore = useAppStore()
+
+const notifPanel = ref()
+
+function toggleNotifications(event: Event): void {
+  notifPanel.value?.toggle(event)
+}
 
 const sidebarVisible = computed(() => appStore.sidebarOpen)
 

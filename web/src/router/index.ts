@@ -156,6 +156,13 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/shells/ConfigListPage.vue'),
     meta: { conceptKey: 'transport', viewName: 'default-list' },
   },
+  {
+    path: '/travel/:id',
+    name: 'travel-detail',
+    component: () => import('@/views/shells/ConfigDetailPage.vue'),
+    meta: { conceptKey: 'transport', viewName: 'detail-view' },
+    props: true,
+  },
 
   // --- Venues (config-driven) ---
   {
@@ -163,6 +170,13 @@ const routes: RouteRecordRaw[] = [
     name: 'venues',
     component: () => import('@/views/shells/ConfigListPage.vue'),
     meta: { conceptKey: 'venue', viewName: 'default-list' },
+  },
+  {
+    path: '/venues/:id',
+    name: 'venue-detail',
+    component: () => import('@/views/shells/ConfigDetailPage.vue'),
+    meta: { conceptKey: 'venue', viewName: 'detail-view' },
+    props: true,
   },
 
   // --- Guest services: these are guest properties, not separate concepts ---

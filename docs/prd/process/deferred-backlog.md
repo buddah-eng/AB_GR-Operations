@@ -35,6 +35,7 @@ Deferring without documentation is a shortcut. Deferring without a gate conditio
 | D-010 | Horizontal Gantt-style timeline rendering | ui/operational-ux-gaps.md | §8 | ViewTimeline component rewritten with horizontal time axis, swim lanes, zoom levels | DEFERRED |
 | D-011 | Relation field name resolution (UUID to display name) | ui/operational-ux-gaps.md | §10 | Domain CRUD API supports `?expand=relations` param that JOINs related records | DEFERRED |
 | D-012 | Activity feed shows actor/user who made each change | ui/operational-ux-gaps.md | §6 | Activity feed queries audit_log or event_log with actor resolution | DEFERRED |
+| D-013 | Add/remove pairing actions on detail pages | ui/operational-ux-gaps.md | §10 | Pairing CRUD API + inline add/remove UI on guest/staff detail tabs | DEFERRED |
 
 ---
 

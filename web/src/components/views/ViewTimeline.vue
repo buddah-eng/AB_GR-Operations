@@ -70,6 +70,12 @@
 </template>
 
 <script setup lang="ts">
+// TODO: D-007 — Add date range filter and venue-based conflict detection
+// See deferred backlog for gate conditions
+
+// TODO: D-010 — Horizontal Gantt-style rendering with swim lanes and zoom
+// Current implementation is a vertical date-grouped list
+
 import { computed } from 'vue'
 
 import type { ViewConfig } from '@/types/views'

@@ -69,10 +69,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import ProgressBar from 'primevue/progressbar'
 import { api } from '@/api/client'
+import { CONCEPT_LIST_ROUTES } from '@/utils/routes'
 import type { PageWidget } from '@/composables/usePageConfig'
 
 const router = useRouter()
@@ -124,13 +125,7 @@ function getStatusIcon(status: string): { icon: string; color: string } {
 }
 
 const CONCEPT_ROUTES: Record<string, string> = {
-  guest: '/guests',
-  staff: '/staff',
-  transport: '/travel',
-  prep_item: '/prep-tracker',
-  schedule: '/schedule',
-  venue: '/venues',
-  pairing: '/pairings',
+  ...CONCEPT_LIST_ROUTES,
   accommodation: '/accommodations',
 }
 
@@ -303,7 +298,15 @@ async function loadData(): Promise<void> {
   }
 }
 
-onMounted(loadData)
+onMounted(() => {
+  loadData()
+
+  // Auto-refresh activity feed every 60 seconds
+  if (props.widget.type === 'activity_feed') {
+    const interval = setInterval(loadData, 60_000)
+    onUnmounted(() => clearInterval(interval))
+  }
+})
 watch(() => props.refreshKey, loadData)
 watch(() => props.timeScope, loadData)
 </script>
