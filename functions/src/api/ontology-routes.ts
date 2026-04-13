@@ -41,6 +41,8 @@ ontologyRouter.get("/", async (_req: Request, res: Response) => {
       success: true,
       data: serialized,
     };
+    // Ontology changes rarely — cache at CDN for 5 min, serve stale for 1 hour
+    res.set("Cache-Control", "public, max-age=300, stale-while-revalidate=3600");
     res.json(response);
   } catch (err) {
     handleError(res, err, "loading ontology");

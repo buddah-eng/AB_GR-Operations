@@ -87,6 +87,12 @@ export const useAppStore = defineStore('app', () => {
   /* ---- actions ---- */
 
   async function loadConfig(): Promise<void> {
+    // On Vercel (no Firebase), /api/config uses Firestore which isn't available.
+    // Skip the call and use defaults to avoid a wasted round-trip.
+    if (!import.meta.env.VITE_FIREBASE_API_KEY) {
+      loading.value = false
+      return
+    }
     loading.value = true
     try {
       const data = await api.get<ConfigData>('/api/config')

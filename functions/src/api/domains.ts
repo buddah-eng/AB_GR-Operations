@@ -168,20 +168,23 @@ domainRouter.get("/:concept", async (req: Request, res: Response) => {
       [...combinedParams, limit, offset]
     );
 
-    // Filter visible properties per record
-    const records = await Promise.all(
-      dataResult.rows.map(async (row) => {
-        const record = rowToDomainRecord(row, conceptKey);
-        const filteredProps = await roleEngine.filterRecord(
-          roleKey, conceptKey, record.properties
-        );
-        // Decrypt PII only after RBAC filter — if role can't see the field, decryption never runs
-        const decryptedProps = isEncryptionConfigured()
-          ? decryptPiiFields(filteredProps, { recordId: record.id, actorId: req.user?.uid ?? "anonymous" })
-          : filteredProps;
-        return { ...record, properties: decryptedProps };
-      })
-    );
+    // Pre-resolve visible properties once (not per record — avoids N async hops)
+    const visibleProps = await roleEngine.getVisibleProperties(roleKey, conceptKey);
+
+    const records = dataResult.rows.map((row) => {
+      const record = rowToDomainRecord(row, conceptKey);
+      // Synchronous field filter using pre-resolved visible properties
+      const filteredProps = visibleProps.length === 0
+        ? {}
+        : Object.fromEntries(
+            Object.entries(record.properties).filter(([key]) => visibleProps.includes(key))
+          );
+      // Decrypt PII only after RBAC filter
+      const decryptedProps = isEncryptionConfigured()
+        ? decryptPiiFields(filteredProps, { recordId: record.id, actorId: req.user?.uid ?? "anonymous" })
+        : filteredProps;
+      return { ...record, properties: decryptedProps };
+    });
 
     const response: ApiResponse<ReadonlyArray<DomainRecord>> = {
       success: true,

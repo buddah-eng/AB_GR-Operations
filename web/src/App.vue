@@ -26,12 +26,16 @@ import ProgressSpinner from 'primevue/progressspinner'
 import AppLayout from '@/components/AppLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useAppStore } from '@/stores/app'
+import { useOntologyStore } from '@/stores/ontology'
 
 const authStore = useAuthStore()
 const appStore = useAppStore()
+const ontologyStore = useOntologyStore()
 
 onMounted(() => {
   authStore.init()
   appStore.loadConfig()
+  // Load ontology eagerly — all config-driven pages depend on it for labels, types, properties
+  ontologyStore.loadOntology()
 })
 </script>

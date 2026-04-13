@@ -9,6 +9,17 @@ export default defineConfig({
       '@': resolve(__dirname, 'src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vue-vendor': ['vue', 'vue-router', 'pinia'],
+          'primevue': ['primevue'],
+          'formkit': ['@formkit/vue'],
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
   },
