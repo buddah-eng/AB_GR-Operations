@@ -84,7 +84,7 @@
             :key="getColumnKey(col)"
             class="vcr-field"
           >
-            <span class="vcr-field-label">{{ col.label }}</span>
+            <span class="vcr-field-label">{{ getColumnLabel(col) }}</span>
 
             <!-- Progress bar renderer -->
             <ProgressBar
@@ -246,6 +246,22 @@ function getColumnKey(col: ViewColumn): string {
   return col.key ?? col.propertyKey ?? ''
 }
 
+/** Format a property key into a human-readable label */
+function formatLabel(key: string): string {
+  return key
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/[_-]/g, ' ')
+    .replace(/^\w/, (c) => c.toUpperCase())
+    .trim()
+}
+
+/** Resolve the display label for a column, falling back to a formatted key */
+function getColumnLabel(col: ViewColumn): string {
+  if (col.label) return col.label
+  const key = getColumnKey(col)
+  return key ? formatLabel(key) : ''
+}
+
 /**
  * Resolves the display value from a record for a given column.
  * Falls back through: record[key] -> record[propertyKey] -> record.properties[key]
@@ -281,11 +297,19 @@ function resolveColumnValue(
 /*  Formatting helpers                                                 */
 /* ------------------------------------------------------------------ */
 
+/** Detect UUID strings (8-4-4-4-12 hex format) */
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 function formatCellValue(value: unknown, column: ViewColumn): string {
   if (value === null || value === undefined) return '\u2014'
 
   const colType = column.type ?? 'text'
   const strValue = String(value)
+
+  // Truncate raw UUIDs to a friendly short form
+  if (UUID_PATTERN.test(strValue)) {
+    return strValue.substring(0, 8) + '\u2026'
+  }
 
   switch (colType) {
     case 'date':
@@ -309,8 +333,17 @@ function formatCellValue(value: unknown, column: ViewColumn): string {
     case 'percentage':
       return typeof value === 'number' ? `${value}%` : strValue
     default:
+      // Format underscored values (e.g. "department_head" -> "Department Head")
+      if (strValue.includes('_')) {
+        return formatBadgeText(strValue)
+      }
       return strValue
   }
+}
+
+/** Format raw DB values like "Department_head" or "in_progress" to "Department Head" */
+function formatBadgeText(value: string): string {
+  return value.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
 }
 
 function formatRelativeDate(value: unknown): string {
@@ -396,7 +429,7 @@ const STATUS_SEVERITY_MAP: Record<string, BadgeInfo['severity']> = {
 }
 
 function resolveSeverity(value: string): BadgeInfo['severity'] {
-  const normalized = value.toLowerCase().trim()
+  const normalized = value.toLowerCase().trim().replace(/_/g, ' ')
   return STATUS_SEVERITY_MAP[normalized] ?? 'info'
 }
 
@@ -413,7 +446,7 @@ function getBadgeColumns(record: Record<string, unknown>): BadgeInfo[] {
     const value = String(raw)
     badges.push({
       key,
-      value,
+      value: formatBadgeText(value),
       severity: resolveSeverity(value),
     })
   }

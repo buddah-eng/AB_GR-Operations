@@ -27,6 +27,10 @@ Deferring without documentation is a shortcut. Deferring without a gate conditio
 | D-002 | Frontend component testing infrastructure (Vitest + Vue Test Utils) | Phase 4.5 (all frontend PRDs) | Frontend test infrastructure established (vitest config, vue-test-utils installed, test patterns defined) | DEFERRED |
 | D-003 | SSE connection timeout on Vercel (300s max) | ui/operational-ux-gaps.md | §13 Vercel Considerations | Vercel migrates to dedicated compute (Fluid Compute long-running), OR canvas real-time polling replaces SSE, OR platform deploys to Cloud Run | DEFERRED |
 | D-004 | Relation-based data scoping for liaison role (join-through pairings) | core/rbac-completion.md | §4 Data Scope Extension | RBAC engine's `buildDataScopeFilter` extended to support subquery-based scoping (`AND id IN (SELECT guest_id FROM pairings WHERE staff_id = $uid)`) | DEFERRED |
+| D-005 | Staff workload column (computed guest count per staff) | ui/operational-ux-gaps.md | §9 Staff Workload | API endpoint supports computed/aggregate columns via join queries | DEFERRED |
+| D-006 | Dashboard time-scoping beyond All Time/Today | ui/operational-ux-gaps.md | §5 Time Scoping | Time-scope infrastructure tested and working for "Today" | DEFERRED |
+| D-007 | Schedule date picker and conflict detection | ui/operational-ux-gaps.md | §8 Timeline/Schedule | ViewTimeline component extended with date range filter and venue-based conflict query | DEFERRED |
+| D-008 | transport_drivers table and driver management UI | modules/guest-relations/transport-logistics.md | §1 Transport Booking Concept | Transport module requires driver entity management beyond text fields on bookings | DEFERRED |
 
 ---
 

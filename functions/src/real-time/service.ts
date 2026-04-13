@@ -112,6 +112,10 @@ export function registerRealtimeHandler(): () => void {
 
 /**
  * Creates an Express handler for GET /api/stream?concepts=guest,schedule.
+ *
+ * NOTE: On Vercel serverless, SSE connections time out after 300 seconds (5 minutes).
+ * The canvas config bridge handles disconnection gracefully (isDisconnected computed).
+ * For production, consider polling fallback or Vercel Fluid Compute for long-running connections.
  */
 export function createSSEHandler() {
   return (req: Request, res: Response): void => {

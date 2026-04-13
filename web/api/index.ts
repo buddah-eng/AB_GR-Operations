@@ -203,8 +203,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return
     }
 
-    // --- /api/visualization/graph --- system graph for canvas
-    if (path === '/api/visualization/graph') {
+    // --- /api/visualization/graph and /api/ontology/visualization/graph --- system graph for canvas
+    if (path === '/api/visualization/graph' || path === '/api/ontology/visualization/graph') {
       const [concepts, relationships, properties] = await Promise.all([
         pool.query("SELECT * FROM ontology_concepts WHERE status = 'active'"),
         pool.query("SELECT * FROM ontology_relationships WHERE status = 'active'"),

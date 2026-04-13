@@ -275,6 +275,69 @@ ontologyRouter.post(
   }
 );
 
+// --- GET /api/ontology/visualization/graph ---
+// Returns the system graph for the canvas view (fallback for /api/visualization/graph)
+
+ontologyRouter.get(
+  "/visualization/graph",
+  async (_req: Request, res: Response) => {
+    try {
+      const { query: dbQuery } = await import("../db/client");
+
+      const [concepts, relationships, properties] = await Promise.all([
+        dbQuery("SELECT * FROM ontology_concepts WHERE status = 'active'"),
+        dbQuery("SELECT * FROM ontology_relationships WHERE status = 'active'"),
+        dbQuery(
+          "SELECT concept_key, count(*) as prop_count FROM ontology_properties WHERE status = 'active' GROUP BY concept_key"
+        ),
+      ]);
+
+      const propCounts: Record<string, number> = {};
+      for (const r of properties.rows) {
+        propCounts[r.concept_key as string] = parseInt(
+          r.prop_count as string,
+          10
+        );
+      }
+
+      const nodes = concepts.rows.map((c: Record<string, unknown>) => ({
+        id: c.key as string,
+        type: "concept" as const,
+        label: c.name as string,
+        data: {
+          key: c.key as string,
+          name: c.name as string,
+          pluralName: c.plural_name as string,
+          icon: c.icon as string,
+          propertyCount: propCounts[c.key as string] ?? 0,
+          isConfig: c.is_config as boolean,
+          isRegistry: c.is_registry as boolean,
+        },
+      }));
+
+      const edges = relationships.rows.map((r: Record<string, unknown>) => ({
+        id: `${r.source_concept_key}-${r.key}-${r.target_concept_key}`,
+        source: r.source_concept_key as string,
+        target: r.target_concept_key as string,
+        type: "relationship" as const,
+        label: r.label as string,
+        data: {
+          key: r.key as string,
+          cardinality: r.cardinality as string,
+        },
+      }));
+
+      const response: ApiResponse<{ nodes: typeof nodes; edges: typeof edges }> = {
+        success: true,
+        data: { nodes, edges },
+      };
+      res.json(response);
+    } catch (err) {
+      handleError(res, err, "loading visualization graph");
+    }
+  }
+);
+
 // --- Serialization ---
 
 /**

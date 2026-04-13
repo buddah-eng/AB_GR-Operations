@@ -51,6 +51,7 @@ import { venueRouter } from "./api/venues";
 import { equipmentRouter } from "./api/equipment";
 import { calendarSyncRouter } from "./api/calendar-sync";
 import { guidebookSyncRouter } from "./api/guidebook-sync";
+import { visualizationRouter } from "./api/visualization";
 
 // --- Initialize Firebase Admin (skip on Vercel / non-Firebase environments) ---
 
@@ -151,6 +152,7 @@ app.use("/api/venues", venueRouter);
 app.use("/api/equipment", equipmentRouter);
 app.use("/api/calendar-sync", calendarSyncRouter);
 app.use("/api/guidebook-sync", guidebookSyncRouter);
+app.use("/api/visualization", visualizationRouter);
 
 // --- Webhook delivery & workflow engine ---
 

@@ -92,12 +92,15 @@ const displayFields = computed<DisplayField[]>(() => {
   if (props.config.columns && props.config.columns.length > 0) {
     return props.config.columns
       .filter((col) => col.visible !== false)
-      .map((col) => ({
-        key: col.key ?? col.propertyKey ?? '',
-        label: col.label ?? col.key ?? '',
-        value: resolveValue(props.data!, col.key ?? col.propertyKey ?? ''),
-        type: col.type,
-      }))
+      .map((col) => {
+        const key = col.key ?? col.propertyKey ?? ''
+        return {
+          key,
+          label: col.label ?? formatLabel(key),
+          value: resolveValue(props.data!, key),
+          type: col.type,
+        }
+      })
   }
 
   // Otherwise, display all non-null data fields
@@ -123,10 +126,17 @@ function formatLabel(key: string): string {
     .trim()
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 function formatValue(value: unknown, type?: string): string {
   if (value === null || value === undefined) return '—'
 
   const strValue = String(value)
+
+  // Truncate raw UUIDs to a friendly short form
+  if (UUID_PATTERN.test(strValue)) {
+    return strValue.substring(0, 8) + '\u2026'
+  }
 
   switch (type) {
     case 'date':

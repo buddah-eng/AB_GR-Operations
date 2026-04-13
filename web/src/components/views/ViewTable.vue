@@ -34,9 +34,9 @@
       >
         <Column
           v-for="col in visibleColumns"
-          :key="col.key"
-          :field="col.key"
-          :header="col.label"
+          :key="col.key ?? col.propertyKey"
+          :field="col.key ?? col.propertyKey"
+          :header="col.label ?? formatLabel(col.key ?? col.propertyKey ?? '')"
           :sortable="col.sortable !== false"
           :style="col.width ? { width: col.width } : undefined"
         >
@@ -84,11 +84,27 @@ const visibleColumns = computed<ViewColumn[]>(() => {
   return columns.filter((col) => col.visible !== false)
 })
 
+/** Format a property key into a human-readable label */
+function formatLabel(key: string): string {
+  return key
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/[_-]/g, ' ')
+    .replace(/^\w/, (c) => c.toUpperCase())
+    .trim()
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 function formatCellValue(value: unknown, column: ViewColumn): string {
   if (value === null || value === undefined) return '—'
 
   const colType = column.type ?? 'text'
   const strValue = String(value)
+
+  // Truncate raw UUIDs to a friendly short form
+  if (UUID_PATTERN.test(strValue)) {
+    return strValue.substring(0, 8) + '\u2026'
+  }
 
   switch (colType) {
     case 'date':

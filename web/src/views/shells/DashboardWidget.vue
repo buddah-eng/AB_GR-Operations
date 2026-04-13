@@ -29,7 +29,7 @@
         class="flex items-center gap-2 text-sm"
       >
         <i class="pi pi-angle-right text-accent-500" />
-        <span class="text-surface-700">{{ rec.name ?? rec.id }}</span>
+        <span class="text-surface-700">{{ (rec.properties as Record<string, unknown>)?.name ?? rec.name ?? rec.id }}</span>
       </div>
     </div>
 
@@ -77,9 +77,12 @@ import type { PageWidget } from '@/composables/usePageConfig'
 
 const router = useRouter()
 
+type TimeScope = 'all' | 'today'
+
 const props = defineProps<{
   widget: PageWidget
   refreshKey?: number
+  timeScope?: TimeScope
 }>()
 
 const count = ref(0)
@@ -144,21 +147,59 @@ function handleWidgetClick(): void {
 }
 
 async function loadData(): Promise<void> {
-  // Activity feed loads from event_log instead of domains
+  // Activity feed loads recent records from multiple concepts
   if (props.widget.type === 'activity_feed') {
     loading.value = true
     try {
-      const data = await api.get<unknown>('/api/domains/guest?limit=10&sort=updated_at&direction=desc')
-      const items = Array.isArray(data) ? data : ((data as Record<string, unknown>).records as Record<string, unknown>[] ?? [])
-      activityItems.value = items.slice(0, 8).map((r) => {
+      const conceptKeys = ['guest', 'staff', 'transport', 'prep_item', 'schedule']
+      const CONCEPT_LABELS: Record<string, string> = {
+        guest: 'Guest',
+        staff: 'Staff',
+        transport: 'Transport',
+        prep_item: 'Prep Item',
+        schedule: 'Schedule',
+        venue: 'Venue',
+        pairing: 'Pairing',
+        accommodation: 'Accommodation',
+      }
+
+      const fetches = conceptKeys.map(async (conceptKey) => {
+        try {
+          const data = await api.get<unknown>(`/api/domains/${conceptKey}?limit=5&sort=updated_at&direction=desc`)
+          const items = Array.isArray(data)
+            ? data
+            : ((data as Record<string, unknown>).records as Record<string, unknown>[] ?? [])
+          return items.map((r) => ({
+            ...r,
+            __conceptKey: conceptKey,
+            __conceptLabel: CONCEPT_LABELS[conceptKey] ?? conceptKey,
+          }))
+        } catch {
+          return []
+        }
+      })
+
+      const results = await Promise.all(fetches)
+      const allItems = results
+        .flat()
+        .sort((a, b) => {
+          const dateA = new Date((a.updatedAt ?? a.updated_at ?? '1970-01-01') as string).getTime()
+          const dateB = new Date((b.updatedAt ?? b.updated_at ?? '1970-01-01') as string).getTime()
+          return dateB - dateA
+        })
+
+      activityItems.value = allItems.slice(0, 8).map((r) => {
         const p = (r.properties ?? {}) as Record<string, unknown>
         const name = (p.name ?? r.name ?? 'Record') as string
         const status = (p.status ?? r.status ?? '') as string
-        const statusDisplay = status ? `updated to ${status}` : 'updated'
+        const conceptLabel = (r.__conceptLabel ?? '') as string
+        const statusDisplay = status
+          ? `updated to ${status.replace(/_/g, ' ')}`
+          : 'updated'
         const iconInfo = getStatusIcon(status)
         return {
           id: r.id as string,
-          summary: `${name} ${statusDisplay}`,
+          summary: conceptLabel ? `${conceptLabel}: ${name} ${statusDisplay}` : `${name} ${statusDisplay}`,
           timeAgo: formatTimeAgo((r.updatedAt ?? r.updated_at ?? new Date().toISOString()) as string),
           icon: iconInfo.icon,
           iconColor: iconInfo.color,
@@ -188,6 +229,13 @@ async function loadData(): Promise<void> {
       }
     }
 
+    // When time scope is "today", filter to records updated today or later
+    if (props.timeScope === 'today') {
+      const todayStart = new Date()
+      todayStart.setHours(0, 0, 0, 0)
+      params.set('filter.updated_at_gte', todayStart.toISOString())
+    }
+
     const qs = params.toString()
     const path = `/api/domains/${props.widget.conceptKey}${qs ? `?${qs}` : ''}`
     const data = await api.get<Record<string, unknown>>(path)
@@ -214,9 +262,11 @@ async function loadData(): Promise<void> {
 
     // Calculate progress for prep_progress type
     if (props.widget.type === 'prep_progress' && records.value.length > 0) {
-      const complete = records.value.filter(
-        (r) => r.status === 'complete' || r.status === 'completed'
-      ).length
+      const complete = records.value.filter((r) => {
+        const p = (r.properties ?? {}) as Record<string, unknown>
+        const status = ((p.status ?? r.status ?? '') as string).toLowerCase()
+        return status === 'complete' || status === 'completed'
+      }).length
       progressPct.value = Math.round((complete / records.value.length) * 100)
     }
   } catch {
@@ -229,4 +279,5 @@ async function loadData(): Promise<void> {
 
 onMounted(loadData)
 watch(() => props.refreshKey, loadData)
+watch(() => props.timeScope, loadData)
 </script>

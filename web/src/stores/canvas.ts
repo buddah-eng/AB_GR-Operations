@@ -88,7 +88,7 @@ export const useCanvasStore = defineStore('canvas', () => {
 
     try {
       const data = await api.get<VisualizationGraph>(
-        '/api/visualization/graph',
+        '/api/ontology/visualization/graph',
       )
       graph.value = data
     } catch (err) {

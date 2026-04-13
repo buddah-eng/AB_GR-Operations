@@ -94,6 +94,13 @@
           @click="appStore.toggleSidebar()"
         />
         <div class="al-topbar-spacer" />
+        <Button
+          icon="pi pi-bell"
+          severity="secondary"
+          text
+          rounded
+          aria-label="Notifications"
+        />
       </header>
 
       <!-- Page content -->
