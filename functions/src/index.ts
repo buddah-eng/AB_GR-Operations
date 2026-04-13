@@ -153,7 +153,6 @@ app.use("/api/equipment", equipmentRouter);
 app.use("/api/calendar-sync", calendarSyncRouter);
 app.use("/api/guidebook-sync", guidebookSyncRouter);
 app.use("/api/visualization", visualizationRouter);
-app.use("/api/ontology/visualization", visualizationRouter);
 
 // --- Webhook delivery & workflow engine ---
 
