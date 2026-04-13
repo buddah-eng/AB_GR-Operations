@@ -80,6 +80,7 @@
             :options="field.options"
             :disabled="field.disabled"
             :value="getFieldValue(field.name)"
+            v-bind="field.attrs ?? {}"
             @input="(val: unknown) => setFieldValue(field.name, val)"
           />
         </div>

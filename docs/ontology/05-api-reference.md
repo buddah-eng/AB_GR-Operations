@@ -475,6 +475,43 @@ Create a new concept. Also auto-generates default `FormConfig` and `ViewConfig` 
 
 **Domain event emitted:** `concept.created`
 
+**Example request:**
+
+```bash
+curl -X POST /api/builder/concepts \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "vendor",
+    "name": "Vendor",
+    "plural_name": "Vendors",
+    "icon": "pi pi-briefcase",
+    "description": "External service providers",
+    "owner_scope": "org"
+  }'
+```
+
+**Example response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440001",
+    "key": "vendor",
+    "name": "Vendor",
+    "plural_name": "Vendors",
+    "icon": "pi pi-briefcase",
+    "description": "External service providers",
+    "extends": null,
+    "owner_scope": "org",
+    "owner_department": null,
+    "version": 1,
+    "status": "active"
+  }
+}
+```
+
 ---
 
 #### PUT /api/builder/concepts/:key
@@ -502,11 +539,44 @@ Update a concept. Creates a new version via the versioning service.
 
 **Domain event emitted:** `concept.updated`
 
+**Example request:**
+
+```bash
+curl -X PUT /api/builder/concepts/vendor \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "icon": "pi pi-building",
+    "description": "External service providers and suppliers",
+    "change_reason": "Updated icon and description for clarity"
+  }'
+```
+
+**Example response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440001",
+    "key": "vendor",
+    "name": "Vendor",
+    "plural_name": "Vendors",
+    "icon": "pi pi-building",
+    "description": "External service providers and suppliers",
+    "version": 2,
+    "status": "active"
+  }
+}
+```
+
 ---
 
 #### DELETE /api/builder/concepts/:key
 
 Deprecates a concept (sets `status = 'deprecated'`, `deprecated_at = now()`). Does NOT physically delete the row.
+
+> **Missing guardrail:** Unlike `DELETE /properties/:id` (which checks for domain data in `guests`, `staff`, `schedule_events`, `prep_items`), concept deprecation does **not** check whether the concept's domain table contains records. A concept with thousands of active records can be deprecated without warning. The doc header says "Cannot delete concept with data" but the implementation only checks scope permissions, not data existence.
 
 **Response:** `ApiResponse<{ status: 'deprecated' }>`
 
@@ -592,6 +662,53 @@ After creation, the endpoint runs `checkGuardrails()` against the concept's full
 
 **Domain event emitted:** `property.created`
 
+**Example request:**
+
+```bash
+curl -X POST /api/builder/concepts/guest/properties \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "dietary_restrictions",
+    "label": "Dietary Restrictions",
+    "type": "multi_select",
+    "required": false,
+    "options": [
+      { "value": "vegetarian", "label": "Vegetarian" },
+      { "value": "vegan", "label": "Vegan" },
+      { "value": "halal", "label": "Halal" },
+      { "value": "gluten_free", "label": "Gluten Free" }
+    ],
+    "sort_order": 5
+  }'
+```
+
+**Example response (with guardrail warnings):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "660e8400-e29b-41d4-a716-446655440002",
+    "concept_key": "guest",
+    "key": "dietary_restrictions",
+    "label": "Dietary Restrictions",
+    "type": "multi_select",
+    "required": false,
+    "sort_order": 5,
+    "version": 1,
+    "status": "active"
+  },
+  "warnings": [
+    {
+      "severity": "info",
+      "code": "MANY_PROPERTIES",
+      "message": "Concept 'guest' has 15 properties. Consider grouping into form sections."
+    }
+  ]
+}
+```
+
 ---
 
 #### PUT /api/builder/properties/:id
@@ -606,7 +723,19 @@ Update a property by its UUID. Creates a new version.
 
 **Request body:** Partial property fields to update. Include `change_reason` to document why.
 
-**Safety guardrail:** Cannot change `type` when the property has data (currently a placeholder check -- see source for details).
+**Safety guardrail (NOT ENFORCED):** The property type-change guardrail is currently a no-op. The code queries `ontology_properties` (the metadata table itself, not a domain data table) and then discards the result with `void dataCheck`. It does **not** check whether any domain records (`guests`, `staff`, `schedule_events`, `prep_items`) contain values for the property. A type change will succeed even when domain data exists, which could cause rendering or validation errors downstream.
+
+```typescript
+// Current code (no-op):
+const dataCheck = await query(
+  `SELECT COUNT(*) AS cnt FROM ontology_properties
+   WHERE id = $1 AND status = 'active'`,  // queries metadata, not data
+  [id]
+);
+void dataCheck;  // result discarded
+```
+
+To enforce this guardrail, the check should query domain tables for the property key's existence in JSONB `properties` columns, similar to the `DELETE /properties/:id` endpoint.
 
 **Errors:**
 - `404` if property not found.
@@ -644,6 +773,14 @@ Deprecates a property. Blocked if the property key exists in any domain data tab
 ---
 
 ### Relationship CRUD
+
+> **Implementation gap:** Only GET (list) and POST (create) are implemented for relationships.
+> There are no `PUT /api/builder/relationships/:id` or `DELETE /api/builder/relationships/:id` endpoints.
+> To modify or remove a relationship, you must update the `ontology_relationships` table directly and call `POST /api/ontology/reload`.
+
+> **Missing scope checks:** The GET and POST relationship endpoints do **not** call `validateScopePermission()`.
+> Any authenticated director-level user can list and create relationships regardless of `owner_scope` or `owner_department`.
+> This differs from concept and property CRUD, which enforce scope checks on every mutation.
 
 #### GET /api/builder/concepts/:key/relationships
 
@@ -687,6 +824,43 @@ Create a relationship originating from the given concept.
 **Response:** `201 Created` with `ApiResponse<RelationshipRow>`.
 
 **Domain event emitted:** `relationship.created`
+
+**Example request:**
+
+```bash
+curl -X POST /api/builder/concepts/guest/relationships \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "assigned_liaison",
+    "target_concept_key": "staff",
+    "label": "Assigned Liaison",
+    "cardinality": "has-one",
+    "inverse_key": "liaison_for"
+  }'
+```
+
+**Example response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "key": "assigned_liaison",
+    "source_concept_key": "guest",
+    "target_concept_key": "staff",
+    "label": "Assigned Liaison",
+    "cardinality": "has-one",
+    "inverse_key": "liaison_for",
+    "description": null,
+    "owner_scope": "org",
+    "owner_department": null,
+    "version": 1,
+    "status": "active"
+  }
+}
+```
 
 ---
 
@@ -749,21 +923,60 @@ Any type not listed defaults to 150px.
 
 **Domain event emitted:** `concept.defaults_generated`
 
+**Example request:**
+
+```bash
+curl -X POST /api/builder/concepts/vendor/generate-defaults \
+  -H "Authorization: Bearer <token>"
+```
+
+**Example response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "formConfig": {
+      "id": "770e8400-e29b-41d4-a716-446655440003",
+      "concept_key": "vendor",
+      "name": "default",
+      "fields": "[{\"propertyKey\":\"name\",\"colSpan\":1},{\"propertyKey\":\"type\",\"colSpan\":1}]",
+      "layout": "single",
+      "version": 1,
+      "status": "active"
+    },
+    "viewConfig": {
+      "id": "880e8400-e29b-41d4-a716-446655440004",
+      "concept_key": "vendor",
+      "name": "default",
+      "view_type": "table",
+      "columns": "[{\"propertyKey\":\"name\",\"width\":200,\"sortable\":true,\"filterable\":true}]",
+      "sort": "{\"field\":\"created_at\",\"direction\":\"desc\"}",
+      "version": 1,
+      "status": "active"
+    }
+  }
+}
+```
+
 ---
 
 ## Safety guardrails summary
 
 The builder API enforces the following guardrails to prevent data loss and schema corruption:
 
-| Rule | Endpoint | HTTP status | Description |
-|------|----------|-------------|-------------|
-| Cannot delete concept with data | `DELETE /concepts/:key` | 403/409 | Concept is deprecated, not deleted. Scope check prevents unauthorized deprecation. |
-| Cannot delete property with data | `DELETE /properties/:id` | 409 | Checks `guests`, `staff`, `schedule_events`, `prep_items` for existing JSONB keys. |
-| Cannot change property type with data | `PUT /properties/:id` | (placeholder) | Type change check exists in code but full enforcement is pending. |
-| Cannot set hidden + required | `POST /concepts/:key/properties` | 400 | A hidden field cannot be required since operators cannot fill it in. |
-| Department property conflict | `POST /concepts/:key/properties` | 409 | Department-scoped property cannot shadow an org-scoped property of the same key. |
-| Scope permission | All mutations | 403 | Caller must have appropriate scope (org-wide = admin only, department = director of that department). |
-| Defaults already exist | `POST /concepts/:key/generate-defaults` | 409 | Prevents duplicate default configs; edit existing ones instead. |
+| Rule | Endpoint | HTTP status | Status | Description |
+|------|----------|-------------|--------|-------------|
+| Cannot delete concept with data | `DELETE /concepts/:key` | -- | **NOT ENFORCED** | Concept is deprecated without checking for domain data. Only scope check is enforced. |
+| Cannot delete property with data | `DELETE /properties/:id` | 409 | Enforced | Checks `guests`, `staff`, `schedule_events`, `prep_items` for existing JSONB keys. |
+| Cannot change property type with data | `PUT /properties/:id` | -- | **NO-OP** | Code queries the metadata table (not domain data) and discards the result via `void dataCheck`. Type changes always succeed. |
+| Cannot set hidden + required | `POST /concepts/:key/properties` | 400 | Enforced | A hidden field cannot be required since operators cannot fill it in. |
+| Department property conflict | `POST /concepts/:key/properties` | 409 | Enforced | Department-scoped property cannot shadow an org-scoped property of the same key. |
+| Scope permission (concepts) | `POST`, `PUT`, `DELETE /concepts` | 403 | Enforced | Caller must have appropriate scope. |
+| Scope permission (properties) | `POST /concepts/:key/properties` | 403 | Enforced | Caller must have appropriate scope. |
+| Scope permission (relationships) | `POST /concepts/:key/relationships` | -- | **NOT ENFORCED** | Relationship endpoints do not call `validateScopePermission()`. |
+| Relationship mutation | `PUT`, `DELETE /relationships/:id` | -- | **NOT IMPLEMENTED** | No update or delete endpoints exist for relationships. |
+| Defaults already exist | `POST /concepts/:key/generate-defaults` | 409 | Enforced | Prevents duplicate default configs; edit existing ones instead. |
 
 ---
 

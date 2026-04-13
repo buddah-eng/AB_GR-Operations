@@ -208,16 +208,25 @@ function parseViewConfig(row: Record<string, unknown>): ViewConfig
 function parsePageConfig(row: Record<string, unknown>): PageConfig
 ```
 
-`parseFormConfig` produces a `FormConfig` with `name` defaulting to
-`"default"`, `layout` defaulting to `"single"`, and `fields`/`steps` coming
-directly from the JSONB column.
+`parseFormConfig` produces a `FormConfig` with `conceptKey` read from the
+`concept_key` column, `name` defaulting to `"default"`, `layout` defaulting
+to `"single"`, and `fields`/`steps` coming directly from the JSONB column.
+`fields` defaults to `[]` when absent.
 
 `parseViewConfig` produces a `ViewConfig` with `name` defaulting to
 `"default"`, `viewType` defaulting to `"table"`, and all list fields
 (`columns`, `filters`, `presets`, `tabs`) read directly from JSONB columns.
+Additional fields parsed from the row: `sort` (a `ViewSort` object),
+`groupBy` (from `group_by` column), `timelineStart` (from `timeline_start`),
+`timelineEnd` (from `timeline_end`), and `rowAction` (from `row_action`,
+typed as `'navigate_to_detail' | 'inline_edit' | 'none'`). All default to
+`undefined` when absent.
 
 `parsePageConfig` produces a `PageConfig` with `name` defaulting to
-`"Unnamed Page"` and `slug` defaulting to `"/unknown"`.
+`"Unnamed Page"`, `slug` defaulting to `"/unknown"`, `widgets` (a
+`WidgetConfig[]`) defaulting to `[]`, and `breakpoints` (an object with
+`desktop`, optional `tablet`, and optional `mobile` layout arrays) defaulting
+to `undefined`.
 
 ### 3.7 Error handling strategy
 
@@ -423,6 +432,11 @@ loading pipeline; subsequent calls within the TTL window return cached data.
 ### 8.1 Ontology accessors
 
 ```typescript
+// Executes the full 5-stage loading pipeline and returns a fresh OntologyCache.
+// Called internally by getOntology() on a cache miss. Also exported for direct
+// use when a guaranteed-fresh load is needed (e.g., during tests or seeding).
+export async function loadOntology(): Promise<OntologyCache>
+
 // Returns the full OntologyCache, loading from Postgres if needed.
 export async function getOntology(): Promise<OntologyCache>
 

@@ -38,6 +38,8 @@ This document is the authoritative developer reference for the GR-Ops ontology t
 8. [OntologyCache and Runtime Resolution](#ontologycache-and-runtime-resolution)
 9. [Versioning and Status Lifecycle](#versioning-and-status-lifecycle)
 10. [Seed Data Examples](#seed-data-examples)
+11. [Domain Tables](#domain-tables)
+12. [Audit System](#audit-system)
 
 ---
 
@@ -560,12 +562,30 @@ interface ViewConfig {
 
 interface ViewColumn {
   readonly propertyKey: string
+  readonly label?: string
+  readonly renderer?: string
+  readonly section?: string
   readonly width?: number
   readonly sortable?: boolean
   readonly filterable?: boolean
   readonly editable?: boolean
 }
+```
 
+**ViewColumn field reference:**
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `propertyKey` | string | References a `Property.key` on the concept |
+| `label` | string? | Display label override. When omitted, the renderer resolves from the ontology property's `label`. Added in migration 014. |
+| `renderer` | string? | Renderer hint for the frontend (e.g., `status-badge`, `rich-text`, `relative-date`, `role-badge`). Added in migration 014. |
+| `section` | string? | Groups columns into page regions on `detail` views (e.g., `header`, `details`). Added in migration 014. |
+| `width` | number? | Column width in pixels (table view) |
+| `sortable` | boolean? | Whether the column supports sorting (table view) |
+| `filterable` | boolean? | Whether the column supports filtering |
+| `editable` | boolean? | Whether the column supports inline editing |
+
+```typescript
 interface ViewFilter {
   readonly field: string
   readonly operator: string
@@ -592,6 +612,8 @@ interface ViewPreset {
 | `timeline` | `columns`, `timelineStart`, `timelineEnd` | Renders records on a time axis |
 | `detail` | `columns` | Columns may include a `section` field (`header`, `details`) |
 | `dashboard` | N/A | Typically uses PageConfig widgets instead |
+
+> **DDL gap -- `tabs`:** The `tabs` field exists in the TypeScript `ViewConfig` interface but has **no corresponding column** in the `view_configs` DDL (see `001-foundation.sql`). Detail-page tab configuration is currently stored inside the `columns` JSONB (via `section` grouping) rather than a dedicated column. A future migration should add `tabs JSONB` to `view_configs` if first-class tab support is needed.
 
 **Seed example -- guest default list view:**
 
@@ -621,32 +643,38 @@ VALUES (
 );
 ```
 
-**Seed example -- prep item kanban:**
+**Seed example -- prep item kanban (post-014 state):**
 
 ```sql
+-- Initial insert (009-gr-config-seeds.sql), then updated by 014-data-denormalization.sql
+-- Final state after migration 014:
 INSERT INTO view_configs (concept_key, name, view_type, columns, group_by)
 VALUES (
   'prep_item', 'kanban-tracker', 'kanban',
   '[
-    {"propertyKey": "name"},
-    {"propertyKey": "guest_name"},
-    {"propertyKey": "due_date"},
-    {"propertyKey": "owner"}
+    {"propertyKey": "name", "label": "Task"},
+    {"propertyKey": "guest_name", "label": "Guest"},
+    {"propertyKey": "due_date", "label": "Due", "renderer": "relative-date"},
+    {"propertyKey": "owner", "label": "Assigned To"}
   ]',
   'status'
 );
 ```
 
-**Seed example -- schedule timeline:**
+**Seed example -- schedule timeline (post-014 state):**
 
 ```sql
+-- Initial insert (009-gr-config-seeds.sql), then updated by 014-data-denormalization.sql
+-- Final state after migration 014:
 INSERT INTO view_configs (concept_key, name, view_type, columns, timeline_start, timeline_end)
 VALUES (
   'schedule_event', 'timeline-view', 'timeline',
   '[
-    {"propertyKey": "name"},
-    {"propertyKey": "event_type"},
-    {"propertyKey": "venue_name"}
+    {"propertyKey": "name", "label": "Event"},
+    {"propertyKey": "event_type", "label": "Type", "renderer": "status-badge"},
+    {"propertyKey": "venue_name", "label": "Venue"},
+    {"propertyKey": "start_time", "label": "Start"},
+    {"propertyKey": "end_time", "label": "End"}
   ]',
   'start_time',
   'end_time'
@@ -681,9 +709,12 @@ interface WidgetLayout {
 }
 ```
 
-**Seed example -- GR Dashboard:**
+**Seed example -- GR Dashboard (assembled from migrations 009 + 013):**
+
+> **Migration provenance:** The first 6 widgets are inserted by `009-gr-config-seeds.sql`. The `overdue-items` widget is appended by `013-final-seeds.sql` via `UPDATE ... SET widgets = widgets || '[...]'::jsonb`.
 
 ```sql
+-- Combined final state after migrations 009 + 013:
 INSERT INTO page_configs (name, slug, widgets)
 VALUES (
   'GR Dashboard', 'gr-dashboard',
@@ -1162,6 +1193,8 @@ interface ApiResponse<T> {
 
 **StaffingTemplate -- conditional staffing requirements:**
 
+> **DDL gap:** `StaffingTemplate` is defined in `functions/src/ontology/types.ts` but has **no backing table** in any migration. No `CREATE TABLE staffing_templates` exists. This type is referenced by the pairings-staffing PRD (`docs/prd/modules/guest-relations/pairings-staffing.md`) but is not yet persisted. A future migration must create the `staffing_templates` table before this type is usable at runtime.
+
 ```typescript
 interface StaffingTemplate {
   readonly id: string
@@ -1210,3 +1243,42 @@ The audit trigger reads actor context from PostgreSQL session variables set by t
 | `app.ip_address` | Client IP address |
 
 If session variables are not set (e.g., direct SQL execution), the trigger falls back to `actor_id = 'pg_trigger_fallback'` and `actor_type = 'system'`.
+
+### Event Log
+
+The `event_log` table records every domain event fired by the workflow engine. It links events to the workflows they triggered and the actions those workflows executed.
+
+**Postgres table:** `event_log`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID | PK, auto-generated |
+| `event_id` | TEXT | Unique event identifier |
+| `event_name` | TEXT | Domain event name (e.g., `guest.status_changed`) |
+| `record_id` | TEXT | ID of the record that emitted the event |
+| `triggered_by` | TEXT | Actor who caused the event |
+| `change_set` | UUID | Groups related events in a single transaction |
+| `timestamp` | TIMESTAMPTZ | When the event occurred |
+| `workflows_triggered` | TEXT[] | Array of workflow names that fired |
+| `actions_executed` | JSONB | Details of each workflow action executed |
+| `created_at` | TIMESTAMPTZ | Row insertion time |
+
+**Indexes:** `event_name`, `timestamp`, `record_id`, `change_set`.
+
+### Admin Alerts
+
+The `admin_alerts` table stores platform-level alerts for administrators. Alerts are created by the workflow engine, constraint violations, or system health checks.
+
+**Postgres table:** `admin_alerts`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID | PK, auto-generated |
+| `severity` | TEXT | One of: `info`, `warning`, `critical` |
+| `category` | TEXT | Alert category for grouping |
+| `title` | TEXT | Human-readable alert title |
+| `details` | JSONB | Structured alert details |
+| `resolved` | BOOLEAN | Default false. Set to true when an admin acknowledges/resolves. |
+| `created_at` | TIMESTAMPTZ | Row insertion time |
+
+**Indexes:** Partial index on `(category) WHERE NOT resolved` for efficient unresolved alert queries.

@@ -54,7 +54,7 @@ Decision table:
 | `org` | non-admin | n/a | Denied -- "Only administrators can modify org-wide ontology records." |
 | `department` | admin | n/a | Allowed |
 | `department` | director (`priority <= 0`) | yes | Allowed |
-| `department` | director | no | Denied -- "You can only modify records owned by your department." |
+| `department` | director | no | Denied -- "You can only modify records owned by your department ({callerDepartment})." (shows the caller's department or "none" if null) |
 | `department` | other (`priority > 0`) | any | Denied -- "Insufficient permissions for this action." |
 | `department` | any | `owner_department` is `NULL` | Denied -- "Department-scoped record is missing owner_department." |
 
@@ -198,10 +198,13 @@ export interface PropertyConflictResult {
 
 ### Conflict Rules
 
+The conflict check query filters by `status = 'active'`, so deprecated or rolled-back org-wide properties do not block new department properties.
+
 | Existing property | New property | Result |
 |---|---|---|
-| Org-wide `key="priority"` | Department `key="priority"` | **409 Conflict** -- department properties cannot shadow org-wide definitions. |
-| Dept A `key="priority"` | Dept B `key="priority"` | **No conflict** -- composite uniqueness (`concept_key`, `key`, `owner_department`) allows this. |
+| Org-wide `key="priority"` (`status='active'`) | Department `key="priority"` | **409 Conflict** -- department properties cannot shadow active org-wide definitions. |
+| Org-wide `key="priority"` (`status='deprecated'`) | Department `key="priority"` | **No conflict** -- only active org-wide properties block. |
+| Dept A `key="priority"` | Dept B `key="priority"` | **No conflict** -- composite uniqueness (`concept_key`, `key`, `version`, `owner_department`) allows this. |
 | None | Any | **No conflict**. |
 
 The 409 response body includes a message explaining the collision:
@@ -224,7 +227,7 @@ The scoping module expects these columns on all ontology tables:
 |---|---|---|
 | `owner_scope` | `text` | `CHECK (owner_scope IN ('org', 'department'))` |
 | `owner_department` | `text` | `NULL` when `owner_scope = 'org'` |
-| `status` | `text` | `'active'` for live records |
+| `status` | `text` | One of 4 valid values: `'active'` (live), `'pending_review'` (awaiting CI/QA approval), `'deprecated'` (soft-deleted, retained for history), `'rolled_back'` (reverted via rollback window). Only `'active'` rows are loaded by the ontology loader and returned by scoped queries. |
 
 The `ontology_properties` table additionally requires:
 
@@ -236,4 +239,4 @@ The `ontology_properties` table additionally requires:
 | `type` | `text` | Property data type |
 | `sort_order` | `integer` | Display ordering |
 
-Composite unique constraint on `ontology_properties`: `(concept_key, key, owner_department)`.
+Composite unique constraint on `ontology_properties`: `(concept_key, key, version, owner_department)`. The `version` column is included so that the versioning service can store multiple historical versions of the same property. Only the row with `status = 'active'` represents the current definition; prior versions have `status = 'deprecated'` or `'rolled_back'`.

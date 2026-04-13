@@ -35,6 +35,7 @@
 import { ref, computed } from 'vue'
 import AutoComplete from 'primevue/autocomplete'
 import type { AutoCompleteCompleteEvent } from 'primevue/autocomplete'
+import type { FormKitContext } from './types'
 
 interface OptionItem {
   label: string
@@ -44,16 +45,29 @@ interface OptionItem {
   [key: string]: unknown
 }
 
-interface FormKitContext {
-  _value: unknown
-  value: unknown
-  node: { input: (value: unknown) => void }
-  handlers: { blur: () => void; DOMInput: (e: Event) => void }
-  disabled: boolean
-  id: string
-  label: string
-  attrs: Record<string, unknown>
+/**
+ * Allowed origins for remote autocomplete fetches (SSRF prevention).
+ * Only URLs whose origin matches one of these will be fetched.
+ */
+const ALLOWED_ORIGINS: readonly string[] = [
+  window.location.origin,
+  import.meta.env.VITE_API_BASE_URL
+    ? new URL(import.meta.env.VITE_API_BASE_URL).origin
+    : '',
+].filter(Boolean) as string[]
+
+/** Validates that a URL's origin is in the allow-list */
+function isAllowedOrigin(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    return ALLOWED_ORIGINS.includes(parsed.origin)
+  } catch {
+    return false
+  }
 }
+
+const DEBOUNCE_MS = 300
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const props = defineProps<{
   context: FormKitContext
@@ -101,19 +115,17 @@ const modelValue = computed(() => {
   return val
 })
 
-async function handleComplete(event: AutoCompleteCompleteEvent): Promise<void> {
+function handleComplete(event: AutoCompleteCompleteEvent): void {
   const query = event.query.toLowerCase()
 
   if (suggestionsUrl.value) {
-    try {
-      const url = new URL(suggestionsUrl.value)
-      url.searchParams.set('q', event.query)
-      const response = await fetch(url.toString())
-      const data: OptionItem[] = await response.json()
-      filteredSuggestions.value = data
-    } catch {
-      filteredSuggestions.value = []
+    // Debounce remote fetches to avoid excessive requests
+    if (debounceTimer !== null) {
+      clearTimeout(debounceTimer)
     }
+    debounceTimer = setTimeout(() => {
+      fetchRemoteSuggestions(event.query)
+    }, DEBOUNCE_MS)
     return
   }
 
@@ -121,6 +133,27 @@ async function handleComplete(event: AutoCompleteCompleteEvent): Promise<void> {
     const label = String(opt[optionLabelField.value] ?? '').toLowerCase()
     return label.includes(query)
   })
+}
+
+async function fetchRemoteSuggestions(query: string): Promise<void> {
+  const rawUrl = suggestionsUrl.value
+  if (!rawUrl) return
+
+  // SSRF prevention: only fetch from allowed origins
+  if (!isAllowedOrigin(rawUrl)) {
+    filteredSuggestions.value = []
+    return
+  }
+
+  try {
+    const url = new URL(rawUrl)
+    url.searchParams.set('q', query)
+    const response = await fetch(url.toString())
+    const data: OptionItem[] = await response.json()
+    filteredSuggestions.value = data
+  } catch {
+    filteredSuggestions.value = []
+  }
 }
 
 function handleChange(selected: unknown): void {

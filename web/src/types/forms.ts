@@ -111,6 +111,9 @@ export const PROPERTY_TYPE_INPUT_MAP: Record<string, string> = {
   url: 'url',
   phone: 'tel',
   select: 'select',
+  // TODO: Consider mapping multi_select to a chips-style dropdown (PrimeVue MultiSelect)
+  // instead of primeTagList when the property has a fixed options list, reserving
+  // primeTagList for free-text tag entry without predefined options.
   multi_select: 'primeTagList',
   radio: 'radio',
   currency: 'number',

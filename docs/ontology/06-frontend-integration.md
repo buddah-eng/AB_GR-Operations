@@ -6,8 +6,11 @@ Source files:
 
 - `web/src/stores/ontology.ts` -- Pinia store
 - `web/src/composables/useFormSchema.ts` -- FormKit schema bridge
+- `web/src/composables/useFormConfig.ts` -- FormConfig loader + adapter composable
 - `web/src/composables/useConfigAdapter.ts` -- backend-to-frontend ViewConfig adapter
 - `web/src/composables/useViewConfig.ts` -- ViewConfig loader composable
+- `web/src/composables/useConceptData.ts` -- domain record loader composable
+- `web/src/composables/usePageConfig.ts` -- PageConfig loader composable
 - `web/src/types/forms.ts` -- form type definitions
 - `web/src/types/views.ts` -- view type definitions
 - `web/src/types/index.ts` -- shared ontology types
@@ -65,24 +68,37 @@ Fetches `GET /api/ontology` and normalizes the response into `OntologyConcept[]`
 
 The store handles backend `snake_case` to frontend `camelCase` conversion inline:
 
-| Backend field | Frontend field | Fallback |
-|---------------|---------------|----------|
-| `name` | `label` | concept key |
-| `pluralName` or `plural_name` | `pluralLabel` | `label + 's'` |
-| `icon` | `icon` | `'pi pi-box'` |
-| `target_concept_key` | `targetConcept` | -- |
-| `cardinality` | `cardinality` | `'has-many'` |
+**Concept fields:**
+
+| Backend field | Frontend field | Fallback chain |
+|---------------|---------------|----------------|
+| `name` | `label` | `c.label` -> `c.name` -> concept key |
+| `pluralName` or `plural_name` | `pluralLabel` | `c.pluralLabel` -> `c.pluralName` -> `c.plural_name` -> `label + 's'` |
+| `icon` | `icon` | `c.icon` -> `'pi pi-box'` |
+
+**Relationship fields (per-relationship mapping inside each concept):**
+
+| Backend field | Frontend field | Fallback chain |
+|---------------|---------------|----------------|
+| `key` | `key` | -- |
+| `label` | `label` | -- |
+| `target_concept_key` | `targetConcept` | `rel.targetConcept` -> `rel.target` -> `rel.target_concept_key` |
+| `cardinality` | `cardinality` | `rel.cardinality` -> `'has-many'` |
+
+> **Note:** The three-step `targetConcept` fallback chain handles data from the real backend (`target_concept_key`), the Vercel shim (`target`), and pre-normalized data (`targetConcept`).
 
 ### Fallback defaults
 
 If the API call fails and no concepts have been loaded yet, the store falls back to four hardcoded concepts with empty properties/relationships:
 
-| Key | Label | Icon |
-|-----|-------|------|
-| `guest` | Guest | `pi pi-users` |
-| `staff` | Staff | `pi pi-id-card` |
-| `schedule` | Event | `pi pi-calendar` |
-| `prep` | Prep Item | `pi pi-check-square` |
+| Key | Label | Plural Label | Icon |
+|-----|-------|-------------|------|
+| `guest` | Guest | Guests | `pi pi-users` |
+| `staff` | Staff | Staff | `pi pi-id-card` |
+| `schedule` | Event | Schedule | `pi pi-calendar` |
+| `prep` | Prep Item | Prep Tracker | `pi pi-check-square` |
+
+Note that `staff` uses the same word for both singular and plural labels, and `schedule` uses a different word for each (`Event` singular, `Schedule` plural). These values match the production seed data.
 
 This ensures the app remains navigable even when the backend is unreachable.
 
@@ -117,29 +133,33 @@ function useFormSchema(
 
 ### PROPERTY_TYPE_INPUT_MAP
 
-Defined in `web/src/types/forms.ts`. Maps all 17 ontology property types to FormKit input types:
+Defined in `web/src/types/forms.ts`. Maps ontology property types to FormKit input types. Several entries use PrimeVue-backed custom FormKit inputs (registered via `@formkit/addons` or custom input plugins), not native HTML inputs:
 
-| Ontology type | FormKit `$formkit` | Notes |
-|---------------|-------------------|-------|
-| `text` | `text` | |
-| `textarea` | `textarea` | |
-| `number` | `number` | |
-| `integer` | `number` | Adds `step="1"` attribute |
-| `decimal` | `number` | Adds `step="0.01"` attribute |
-| `boolean` | `checkbox` | |
-| `date` | `date` | |
-| `datetime` | `datetime-local` | |
-| `time` | `time` | |
-| `email` | `email` | Also adds `email` validation rule |
-| `url` | `url` | Also adds `url` validation rule |
-| `phone` | `tel` | |
-| `select` | `select` | Maps `property.options` to FormKit options |
-| `multi_select` | `checkbox` | Maps `property.options` to FormKit options |
-| `radio` | `radio` | Maps `property.options` to FormKit options |
-| `currency` | `number` | Adds `step="0.01"` attribute |
-| `percentage` | `number` | Adds `step="1"`, `min="0"` attributes |
+| Ontology type | FormKit `$formkit` | PrimeVue component | Notes |
+|---------------|-------------------|-------------------|-------|
+| `text` | `text` | -- | Native HTML text input |
+| `textarea` | `textarea` | -- | Native HTML textarea |
+| `number` | `number` | -- | Native HTML number input |
+| `integer` | `number` | -- | Adds `step="1"` attribute |
+| `decimal` | `number` | -- | Adds `step="0.01"` attribute |
+| `boolean` | `primeToggle` | `ToggleSwitch` | PrimeVue toggle switch, not a native checkbox |
+| `date` | `primeDatePicker` | `DatePicker` | PrimeVue calendar picker, not native `<input type="date">` |
+| `datetime` | `primeDatePicker` | `DatePicker` | PrimeVue calendar with `showTime: true` via attrs |
+| `time` | `time` | -- | Native HTML time input |
+| `email` | `email` | -- | Also adds `email` validation rule |
+| `url` | `url` | -- | Also adds `url` validation rule |
+| `phone` | `tel` | -- | Native HTML tel input |
+| `select` | `select` | -- | Maps `property.options` to FormKit options |
+| `multi_select` | `primeTagList` | `AutoComplete` (multi) | PrimeVue tag-based multi-select, not native checkboxes |
+| `radio` | `radio` | -- | Maps `property.options` to FormKit options |
+| `currency` | `number` | -- | Adds `step="0.01"` attribute |
+| `percentage` | `number` | -- | Adds `step="1"`, `min="0"` attributes |
+| `relation` | `primeAutocomplete` | `AutoComplete` | PrimeVue autocomplete for FK lookups; options passed via `attrs` |
+| `checkbox` | `primeToggle` | `ToggleSwitch` | Backend `checkbox` type maps to PrimeVue toggle, same as `boolean` |
 
 Any unknown type falls back to `text`.
+
+> **Note on PrimeVue inputs:** The `primeToggle`, `primeDatePicker`, `primeTagList`, and `primeAutocomplete` identifiers are custom FormKit input registrations that wrap PrimeVue components. They are NOT native FormKit or HTML input types. These must be registered in the FormKit config for schema-driven rendering to work.
 
 ### buildValidation
 
@@ -219,6 +239,61 @@ When `config.steps` is defined, the composable produces `stepSchemas` -- an arra
 
 ---
 
+## useFormConfig composable
+
+**File:** `web/src/composables/useFormConfig.ts`
+
+Loads a named FormConfig from the API and adapts it from backend shape to frontend shape. This is the FormConfig equivalent of `useViewConfig` -- the gap analysis in earlier versions of this document incorrectly stated it did not exist.
+
+### Signature
+
+```typescript
+function useFormConfig(
+  conceptKey: Ref<string> | string,
+  formName: Ref<string> | string,
+): {
+  config: Ref<FormConfig | null>
+  loading: Ref<boolean>
+  error: Ref<string | null>
+  reload: () => Promise<void>
+}
+```
+
+### Behavior
+
+- Calls `GET /api/ontology/configs/forms/{concept}/{name}` on mount.
+- Passes the raw response through `adaptFormConfig()` (internal adapter function).
+- Re-fetches automatically if either `conceptKey` or `formName` is a `Ref` and its value changes.
+- Exposes a `reload()` function for manual refresh.
+
+### adaptFormConfig (internal)
+
+The composable includes a full adapter that bridges backend-to-frontend differences:
+
+| Backend field | Frontend field | Transformation |
+|---------------|---------------|----------------|
+| `name` | `title` | Used as title only if it does not look like a slug (no hyphens or underscores) |
+| `layout: 'single'` | `layout: 'single-column'` | String remapped |
+| `fields[].propertyKey` | `fields[].key` | Checks `key`, `propertyKey`, `property_key` in priority order |
+| `fields[].overrideLabel` | `fields[].label` | Also checks `override_label` (snake_case) |
+| `fields[].overridePlaceholder` | `fields[].placeholder` | Also checks `override_placeholder` |
+| `concept_key` | `conceptKey` | Snake-to-camel conversion |
+| Step fields as strings | Step fields as objects | `["name", "type"]` becomes `[{ key: "name" }, { key: "type" }]` |
+
+This adapter solves gap analysis items 5, 6, and 8 from the previous version of this document (FormConfig field key mismatch, layout value mismatch, and no form config adapter).
+
+### Usage example
+
+```typescript
+import { useFormConfig } from '@/composables/useFormConfig'
+
+const { config, loading, error } = useFormConfig('guest', 'default')
+
+// config.value is a fully adapted FormConfig ready for useFormSchema()
+```
+
+---
+
 ## useConfigAdapter composable
 
 **File:** `web/src/composables/useConfigAdapter.ts`
@@ -292,6 +367,130 @@ function useViewConfig(
 - Passes the raw response through `adaptViewConfig()`.
 - Re-fetches automatically if either `conceptKey` or `viewName` is a `Ref` and its value changes.
 - Exposes a `reload()` function for manual refresh.
+
+---
+
+## useConceptData composable
+
+**File:** `web/src/composables/useConceptData.ts`
+
+Loads domain records for a given concept from the generic domain CRUD API. This is the data-fetching composable that feeds table, kanban, and timeline views with actual records.
+
+### Signature
+
+```typescript
+function useConceptData(
+  conceptKey: Ref<string> | string,
+  options?: Ref<UseConceptDataOptions> | UseConceptDataOptions,
+): {
+  records: Ref<Record<string, unknown>[]>
+  loading: Ref<boolean>
+  error: Ref<string | null>
+  total: Ref<number>
+  reload: () => Promise<void>
+}
+
+interface UseConceptDataOptions {
+  filters?: Record<string, unknown>
+  sort?: { field: string; direction: 'asc' | 'desc' }
+  page?: number
+  limit?: number
+}
+```
+
+### Behavior
+
+- Calls `GET /api/domains/{conceptKey}` on mount with optional query parameters for filtering, sorting, and pagination.
+- Handles two response formats:
+  - **Real backend:** Response is a flat array (unwrapped from `ApiResponse.data`). `total` falls back to array length.
+  - **Vercel shim:** Response is `{ records: [...], total: N }`.
+- Filter parameters are passed as `filter[fieldName]=value` query parameters.
+- Sort is passed as `sortBy` and `sortDir` query parameters.
+- On error, resets `records` to `[]` and `total` to `0`.
+
+### Usage example
+
+```typescript
+import { useConceptData } from '@/composables/useConceptData'
+
+const { records, loading, total, reload } = useConceptData('guest', {
+  filters: { status: 'confirmed' },
+  sort: { field: 'name', direction: 'asc' },
+  page: 1,
+  limit: 25,
+})
+```
+
+---
+
+## usePageConfig composable
+
+**File:** `web/src/composables/usePageConfig.ts`
+
+Loads a PageConfig by URL slug from the API. PageConfigs drive dashboard-style pages with widget grids and responsive breakpoint layouts.
+
+### Signature
+
+```typescript
+function usePageConfig(
+  slug: Ref<string> | string,
+): {
+  config: Ref<PageConfig | null>
+  loading: Ref<boolean>
+  error: Ref<string | null>
+  reload: () => Promise<void>
+}
+```
+
+### PageConfig type
+
+```typescript
+interface PageConfig {
+  readonly id: string
+  readonly name: string
+  readonly slug: string
+  readonly widgets: ReadonlyArray<PageWidget>
+  readonly breakpoints?: {
+    readonly desktop: ReadonlyArray<PageWidgetLayout>
+    readonly tablet?: ReadonlyArray<PageWidgetLayout>
+    readonly mobile?: ReadonlyArray<PageWidgetLayout>
+  }
+}
+
+interface PageWidget {
+  readonly widgetId: string
+  readonly type: string           // 'stat-card' | 'chart' | 'table' | 'list'
+  readonly title?: string
+  readonly conceptKey?: string
+  readonly filter?: Record<string, unknown>
+  readonly displayOptions?: Record<string, unknown>
+}
+
+interface PageWidgetLayout {
+  readonly widgetId: string
+  readonly x: number
+  readonly y: number
+  readonly w: number
+  readonly h: number
+}
+```
+
+### Behavior
+
+- Calls `GET /api/ontology/configs/pages/{slug}` on mount.
+- Re-fetches automatically if `slug` is a `Ref` and its value changes.
+- No adapter transformation is applied -- the API response is used directly as `PageConfig`.
+
+### Usage example
+
+```typescript
+import { usePageConfig } from '@/composables/usePageConfig'
+
+const { config, loading, error } = usePageConfig('dashboard')
+
+// config.value.widgets contains the widget definitions
+// config.value.breakpoints.desktop contains the grid layout positions
+```
 
 ---
 
@@ -417,27 +616,30 @@ ontology_relationships loader.ts (parseRelationship)    v
   cache (TTL)         (JSON response)              getRelationshipsForConcept()
                             |                           |
                             v                           v
-                      -----------------------------------
-                      |                                 |
-              form_configs table               view_configs table
-              page_configs table                        |
-                      |                                 v
-                      v                     useViewConfig(concept, name)
-              GET /api/ontology/              -> adaptViewConfig()
-              configs/forms/:c/:n             -> ViewConfig (typed)
-                      |                                 |
-                      v                                 v
-              FormConfig (raw)              DynamicView component
-                      |
-                      v
-              useFormSchema(config, properties, values)
-                      |
-                      v
-              FormKitSchemaField[]
-                      |
-                      v
-              DynamicForm component
-              (<FormKit type="form" :schema="schemaFields">)
+     .----------------------------------------------------------.
+     |                         |                        |        |
+  form_configs          view_configs            page_configs   domain tables
+  table                 table                   table          (guests, staff, ...)
+     |                         |                        |        |
+     v                         v                        v        v
+  GET /configs/          GET /configs/            GET /configs/ GET /api/domains/:key
+  forms/:c/:n            views/:c/:n             pages/:slug    |
+     |                         |                        |        |
+     v                         v                        v        v
+  useFormConfig()        useViewConfig()          usePageConfig() useConceptData()
+  -> adaptFormConfig()   -> adaptViewConfig()     -> PageConfig   -> records[]
+  -> FormConfig          -> ViewConfig                   |        |
+     |                         |                        v        v
+     v                         v              DashboardPage    DynamicView
+  useFormSchema()        DynamicView            (widget grid)   (table/kanban/
+  (config, props, vals)  (table/kanban/                          timeline/detail)
+     |                    timeline/detail)
+     v
+  FormKitSchemaField[]
+     |
+     v
+  DynamicForm component
+  (<FormKit type="form" :schema="schemaFields">)
 ```
 
 ### Step-by-step walkthrough
@@ -450,9 +652,13 @@ ontology_relationships loader.ts (parseRelationship)    v
 
 4. **Pinia store** (`ontology.ts`) calls `GET /api/ontology`, normalizes the response into `OntologyConcept[]` (merging separate properties/relationships maps into each concept), and handles the `snake_case` to `camelCase` field name differences inline.
 
-5. **Form rendering path:** A page component gets the `FormConfig` from `GET /api/ontology/configs/forms/{concept}/{name}`, looks up the concept's properties from the Pinia store, and passes both into `useFormSchema()`. The composable resolves each field's ontology property, maps the property type to a FormKit input type, builds validation rules, and produces `FormKitSchemaField[]`. The `DynamicForm` component renders this schema.
+5. **Form rendering path:** A page component calls `useFormConfig(conceptKey, formName)`, which fetches the form config from `GET /api/ontology/configs/forms/{concept}/{name}` and runs it through `adaptFormConfig()` to normalize field keys (`propertyKey` -> `key`), layout values (`'single'` -> `'single-column'`), and step fields (strings -> objects). The component looks up the concept's properties from the Pinia store, then passes both into `useFormSchema()`. The composable resolves each field's ontology property, maps the property type to a FormKit input type (including PrimeVue custom inputs), builds validation rules, and produces `FormKitSchemaField[]`. The `DynamicForm` component renders this schema.
 
 6. **View rendering path:** A page component calls `useViewConfig(conceptKey, viewName)`, which fetches the view config from the API and runs it through `adaptViewConfig()` for field name normalization. The resulting `ViewConfig` drives `DynamicView`, which renders the appropriate view type (table, kanban, timeline, detail, or dashboard).
+
+7. **Data loading path:** View and list components call `useConceptData(conceptKey, options)` to fetch domain records from `GET /api/domains/{conceptKey}`. The composable passes filter, sort, and pagination parameters as query strings. It handles both backend response formats (flat array from Express, wrapped `{ records, total }` from Vercel shim). The returned `records` ref feeds into the view renderer.
+
+8. **Dashboard rendering path:** Dashboard pages call `usePageConfig(slug)` to fetch the page config from `GET /api/ontology/configs/pages/{slug}`. The returned `PageConfig` contains a `widgets` array and responsive `breakpoints` layout. Each widget uses its `conceptKey` to call `useConceptData()` independently, and the grid layout is driven by the breakpoint positions.
 
 ---
 
@@ -515,15 +721,17 @@ The backend and frontend define similar but distinct types. Key structural diffe
 
 ### PropertyType
 
-| Backend types (17) | Frontend types (17) | Mapping gap |
-|--------------------|---------------------|-------------|
-| `text`, `rich_text`, `number`, `select`, `multi_select`, `date`, `datetime`, `checkbox`, `url`, `email`, `phone`, `relation`, `formula`, `rollup`, `files`, `people`, `status` | `text`, `textarea`, `number`, `integer`, `decimal`, `boolean`, `date`, `datetime`, `time`, `email`, `url`, `phone`, `select`, `multi_select`, `radio`, `currency`, `percentage` | 9 types exist only on one side |
+| Backend types (17) | Frontend PROPERTY_TYPE_INPUT_MAP entries (19) | Mapping gap |
+|--------------------|-----------------------------------------------|-------------|
+| `text`, `rich_text`, `number`, `select`, `multi_select`, `date`, `datetime`, `checkbox`, `url`, `email`, `phone`, `relation`, `formula`, `rollup`, `files`, `people`, `status` | `text`, `textarea`, `number`, `integer`, `decimal`, `boolean`, `date`, `datetime`, `time`, `email`, `url`, `phone`, `select`, `multi_select`, `radio`, `currency`, `percentage`, `relation`, `checkbox` | 7 types exist only on one side |
 
-The backend defines `rich_text`, `checkbox`, `relation`, `formula`, `rollup`, `files`, `people`, `status` which have no corresponding entry in `PROPERTY_TYPE_INPUT_MAP`.
+**Backend types mapped in PROPERTY_TYPE_INPUT_MAP (10 of 17):** `text`, `number`, `select`, `multi_select`, `date`, `datetime`, `checkbox` (-> `primeToggle`), `url`, `email`, `phone`, `relation` (-> `primeAutocomplete`).
 
-The frontend defines `textarea`, `integer`, `decimal`, `boolean`, `time`, `radio`, `currency`, `percentage` which are not in the backend `PropertyType` union.
+**Backend types NOT in PROPERTY_TYPE_INPUT_MAP (7 of 17):** `rich_text`, `formula`, `rollup`, `files`, `people`, `status`. These fall back to `text` via `resolveInputType()`.
 
-The `resolveInputType()` function falls back to `'text'` for any unrecognized type, so backend-only types will render as plain text inputs.
+**Frontend-only types in PROPERTY_TYPE_INPUT_MAP (9 of 19):** `textarea`, `integer`, `decimal`, `boolean`, `time`, `radio`, `currency`, `percentage`. These exist in the map and render correctly but have no corresponding backend `PropertyType` union member.
+
+The `resolveInputType()` function falls back to `'text'` for any unrecognized type, so backend-only types without a map entry will render as plain text inputs.
 
 ---
 
@@ -556,17 +764,17 @@ Backend relationships include `sourceConceptKey`, `inverseKey`, and `description
 
 **Impact:** Inverse relationship navigation and relationship descriptions are not available in the UI.
 
-### 5. FormConfig field key mismatch
+### ~~5. FormConfig field key mismatch~~ (RESOLVED)
 
-The backend `FormFieldConfig` uses `propertyKey` to reference properties. The frontend `FormFieldConfig` uses `key`. The `useFormSchema` composable works with the frontend type, so any raw backend form config must be mapped before use.
+~~The backend `FormFieldConfig` uses `propertyKey` to reference properties. The frontend `FormFieldConfig` uses `key`.~~
 
-**Impact:** There is no adapter composable for FormConfig equivalent to `adaptViewConfig()`. If a backend form config is used directly, property resolution will fail because the composable looks up `field.key` in the property map, not `field.propertyKey`.
+**Status:** Resolved by `useFormConfig` composable (`web/src/composables/useFormConfig.ts`). The internal `adaptFormFields()` function checks `key`, `propertyKey`, and `property_key` in priority order.
 
-### 6. Backend layout value 'single' vs frontend 'single-column'
+### ~~6. Backend layout value 'single' vs frontend 'single-column'~~ (RESOLVED)
 
-The backend stores layout as `'single'`, but the frontend `FormLayout` type expects `'single-column'`. No adapter normalizes this difference.
+~~The backend stores layout as `'single'`, but the frontend `FormLayout` type expects `'single-column'`.~~
 
-**Impact:** Forms loaded directly from the API may not match the layout switch logic in DynamicForm if it checks for exact string equality.
+**Status:** Resolved by `useFormConfig` composable. The internal `adaptLayout()` function maps `'single'` to `'single-column'`.
 
 ### 7. ViewConfig column width type mismatch
 
@@ -574,11 +782,11 @@ Backend `ViewColumn.width` is `number` (pixels). Frontend `ViewColumn.width` is 
 
 **Impact:** If the backend returns `width: 200` (number) and the frontend expects `"200px"` (string), column widths may be ignored or misapplied depending on how the renderer consumes them.
 
-### 8. No form config adapter
+### ~~8. No form config adapter~~ (RESOLVED)
 
-`useConfigAdapter.ts` provides `adaptViewConfig()` for view configs, but there is no equivalent `adaptFormConfig()` for form configs. The `useFormSchema` composable expects a frontend-shaped `FormConfig`.
+~~`useConfigAdapter.ts` provides `adaptViewConfig()` for view configs, but there is no equivalent `adaptFormConfig()` for form configs.~~
 
-**Impact:** Any component that loads a form config from the API must manually map field names. This is a missing piece in the adapter layer.
+**Status:** Resolved. `useFormConfig` composable (`web/src/composables/useFormConfig.ts`) contains a full `adaptFormConfig()` function that handles layout values, field key mapping, label/placeholder overrides, step field normalization (string arrays to objects), and concept key snake-to-camel conversion.
 
 ### 9. Builder API not consumed by frontend store
 
@@ -591,3 +799,111 @@ The Pinia store only uses read-only endpoints. The builder endpoints (`/api/buil
 The `/api/ontology/visualization/graph` endpoint returns `{ nodes, edges }` with a specific shape. The frontend canvas types (`web/src/types/canvas.ts`) define `VisualizationNode` and `VisualizationEdge` types. Whether these align is not verified by the adapter layer.
 
 **Impact:** The canvas view may need its own adapter if the API response shape drifts from the frontend type expectations.
+
+---
+
+## Recipe: How to add a new ontology-driven view
+
+This recipe walks through adding a new ontology-driven page for a concept (e.g., adding a `/vendors` page backed by a `vendor` concept).
+
+### Prerequisites
+
+- The concept exists in `ontology_concepts` (created via `POST /api/builder/concepts` or seed migration).
+- The concept has properties in `ontology_properties`.
+- The domain table exists in Postgres (e.g., `vendors` with a `properties` JSONB column).
+
+### Step 1: Seed a ViewConfig
+
+Insert a view config into the `view_configs` table (or call `POST /api/builder/concepts/vendor/generate-defaults` to auto-generate one):
+
+```sql
+INSERT INTO view_configs (concept_key, name, view_type, columns, sort, version, status)
+VALUES (
+  'vendor',
+  'default',
+  'table',
+  '[
+    {"propertyKey": "name", "width": 200, "sortable": true, "filterable": true},
+    {"propertyKey": "type", "width": 150, "sortable": true, "filterable": true},
+    {"propertyKey": "contact_email", "width": 200, "sortable": true}
+  ]',
+  '{"field": "created_at", "direction": "desc"}',
+  1,
+  'active'
+);
+```
+
+### Step 2: Seed a FormConfig
+
+```sql
+INSERT INTO form_configs (concept_key, name, fields, layout, version, status)
+VALUES (
+  'vendor',
+  'default',
+  '[
+    {"propertyKey": "name", "colSpan": 2},
+    {"propertyKey": "type", "colSpan": 1},
+    {"propertyKey": "contact_email", "colSpan": 1}
+  ]',
+  'single',
+  1,
+  'active'
+);
+```
+
+### Step 3: Add a route in the Vue router
+
+```typescript
+// web/src/router/index.ts
+{
+  path: '/vendors',
+  name: 'vendors',
+  component: () => import('@/views/ConfigListPage.vue'),
+  meta: { conceptKey: 'vendor', viewName: 'default' },
+},
+{
+  path: '/vendors/:id',
+  name: 'vendor-detail',
+  component: () => import('@/views/ConfigDetailPage.vue'),
+  meta: { conceptKey: 'vendor' },
+},
+{
+  path: '/vendors/new',
+  name: 'vendor-new',
+  component: () => import('@/views/ConfigFormPage.vue'),
+  meta: { conceptKey: 'vendor', formName: 'default' },
+},
+```
+
+### Step 4: Add navigation entry (optional)
+
+If the concept should appear in the sidebar, add it to the navigation config or let the ontology-driven nav auto-discover it.
+
+### Step 5: Verify the data flow
+
+The following chain fires automatically -- no additional code is needed:
+
+1. **ConfigListPage** reads `conceptKey` and `viewName` from route meta.
+2. It calls `useViewConfig('vendor', 'default')` which fetches `GET /api/ontology/configs/views/vendor/default` and runs it through `adaptViewConfig()`.
+3. It calls `useConceptData('vendor')` which fetches `GET /api/domains/vendor` and returns the records.
+4. It looks up `vendor` in the Pinia ontology store via `getConceptByKey('vendor')` to resolve property labels, types, and formatting.
+5. The `DynamicView` component renders the table using the `ViewConfig` columns and the domain records.
+
+For forms, the same pattern applies:
+
+1. **ConfigFormPage** reads `conceptKey` and `formName` from route meta.
+2. It calls `useFormConfig('vendor', 'default')` which fetches and adapts the form config.
+3. It looks up properties via `getPropertiesForConcept('vendor')` from the Pinia store.
+4. It passes both into `useFormSchema(config, properties, formValues)` which produces `FormKitSchemaField[]`.
+5. The `DynamicForm` component renders the schema using `<FormKit type="form" :schema="schemaFields">`.
+
+### Key composable reference
+
+| Composable | Purpose | API endpoint |
+|------------|---------|-------------|
+| `useViewConfig(concept, name)` | Load + adapt ViewConfig | `GET /api/ontology/configs/views/:concept/:name` |
+| `useFormConfig(concept, name)` | Load + adapt FormConfig | `GET /api/ontology/configs/forms/:concept/:name` |
+| `usePageConfig(slug)` | Load PageConfig for dashboards | `GET /api/ontology/configs/pages/:slug` |
+| `useConceptData(concept, opts)` | Load domain records | `GET /api/domains/:concept` |
+| `useFormSchema(config, props, vals)` | Convert FormConfig to FormKit schema | (no API call, pure transform) |
+| `useOntologyStore().loadOntology()` | Load full ontology into Pinia | `GET /api/ontology` |

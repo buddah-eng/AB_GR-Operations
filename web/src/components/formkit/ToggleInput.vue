@@ -21,17 +21,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import ToggleSwitch from 'primevue/toggleswitch'
-
-interface FormKitContext {
-  _value: unknown
-  value: unknown
-  node: { input: (value: unknown) => void }
-  handlers: { blur: () => void; DOMInput: (e: Event) => void }
-  disabled: boolean
-  id: string
-  label: string
-  attrs: Record<string, unknown>
-}
+import type { FormKitContext } from './types'
 
 const props = defineProps<{
   context: FormKitContext

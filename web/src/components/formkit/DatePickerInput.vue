@@ -22,17 +22,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import DatePicker from 'primevue/datepicker'
-
-interface FormKitContext {
-  _value: unknown
-  value: unknown
-  node: { input: (value: unknown) => void }
-  handlers: { blur: () => void; DOMInput: (e: Event) => void }
-  disabled: boolean
-  id: string
-  label: string
-  attrs: Record<string, unknown>
-}
+import type { FormKitContext } from './types'
 
 const props = defineProps<{
   context: FormKitContext
@@ -112,7 +102,7 @@ function handleChange(
   value: Date | Date[] | Array<Date | null> | null | undefined,
 ): void {
   if (value === null || value === undefined) {
-    props.context.node.input('')
+    props.context.node.input(null)
     return
   }
 
@@ -132,7 +122,7 @@ function handleChange(
     return
   }
 
-  props.context.node.input('')
+  props.context.node.input(null)
 }
 </script>
 

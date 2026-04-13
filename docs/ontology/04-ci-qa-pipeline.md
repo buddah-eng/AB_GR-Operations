@@ -47,9 +47,9 @@ Any transition not listed above throws an error with the message: `Invalid trans
 
 | Transition target | What happens |
 |---|---|
-| `validating` | Runs `validateChange` and `analyzeImpact`. If validation passes, auto-advances to `review`. If validation fails, returns to `draft` with errors attached. |
-| `review` | Evaluates `determineReviewRequirement`. Low-risk additive department changes auto-approve (skip to `staged`). Otherwise, checks that the actor's priority meets the minimum required. |
-| `staged` | Marks the change as staged (preview). No side effects. |
+| `validating` | **Transient -- never persisted.** Runs `validateChange` and `analyzeImpact`. The database row is written with the resulting status (`review` on success, `draft` on failure), so the `validating` state only exists in-memory during the `advanceChangeRequest` call. A query against `config_change_requests` will never return `status = 'validating'`. |
+| `review` | **Transient -- never persisted.** Evaluates `determineReviewRequirement`. Low-risk additive department changes auto-approve (skip to `staged`). Otherwise, checks that the actor's priority meets the minimum required. In both paths the database row is written as `staged`, so the `review` state only exists in-memory during the call. A query against `config_change_requests` will never return `status = 'review'`. |
+| `staged` | Marks the change as staged (preview). No side effects. **Known bug:** The `case "staged"` branch in `advanceChangeRequest` sets the status directly to `staged` without running any review gate checks. Since `VALID_TRANSITIONS` allows `review -> staged`, a caller can advance directly from `review` to `staged` by passing `targetStatus = "staged"`, bypassing `determineReviewRequirement` entirely. The intended path is for the `case "review"` branch to evaluate review gates and then write `staged` itself; the standalone `case "staged"` is a redundant code path that skips those gates. |
 | `applied` | Calls `updateOntologyRecord` via the versioning service, logs an audit claim, emits a `config.applied` domain event, and records `applied_at` and `change_set`. |
 | `rolled_back` | Validates the 24-hour rollback window, emits a `config.rolled_back` domain event, and updates status. |
 | `rejected` | Records the reviewer and sets status to `rejected`. Terminal state. |
@@ -247,6 +247,16 @@ export interface ImpactReport {
 | `deletion` | Same as modification | Same as modification | `high` |
 
 Impact analysis runs alongside validation during the `draft -> validating` transition. The report is stored on the change request as `impact_report`.
+
+**Known bug:** `analyzeImpact` interpolates `tableName` directly into the SQL
+string (`SELECT COUNT(*) as cnt FROM ${tableName}`) without validating it
+against the `ONTOLOGY_TABLES` whitelist. The sibling function `validateChange`
+does check the whitelist and rejects unknown tables early, so in the normal
+pipeline flow the invalid table name never reaches `analyzeImpact`. However,
+`analyzeImpact` is exported and can be called independently. A caller
+supplying an untrusted `tableName` could trigger a SQL injection. The fix is
+to add the same `ONTOLOGY_TABLES.has(tableName)` guard at the top of
+`analyzeImpact`.
 
 ---
 

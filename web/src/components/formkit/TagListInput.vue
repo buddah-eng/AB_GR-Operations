@@ -10,7 +10,6 @@
       :aria-label="context.label"
       :allow-duplicate="false"
       @update:model-value="handleChange"
-      @add="handleAdd"
       @blur="context.handlers.blur"
     />
     <small v-if="limitMessage" class="fk-taglist-limit">
@@ -22,22 +21,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import Chips from 'primevue/chips'
-
-interface FormKitContext {
-  _value: unknown
-  value: unknown
-  node: { input: (value: unknown) => void }
-  handlers: { blur: () => void; DOMInput: (e: Event) => void }
-  disabled: boolean
-  id: string
-  label: string
-  attrs: Record<string, unknown>
-}
-
-interface ChipsAddEvent {
-  originalEvent: Event
-  value: string
-}
+import type { FormKitContext } from './types'
 
 const props = defineProps<{
   context: FormKitContext
@@ -77,20 +61,6 @@ function truncateTag(tag: string): string {
     return tag.slice(0, maxTagLength.value)
   }
   return tag
-}
-
-function handleAdd(event: ChipsAddEvent): void {
-  if (maxTagLength.value === undefined) return
-
-  const addedTag = event.value
-  if (addedTag.length <= maxTagLength.value) return
-
-  // Replace the last-added tag with the truncated version
-  const current = chipValues.value
-  const truncated = current.map((tag) =>
-    tag === addedTag ? truncateTag(tag) : tag,
-  )
-  props.context.node.input(truncated)
 }
 
 function handleChange(value: string[]): void {

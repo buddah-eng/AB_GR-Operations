@@ -5,7 +5,12 @@ import Aura from '@primevue/themes/aura'
 import ToastService from 'primevue/toastservice'
 import ConfirmationService from 'primevue/confirmationservice'
 import { plugin as formkitPlugin, defaultConfig } from '@formkit/vue'
-import { primeInputsPlugin } from '@/components/formkit'
+import {
+  primeAutocomplete,
+  primeDatePicker,
+  primeToggle,
+  primeTagList,
+} from '@/components/formkit'
 
 import 'primeicons/primeicons.css'
 import './styles/global.css'
@@ -39,7 +44,12 @@ app.use(ConfirmationService)
 
 /* ---- FormKit ---- */
 app.use(formkitPlugin, defaultConfig({
-  plugins: [primeInputsPlugin],
+  inputs: {
+    primeAutocomplete,
+    primeDatePicker,
+    primeToggle,
+    primeTagList,
+  },
 }))
 
 /* ---- Mount ---- */

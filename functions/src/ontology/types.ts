@@ -209,6 +209,9 @@ export interface ViewConfig {
 
 export interface ViewColumn {
   readonly propertyKey: string
+  readonly label?: string
+  readonly renderer?: string
+  readonly section?: string
   readonly width?: number
   readonly sortable?: boolean
   readonly filterable?: boolean
