@@ -44,7 +44,7 @@ export function useConceptData(
       if (opts?.filters) {
         for (const [k, v] of Object.entries(opts.filters)) {
           if (v !== null && v !== undefined) {
-            params.set(`filter.${k}`, String(v))
+            params.set(`filter[${k}]`, String(v))
           }
         }
       }

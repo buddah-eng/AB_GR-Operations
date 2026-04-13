@@ -119,7 +119,7 @@ function formatLabel(key: string): string {
   return key
     .replace(/([A-Z])/g, ' $1')
     .replace(/[_-]/g, ' ')
-    .replace(/^\w/, (c) => c.toUpperCase())
+    .replace(/\b\w/g, (c) => c.toUpperCase())
     .trim()
 }
 
@@ -149,7 +149,7 @@ function formatValue(value: unknown, type?: string): string {
         return strValue
       }
     case 'boolean':
-      return value ? 'Yes' : 'No'
+      return (value === true || value === 'true') ? 'Yes' : 'No'
     case 'currency':
       return typeof value === 'number'
         ? value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })

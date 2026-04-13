@@ -24,9 +24,15 @@ function adaptFormConfig(raw: Record<string, unknown>): FormConfig {
   const fields = adaptFormFields(raw.fields as Record<string, unknown>[] | undefined)
   const steps = adaptFormSteps(raw.steps as Record<string, unknown>[] | undefined)
 
+  // Don't fall back to raw.name if it looks like a slug (contains hyphens or underscores)
+  const rawTitle = (raw.title as string) ?? ''
+  const rawName = (raw.name as string) ?? ''
+  const nameIsSlug = /[-_]/.test(rawName)
+  const title = rawTitle || (nameIsSlug ? '' : rawName)
+
   return {
     id: (raw.id as string) ?? '',
-    title: (raw.title as string) ?? (raw.name as string) ?? '',
+    title,
     layout,
     conceptKey: (raw.conceptKey ?? raw.concept_key) as string | undefined,
     fields,

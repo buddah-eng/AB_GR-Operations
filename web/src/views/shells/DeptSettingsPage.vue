@@ -67,8 +67,7 @@ const ontologyStore = useOntologyStore()
 
 const department = computed(() => (route.meta.department as string) ?? 'guest-relations')
 const deptName = computed(() => {
-  const name = department.value.replace(/-/g, ' ')
-  return name.charAt(0).toUpperCase() + name.slice(1)
+  return department.value.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
 })
 
 const deptConcepts = computed(() => {

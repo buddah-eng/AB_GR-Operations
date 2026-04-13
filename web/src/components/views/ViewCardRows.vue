@@ -251,7 +251,7 @@ function formatLabel(key: string): string {
   return key
     .replace(/([A-Z])/g, ' $1')
     .replace(/[_-]/g, ' ')
-    .replace(/^\w/, (c) => c.toUpperCase())
+    .replace(/\b\w/g, (c) => c.toUpperCase())
     .trim()
 }
 
@@ -442,6 +442,17 @@ function getBadgeColumns(record: Record<string, unknown>): BadgeInfo[] {
 
     const raw = resolveColumnValue(record, col)
     if (raw === null || raw === undefined || raw === '') continue
+
+    // Handle boolean values (e.g. enabled: true/false -> "Active"/"Inactive")
+    if (typeof raw === 'boolean' || col.type === 'boolean') {
+      const boolVal = raw === true || raw === 'true'
+      badges.push({
+        key,
+        value: boolVal ? 'Active' : 'Inactive',
+        severity: boolVal ? 'success' : 'secondary',
+      })
+      continue
+    }
 
     const value = String(raw)
     badges.push({

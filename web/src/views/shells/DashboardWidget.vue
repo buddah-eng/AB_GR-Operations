@@ -114,6 +114,10 @@ const STATUS_ICON_MAP: Record<string, { icon: string; color: string }> = {
   draft: { icon: 'pi pi-file', color: 'text-surface-400' },
 }
 
+function titleCase(s: string): string {
+  return s.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+}
+
 function getStatusIcon(status: string): { icon: string; color: string } {
   const normalized = status.toLowerCase().trim()
   return STATUS_ICON_MAP[normalized] ?? { icon: 'pi pi-circle-fill', color: 'text-primary-400' }
@@ -137,7 +141,7 @@ function handleWidgetClick(): void {
     const query: Record<string, string> = {}
     for (const [k, v] of Object.entries(props.widget.filter)) {
       if (v !== null && v !== undefined) {
-        query[`filter.${k}`] = Array.isArray(v) ? v.join(',') : String(v)
+        query[`filter[${k}]`] = Array.isArray(v) ? v.join(',') : String(v)
       }
     }
     router.push({ path: route, query })
@@ -193,13 +197,26 @@ async function loadData(): Promise<void> {
         const name = (p.name ?? r.name ?? 'Record') as string
         const status = (p.status ?? r.status ?? '') as string
         const conceptLabel = (r.__conceptLabel ?? '') as string
-        const statusDisplay = status
-          ? `updated to ${status.replace(/_/g, ' ')}`
-          : 'updated'
+        const conceptKey = (r.__conceptKey ?? '') as string
+        const role = (p.role_key ?? p.role ?? r.role_key ?? r.role ?? '') as string
+
+        // Staff records don't have status — show role instead of "updated to"
+        let statusDisplay: string
+        if (status) {
+          statusDisplay = `updated to ${titleCase(status)}`
+        } else if (conceptKey === 'staff' && role) {
+          statusDisplay = `\u2014 ${titleCase(role)}`
+        } else {
+          statusDisplay = ''
+        }
+
         const iconInfo = getStatusIcon(status)
+        const summary = conceptLabel
+          ? `${conceptLabel}: ${name}${statusDisplay ? ` ${statusDisplay}` : ''}`
+          : `${name}${statusDisplay ? ` ${statusDisplay}` : ''}`
         return {
           id: r.id as string,
-          summary: conceptLabel ? `${conceptLabel}: ${name} ${statusDisplay}` : `${name} ${statusDisplay}`,
+          summary,
           timeAgo: formatTimeAgo((r.updatedAt ?? r.updated_at ?? new Date().toISOString()) as string),
           icon: iconInfo.icon,
           iconColor: iconInfo.color,
@@ -224,7 +241,7 @@ async function loadData(): Promise<void> {
     if (props.widget.filter) {
       for (const [k, v] of Object.entries(props.widget.filter)) {
         if (v !== null && v !== undefined) {
-          params.set(`filter.${k}`, Array.isArray(v) ? v.join(',') : String(v))
+          params.set(`filter[${k}]`, Array.isArray(v) ? v.join(',') : String(v))
         }
       }
     }

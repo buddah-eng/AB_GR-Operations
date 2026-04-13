@@ -19,6 +19,8 @@
           v-if="currentStatus && canEdit"
           v-model="currentStatus"
           :options="statusOptions"
+          optionLabel="label"
+          optionValue="value"
           placeholder="Status"
           class="w-40"
           @change="handleStatusChange"
@@ -27,7 +29,7 @@
           v-else-if="currentStatus"
           class="inline-flex items-center rounded-full bg-surface-100 px-3 py-1 text-sm font-medium text-surface-700"
         >
-          {{ currentStatus }}
+          {{ titleCase(currentStatus) }}
         </span>
       </div>
       <div class="flex items-center gap-2">
@@ -131,6 +133,10 @@ const isDirectorOrAbove = computed(() =>
   ['director', 'admin'].includes(authStore.role ?? '')
 )
 
+function titleCase(s: string): string {
+  return s.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+}
+
 const STATUS_TRANSITIONS: Record<string, string[]> = {
   draft: ['invited', 'canceled'],
   invited: ['confirmed', 'declined', 'canceled'],
@@ -142,7 +148,10 @@ const STATUS_TRANSITIONS: Record<string, string[]> = {
   canceled: ['draft'],
   declined: ['draft'],
 }
-const statusOptions = computed(() => STATUS_TRANSITIONS[currentStatus.value ?? ''] ?? [])
+const statusOptions = computed(() => {
+  const raw = STATUS_TRANSITIONS[currentStatus.value ?? ''] ?? []
+  return raw.map(s => ({ label: titleCase(s), value: s }))
+})
 
 const recordTitle = computed(() => {
   if (!record.value) return 'Loading...'

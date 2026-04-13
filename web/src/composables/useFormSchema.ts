@@ -79,6 +79,13 @@ function buildValidation(
 /**
  * Converts a single FormFieldConfig + OntologyProperty into a FormKit schema node.
  */
+/** Title-case a raw key: "dietary_restrictions" -> "Dietary Restrictions" */
+function formatKeyAsLabel(key: string): string {
+  return key
+    .replace(/[_-]/g, ' ')
+    .replace(/\b\w/g, l => l.toUpperCase())
+}
+
 function fieldToSchemaNode(
   field: FormFieldConfig,
   property: OntologyProperty | undefined,
@@ -89,7 +96,7 @@ function fieldToSchemaNode(
   const node: FormKitSchemaField = {
     $formkit: inputType,
     name: field.key,
-    label: field.label ?? property?.label ?? field.key,
+    label: field.label ?? property?.label ?? formatKeyAsLabel(field.key),
     placeholder: field.placeholder ?? property?.placeholder,
     help: field.helpText ?? property?.description,
   }
