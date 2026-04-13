@@ -282,6 +282,7 @@ import Button from 'primevue/button'
 import Message from 'primevue/message'
 import Select from 'primevue/select'
 import SelectButton from 'primevue/selectbutton'
+import ToggleButton from 'primevue/togglebutton'
 
 import type { OntologyProperty } from '@/types'
 import type { ConditionExpression } from '@/types/forms'

@@ -54,7 +54,7 @@ export function useConceptData(
       const result = await api.get<unknown>(path)
 
       // Handle both response formats:
-      // Real backend: data is array (unwrapped from ApiResponse), meta in response
+      // Real backend: data is array (unwrapped from ApiResponse), __meta attached by client
       // Shim: data is { records: [...], total: N }
       if (Array.isArray(result)) {
         records.value = result as Record<string, unknown>[]
@@ -62,9 +62,16 @@ export function useConceptData(
         const obj = result as Record<string, unknown>
         records.value = (obj.records as Record<string, unknown>[]) ?? []
       }
-      total.value = Array.isArray(result)
-        ? records.value.length
-        : ((result as Record<string, unknown>).total as number) ?? records.value.length
+
+      // Read __meta.total from API client (attached to the data object by api.get)
+      const metaTotal = (result as Record<string, unknown>).__meta
+        ? ((result as Record<string, unknown>).__meta as Record<string, unknown>).total as number | undefined
+        : undefined
+
+      total.value = metaTotal
+        ?? (Array.isArray(result)
+          ? records.value.length
+          : ((result as Record<string, unknown>).total as number) ?? records.value.length)
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to load data'
       records.value = []

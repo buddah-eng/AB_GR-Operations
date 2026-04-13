@@ -192,6 +192,21 @@ const routes: RouteRecordRaw[] = [
   { path: '/dietary', redirect: '/guests' },
   { path: '/autographs', redirect: '/guests' },
 
+  // --- Contracts ---
+  {
+    path: '/contracts',
+    name: 'contracts',
+    component: () => import('@/views/shells/ConfigListPage.vue'),
+    meta: { conceptKey: 'guest_contract', viewName: 'default-list' },
+  },
+  {
+    path: '/contracts/:id',
+    name: 'contract-detail',
+    component: () => import('@/views/shells/ConfigDetailPage.vue'),
+    meta: { conceptKey: 'guest_contract', viewName: 'detail-view' },
+    props: true,
+  },
+
   // --- Workflows ---
   {
     path: '/workflows',

@@ -11,6 +11,7 @@ export const CONCEPT_DETAIL_ROUTES: Record<string, string> = {
   transport: 'travel-detail',
   venue: 'venue-detail',
   pairing: 'pairing-detail',
+  guest_contract: 'contract-detail',
 }
 
 export const CONCEPT_LIST_ROUTES: Record<string, string> = {
@@ -21,4 +22,5 @@ export const CONCEPT_LIST_ROUTES: Record<string, string> = {
   schedule: '/schedule',
   venue: '/venues',
   pairing: '/pairings',
+  guest_contract: '/contracts',
 }
