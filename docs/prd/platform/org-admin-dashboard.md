@@ -83,7 +83,7 @@ The dashboard home is a PageConfig-driven widget layout at `/admin`:
 |--------|------|------------|---------|
 | Department Count | `stat_card` | `SELECT count(*) FROM departments WHERE status IN ('active', 'setup_in_progress')` | Real-time via SSE |
 | Active Users | `stat_card` | `SELECT count(*) FROM staff WHERE status = 'active'` | Real-time via SSE |
-| Total Records | `stat_card` | `SELECT count(*) FROM entities` | 5-minute cache |
+| Total Records | `stat_card` | Aggregate across concept tables: `SELECT (SELECT count(*) FROM guests) + (SELECT count(*) FROM staff) + (SELECT count(*) FROM schedule_events) + (SELECT count(*) FROM prep_items) + (SELECT count(*) FROM pairings) + (SELECT count(*) FROM venues) + (SELECT count(*) FROM transport_bookings) AS total` | 5-minute cache |
 | Pending Invitations | `stat_card` | `SELECT count(*) FROM staff WHERE status = 'pending'` | Real-time via SSE |
 | Department Status Table | `data_table` | `departments` join `staff` for counts | Real-time via SSE |
 | Recent Activity | `activity_feed` | Audit log, last 20 entries, cross-department | Real-time via SSE |

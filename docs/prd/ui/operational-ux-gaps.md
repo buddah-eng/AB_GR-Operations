@@ -373,6 +373,7 @@ Two findings relate to Vercel deployment constraints that cannot be "fixed" but 
 - Transport drivers are external actors managed via sessions, not persistent entities
 - No table or route needed in this phase
 - Document as a Phase 7 item
+- Cross-reference: This is tracked as deferred backlog item **D-008** in the project deferred backlog
 
 #### Acceptance Criteria
 

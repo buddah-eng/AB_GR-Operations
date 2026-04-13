@@ -1,16 +1,20 @@
 # RBAC Completion
 
 > RBAC is deny-by-default but permissions were never seeded. Only the director role has permission rows.
-> Every other role (coordinator, liaison, interpreter, volunteer, viewer) gets 403 on every API call.
+> Every other role (assistant_director, department_head, coordinator, liaison, interpreter, volunteer, viewer) gets 403 on every API call.
 > This PRD seeds the full permission matrix, visible/editable properties per role, data scopes, screen access, and the contract tables that the contract service expects.
 
 ---
 
 ## Overview
 
-The RBAC engine works exactly as designed: deny by default, check permission rows before every operation, filter visible/editable properties, apply data-scope WHERE clauses. The problem is that only `director` has permission rows. Every other role -- coordinator, liaison, interpreter, volunteer, viewer -- has zero rows in the `permissions`, `data_scopes`, or `screen_access` tables. They get 403 Forbidden on every API call.
+The RBAC engine works exactly as designed: deny by default, check permission rows before every operation, filter visible/editable properties, apply data-scope WHERE clauses. The problem is that only `director` has permission rows. Every other role -- assistant_director, department_head, coordinator, liaison, interpreter, volunteer, viewer -- has zero rows in the `permissions`, `data_scopes`, or `screen_access` tables. They get 403 Forbidden on every API call.
 
-This PRD populates the permission matrix so that all 7 roles can operate within their intended access boundaries. It covers findings L4, L7, L8, H3, H4, D1.
+This PRD populates the permission matrix so that all 8 roles can operate within their intended access boundaries. It covers findings L4, L7, L8, H3, H4, D1.
+
+**Canonical role list (8 roles):** `admin`, `director`, `assistant_director`, `department_head`, `coordinator`, `liaison`, `interpreter`, `volunteer`, `viewer`. The `admin` role is platform-level (shared services team). The `director` role is department-level (full department access). `assistant_director` mirrors director permissions within department scope. `department_head` is the existing DB role (priority 80) that earlier PRD drafts called `manager` -- same priority level, same scope.
+
+Note: The `admin` role is not listed in the permission matrix below because admin permissions are handled by the RBAC engine's admin bypass (admin has unrestricted access to all concepts, all fields, all screens).
 
 **Dependencies:** `core/rbac-engine.md` (engine must be implemented), `platform/data-wiring.md` (ontology properties must be seeded so visible_properties references are valid)
 
@@ -26,12 +30,13 @@ Define and seed the complete permission matrix so that every role has explicit p
 
 #### Detail
 
-**Permission matrix:**
+**Permission matrix (8 roles, excluding admin which has unrestricted access):**
 
 | Role | guest | staff | schedule_event | prep_item | pairings | venue | transport_booking | contract |
 |------|-------|-------|---------------|-----------|----------|-------|-------------------|----------|
 | **director** | CRUD | CRUD | CRUD | CRUD | CRUD | CRUD | CRUD | CRUD |
-| **manager** | CRUD | CRU | CRUD | CRUD | CRUD | CRU | CRU | CRU |
+| **assistant_director** | CRUD | CRUD | CRUD | CRUD | CRUD | CRUD | CRUD | CRUD |
+| **department_head** | CRUD | CRU | CRUD | CRUD | CRUD | CRU | CRU | CRU |
 | **coordinator** | CRU | R | CRU | CRUD | CRU | R | CRU | R |
 | **liaison** | RU | R | R | RU | R | R | R | R |
 | **interpreter** | R | R | R | R | R | R | R | - |
@@ -40,14 +45,18 @@ Define and seed the complete permission matrix so that every role has explicit p
 
 Legend: C=canCreate, R=canView, U=canEdit, D=canDelete, -=no access
 
+`assistant_director` has the same permissions as `director` but is department-scoped (see Section 4 data scopes). `department_head` maps to the existing `department_head` role in the DB (priority 80); earlier PRD drafts referred to this as `manager`.
+
 This produces one row in the `permissions` table for each cell with any access. Cells with `-` get no row (deny by default handles them).
 
 The seed migration inserts all permission rows in a single migration file.
 
 #### Acceptance Criteria
 
-- [ ] All 7 roles have permission rows for every concept they can access **(L4, L7, H3)**
+- [ ] All 8 roles have permission rows for every concept they can access **(L4, L7, H3)**
 - [ ] Director has full CRUD on all concepts **(L4)**
+- [ ] Assistant director has full CRUD on all concepts, department-scoped **(L4)**
+- [ ] Department head has CRUD/CRU per the matrix (department-scoped) **(L4, L7, H3)**
 - [ ] Coordinator has CRU on guest (can create and edit guests, cannot delete) **(L7, H3)**
 - [ ] Liaison has RU on guest and prep_item (can view and update status, cannot create or delete) **(L7, H3)**
 - [ ] Interpreter has read-only access to relevant concepts **(L7, H3)**
@@ -70,7 +79,8 @@ Each role sees different fields. The director sees everything. The liaison sees 
 | Role | visible_properties |
 |------|-------------------|
 | **director** | `[id, name, type, department, company, bio, status, email, phone, arrival_date, departure_date, dietary, autographs, notes, created_at, updated_at]` |
-| **manager** | `[id, name, type, department, company, status, email, arrival_date, departure_date, notes]` |
+| **assistant_director** | `[id, name, type, department, company, bio, status, email, phone, arrival_date, departure_date, dietary, autographs, notes, created_at, updated_at]` |
+| **department_head** | `[id, name, type, department, company, status, email, arrival_date, departure_date, notes]` |
 | **coordinator** | `[id, name, type, department, company, status, email, arrival_date, departure_date]` |
 | **liaison** | `[id, name, type, status, company, arrival_date, departure_date, dietary]` |
 | **interpreter** | `[id, name, type, status, company]` |
@@ -84,7 +94,8 @@ Similar matrices apply to staff, schedule_event, prep_item, pairings, venue, tra
 #### Acceptance Criteria
 
 - [ ] Director visible_properties includes all fields for every concept **(H3)**
-- [ ] Manager visible_properties includes department-relevant fields **(H3)**
+- [ ] Assistant director visible_properties matches director (department-scoped) **(H3)**
+- [ ] Department head visible_properties includes department-relevant fields **(H3)**
 - [ ] Coordinator visible_properties is scoped to operational fields **(H3)**
 - [ ] Liaison visible_properties is minimal: guest identity, status, travel dates, dietary **(H3)**
 - [ ] Interpreter visible_properties is limited to identity and status **(H3)**
@@ -107,7 +118,8 @@ Editable properties control which fields a role can write. A liaison can update 
 | Role | editable_properties |
 |------|-------------------|
 | **director** | `[name, type, department, company, bio, status, email, phone, arrival_date, departure_date, dietary, autographs, notes]` |
-| **manager** | `[name, type, company, status, email, arrival_date, departure_date, notes]` |
+| **assistant_director** | `[name, type, department, company, bio, status, email, phone, arrival_date, departure_date, dietary, autographs, notes]` |
+| **department_head** | `[name, type, company, status, email, arrival_date, departure_date, notes]` |
 | **coordinator** | `[name, type, company, status, email, arrival_date, departure_date]` |
 | **liaison** | `[status, dietary, notes]` |
 | **interpreter** | `[]` (read-only) |
@@ -148,7 +160,8 @@ Data scopes restrict which rows a role can see. Directors see everything. Coordi
 | Role | Concept | scopeType | Configuration |
 |------|---------|-----------|---------------|
 | **director** | all | `all` | No restriction |
-| **manager** | all | `department` | `field: 'department', value: $userDepartment` |
+| **assistant_director** | all | `department` | `field: 'department', value: $userDepartment` |
+| **department_head** | all | `department` | `field: 'department', value: $userDepartment` |
 | **coordinator** | guest | `department` | `field: 'department', value: $userDepartment` |
 | **coordinator** | prep_item | `department` | `field: 'department', value: $userDepartment` (via guest join) |
 | **coordinator** | schedule_event | `department` | `field: 'department', value: $userDepartment` |
@@ -221,26 +234,26 @@ Screen access controls which pages appear in each role's navigation. Without see
 
 **Screen access matrix:**
 
-| Page Slug | director | manager | coordinator | liaison | interpreter | volunteer | viewer |
-|-----------|----------|---------|-------------|---------|-------------|-----------|--------|
-| dashboard | yes | yes | yes | yes | yes | yes | yes |
-| guests | yes | yes | yes | yes | yes | no | yes |
-| staff | yes | yes | no | no | no | no | yes |
-| schedule | yes | yes | yes | yes | yes | yes | yes |
-| prep-tracker | yes | yes | yes | yes | no | yes | yes |
-| pairings | yes | yes | yes | no | no | no | no |
-| venues | yes | yes | yes | no | no | no | yes |
-| travel | yes | yes | yes | yes | no | no | yes |
-| contracts | yes | yes | no | no | no | no | no |
-| settings | yes | no | no | no | no | no | no |
-| builders | yes | no | no | no | no | no | no |
-| canvas | yes | yes | no | no | no | no | no |
+| Page Slug | director | assistant_director | department_head | coordinator | liaison | interpreter | volunteer | viewer |
+|-----------|----------|-------------------|-----------------|-------------|---------|-------------|-----------|--------|
+| dashboard | yes | yes | yes | yes | yes | yes | yes | yes |
+| guests | yes | yes | yes | yes | yes | yes | no | yes |
+| staff | yes | yes | yes | no | no | no | no | yes |
+| schedule | yes | yes | yes | yes | yes | yes | yes | yes |
+| prep-tracker | yes | yes | yes | yes | yes | no | yes | yes |
+| pairings | yes | yes | yes | yes | no | no | no | no |
+| venues | yes | yes | yes | yes | no | no | no | yes |
+| travel | yes | yes | yes | yes | yes | no | no | yes |
+| contracts | yes | yes | yes | no | no | no | no | no |
+| settings | yes | no | no | no | no | no | no | no |
+| builders | yes | no | no | no | no | no | no | no |
+| canvas | yes | yes | yes | no | no | no | no | no |
 
 Insert one `screen_access` row per `(role_key, page_slug)` pair where `visible = true`.
 
 #### Acceptance Criteria
 
-- [ ] Screen access seeds exist for all 7 roles **(H3)**
+- [ ] Screen access seeds exist for all 8 roles **(H3)**
 - [ ] Director can see all pages including settings and builders **(H3)**
 - [ ] Liaison sees only dashboard, guests, schedule, prep-tracker, and travel **(H3)**
 - [ ] Volunteer sees only dashboard, schedule, and prep-tracker **(H3)**
@@ -254,6 +267,8 @@ Insert one `screen_access` row per `(role_key, page_slug)` pair where `visible =
 #### Purpose
 
 The contract service queries `contract_templates`, `contract_clauses`, and `guest_contracts` tables, but they don't exist. Contract generation workflows will fail until these tables are created.
+
+**Architectural note:** These are **domain tables** for the contract assembly engine, NOT template storage. The unified `templates` table (defined in `platform/template-infrastructure.md`) stores reusable presets (record_set, notification, form_preset, view_preset, workflow). Contract tables are separate because contract assembly requires conditional clause inclusion per guest type, clause ordering, and per-guest rendered output tracking (draft/sent/signed/countersigned/expired) -- capabilities that go beyond simple template storage. See `platform/template-infrastructure.md` Section 6 for the full distinction.
 
 #### Detail
 

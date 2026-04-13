@@ -41,7 +41,7 @@ The library is accessed in two contexts:
 
 **Detail:**
 
-Each template pack is a complete department starter kit stored as a collection of records in the `templates` table with a shared `category` and a `pack_id` linking them. The packs are seed data -- they are inserted during deployment, not compiled into source code.
+Each template pack is a complete department starter kit stored as a collection of records in the `templates` table with a shared `pack_id` linking them to a `template_packs` metadata row (see `platform/template-infrastructure.md` Section 1 for the `template_packs` table schema and the `pack_id` column on `templates`). The packs are seed data -- they are inserted during deployment, not compiled into source code.
 
 #### 1.1 Guest Relations Pack
 

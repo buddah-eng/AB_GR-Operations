@@ -43,6 +43,7 @@ CREATE TABLE templates (
   category        TEXT,             -- grouping: "guest_relations", "operations", etc.
   content         JSONB NOT NULL,   -- template-type-specific payload
   concept_key     TEXT,             -- which concept this template applies to (nullable for cross-concept)
+  pack_id         UUID,             -- groups templates into department packs (e.g., all GR templates share a pack_id)
   
   -- Ontology standard fields
   version         INTEGER NOT NULL DEFAULT 1,
@@ -60,12 +61,36 @@ CREATE TABLE templates (
 CREATE INDEX idx_templates_type ON templates (template_type) WHERE status = 'active';
 CREATE INDEX idx_templates_concept ON templates (concept_key) WHERE status = 'active';
 CREATE INDEX idx_templates_category ON templates (category) WHERE status = 'active';
+CREATE INDEX idx_templates_pack ON templates (pack_id) WHERE status = 'active';
 ```
+
+**Template packs metadata table:**
+
+Templates with the same `pack_id` belong to the same department pack. The `template_packs` table stores pack-level metadata (name, description, icon) referenced by `templates.pack_id`:
+
+```sql
+CREATE TABLE template_packs (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name        TEXT NOT NULL,         -- e.g., "Guest Relations"
+  key         TEXT NOT NULL UNIQUE,   -- e.g., "guest_relations"
+  description TEXT,
+  category    TEXT,                   -- e.g., "convention_operations"
+  icon        TEXT,                   -- e.g., "mdi:account-star"
+  color       TEXT,                   -- e.g., "#4A90D9"
+  version     INTEGER NOT NULL DEFAULT 1,
+  status      TEXT NOT NULL DEFAULT 'active',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+The `pack_id` on `templates` is a FK to `template_packs.id`. When the template library (see `platform/template-library.md`) displays department packs, it queries `template_packs` for metadata and `templates WHERE pack_id = $1` for pack contents.
 
 **Why ontology concepts:** Templates get versioning, CI/QA review, RBAC scoping, and audit trails for free. No new infrastructure — they ride the existing systems.
 
 **Acceptance Criteria:**
-- [ ] `templates` table exists with all specified columns
+- [ ] `templates` table exists with all specified columns including `pack_id`
+- [ ] `template_packs` table exists with pack metadata (name, key, description, icon, color)
+- [ ] `templates.pack_id` references `template_packs.id`
 - [ ] Templates use the same versioning pattern as other ontology tables
 - [ ] RBAC controls template access (who can create, edit, use templates)
 - [ ] Templates go through the CI/QA pipeline for changes
@@ -246,16 +271,27 @@ The `/apply` endpoint is type-specific:
 The existing PRDs reference these separate storage systems:
 - `workflow_templates` table → migrate to `templates` with `template_type = 'record_set'`
 - `notification_templates` → `template_type = 'notification'`
-- `doc_templates` / `contract_templates` → `template_type = 'document'`
+- `doc_templates` → `template_type = 'document'`
 - Form/view presets (inline in configs) → `template_type = 'form_preset'` / `'view_preset'`
 
-**Strategy:** The unified `templates` table replaces all of these. The consuming code (workflow actions, notification service, document generator) queries `templates WHERE template_type = $1 AND name = $2` instead of their former dedicated tables.
+**Important distinction — contract tables are domain tables, NOT template storage:**
+
+The `contract_templates`, `contract_clauses`, and `guest_contracts` tables defined in `core/rbac-completion.md` Section 7 are **domain tables** for the contract assembly engine, not template storage. They serve a fundamentally different purpose:
+
+- `contract_templates` defines the clause library and assembly rules, including conditional clause inclusion via `required` flags and guest-type filtering (`guest_type` column). This is a domain-specific assembly engine.
+- `contract_clauses` defines individual clause bodies with sort ordering and template-level FK relationships. These are components of the assembly engine, not reusable presets.
+- `guest_contracts` stores per-guest generated contracts (rendered output with status tracking: draft → sent → signed → countersigned → expired). This is clearly operational domain data.
+
+The unified `templates` table stores reusable presets (record_set, notification, document, form_preset, view_preset, workflow) with simple storage and versioning. Contracts require conditional clause assembly via per-guest-type rules, which is fundamentally different from the template system's simple storage model. These systems coexist without overlap.
+
+**Strategy:** The unified `templates` table replaces workflow_templates, notification_templates, doc_templates, and inline form/view presets. The contract domain tables (`contract_templates`, `contract_clauses`, `guest_contracts`) remain as separate domain tables managed by the contract assembly engine.
 
 **Acceptance Criteria:**
 - [ ] Workflow `create_records` action queries the unified `templates` table
 - [ ] Notification `notify` action queries the unified `templates` table
-- [ ] Document `generate_doc` action queries the unified `templates` table
-- [ ] No dedicated template tables remain after migration
+- [ ] Document `generate_doc` action queries the unified `templates` table for simple document templates
+- [ ] Contract assembly engine continues to use `contract_templates` and `contract_clauses` (domain tables, not migrated)
+- [ ] `guest_contracts` remains a standalone domain table for per-guest contract instances
 
 ---
 

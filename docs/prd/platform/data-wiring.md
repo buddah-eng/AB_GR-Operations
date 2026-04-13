@@ -228,6 +228,8 @@ Option A is preferred (less indirection). Also seed the initial workflow configs
 
 #### Detail
 
+**Note:** This section defines a minimal Phase 6.5 notification implementation (in-app only, simple `notifications` table). The full notification system -- including multi-channel delivery, notification preferences, digest batching, and escalation rules -- is defined in `data-infrastructure/notifications.md`. That PRD is the authoritative source for the complete notification architecture. This section provides just enough wiring to unblock workflow actions that fire notifications.
+
 - Implement at minimum **in-app notification delivery**:
   - When a notification action fires (from a workflow), write a row to a `notifications` table: `{ id, user_id, title, body, read, created_at }`
   - The frontend can poll `GET /api/notifications?read=false` or receive via SSE

@@ -211,14 +211,18 @@ Step 3 of the setup wizard presents the role hierarchy editor. The platform ship
 |-------------|----------|----------------|-------------|
 | `admin` | 1 | false | Shared services / sysadmin. Full platform access. |
 | `director` | 10 | true | Department head. Full access within their department. |
-| `assistant_director` | 15 | true | Department second-in-command. Same access as director within department. |
+| `assistant_director` | 15 | true | Department second-in-command. Same access as director within department scope. |
+| `department_head` | 80 | true | Sub-department lead. Department-scoped access. |
 | `coordinator` | 20 | true | Team lead within a department. |
 | `liaison` | 30 | true | Assigned to specific records (e.g., guest liaison). |
+| `interpreter` | 40 | true | Language interpreter. Read-only access to relevant concepts. |
 | `volunteer` | 50 | true | General volunteer. Limited access. |
 | `viewer` | 100 | false | Read-only access. |
 
+**Canonical role list (8 operational + 1 platform):** The `admin` role is platform-level (shared services team). The `director` role is department-level (full department access). `assistant_director` mirrors director permissions within department scope. `department_head` is the role at priority 80 that earlier PRD drafts referred to as `manager` -- same priority level, same scope. This list must remain consistent with `core/rbac-completion.md` which seeds the full permission matrix.
+
 The admin can:
-- **Add roles:** Create new role records (e.g., `interpreter`, `driver`, `stage_manager`).
+- **Add roles:** Create new role records (e.g., `driver`, `stage_manager`).
 - **Edit roles:** Change name, description, priority order.
 - **Remove default roles:** Delete roles that don't apply to this convention.
 - **Set permissions:** For each role, define default permissions on org-wide concepts. Department-specific permissions are configured by department leaders later.
@@ -427,6 +431,7 @@ After D0 bootstrap:
 | `core/ontology-engine.md` | Concept creation during department provisioning |
 | `core/ontology-scoping.md` | Org-wide vs department scoping for all created elements |
 | `core/audit-system.md` | Every setup action is audited |
+| `data/postgres-schema.md` | Base Postgres schema must exist before setup writes (organization, departments, staff, roles tables) |
 | `platform/multi-tenancy.md` | Department isolation model |
 | `platform/template-infrastructure.md` | Template storage, versioning, apply endpoint |
 | `platform/template-library.md` | Template packs browsed during department provisioning |
